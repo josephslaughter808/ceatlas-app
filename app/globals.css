@@ -1,26 +1,79 @@
-@import "tailwindcss";
 
+/* CEATLAS COLOR SYSTEM */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-bg: #FAF7F2;
+  --color-text: #1A1A1A;
+  --color-primary: #1A3A5F;
+  --color-accent: #2E8B57;
+
+  --max-width: 1200px;
+  --radius: 8px;
+  --transition: 0.2s ease;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* GLOBAL RESET */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html, body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: system-ui, sans-serif;
+  line-height: 1.6;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* GLOBAL LAYOUT WRAPPER */
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* HEADINGS */
+h1, h2, h3 {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+/* LINKS */
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+a:hover {
+  color: var(--color-accent);
+}
+
+/* BUTTONS */
+.button {
+  display: inline-block;
+  padding: 0.75rem 1.25rem;
+  background: var(--color-primary);
+  color: white;
+  border-radius: var(--radius);
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.button:hover {
+  background: var(--color-accent);
+}
+
+/* CARD STYLE */
+.card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  transition: var(--transition);
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
 }

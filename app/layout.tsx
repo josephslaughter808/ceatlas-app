@@ -24,11 +24,62 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
-      </body>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+
+  {/* GLOBAL NAVIGATION */}
+<div className="container">
+  <nav style={{ 
+    display: "flex", 
+    justifyContent: "space-between", 
+    alignItems: "center", 
+    padding: "1rem 0" 
+  }}>
+    
+    {/* LEFT SIDE: LOGO + BRAND NAME */}
+    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+      <img 
+        src="/logo.png"   // <-- update this path to match your actual logo file
+        alt="CEAtlas Logo"
+        style={{ height: "40px", width: "auto" }}
+      />
+      <h2 style={{ color: "var(--color-primary)", fontWeight: "700", margin: 0 }}>
+        CEAtlas
+      </h2>
+    </div>
+
+    {/* RIGHT SIDE: NAV LINKS */}
+    <div style={{ display: "flex", gap: "1.5rem" }}>
+      <a href="/">Home</a>
+      <a href="/courses">Courses</a>
+      <a href="/packages">Packages</a>
+      <a href="/providers">Providers</a>
+    </div>
+
+  </nav>
+</div>
+
+
+
+  {children}
+
+  {/* GLOBAL FOOTER */}
+  <footer style={{ 
+    marginTop: "5rem", 
+    padding: "2rem 0", 
+    borderTop: "1px solid rgba(0,0,0,0.1)",
+    textAlign: "center"
+  }}>
+    <p style={{ marginBottom: "1rem" }}>© {new Date().getFullYear()} CEAtlas</p>
+
+    <div style={{ display: "flex", justifyContent: "center", gap: "1.5rem" }}>
+      <a href="https://instagram.com" target="_blank">Instagram</a>
+      <a href="https://facebook.com" target="_blank">Facebook</a>
+      <a href="https://linkedin.com" target="_blank">LinkedIn</a>
+    </div>
+  </footer>
+
+</body>
+
     </html>
   );
 }

@@ -1,65 +1,87 @@
-import Image from "next/image";
-
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="container">
+
+      {/* HERO SECTION */}
+      <section style={{ padding: "4rem 0" }}>
+        <h1 style={{ fontSize: "3rem", marginBottom: "1rem" }}>
+          Continuing Education, Simplified
+        </h1>
+
+        <p style={{ fontSize: "1.25rem", maxWidth: "600px", marginBottom: "2rem" }}>
+          CEAtlas helps dental professionals find, compare, and track the best CE courses — all in one clean, easy-to-use platform.
+        </p>
+
+        <a href="/courses" className="button">
+          Browse Courses
+        </a>
+      </section>
+
+      {/* VALUE PROPOSITION */}
+      <section style={{ marginTop: "4rem" }}>
+        <div style={{ 
+          display: "grid", 
+          gap: "2rem", 
+          gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))" 
+        }}>
+          
+          <div className="card">
+            <h3>Find Courses Fast</h3>
+            <p>Search and filter hundreds of CE courses from trusted providers.</p>
+          </div>
+
+          <div className="card">
+            <h3>Compare Providers</h3>
+            <p>See course details, locations, dates, and credits at a glance.</p>
+          </div>
+
+          <div className="card">
+            <h3>Stay Organized</h3>
+            <p>Track upcoming sessions and build your CE plan effortlessly.</p>
+          </div>
+
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      {/* FEATURED COURSES */}
+      <section style={{ marginTop: "4rem" }}>
+        <h2 style={{ marginBottom: "1.5rem" }}>Featured Courses</h2>
+
+        <div style={{ 
+          display: "grid", 
+          gap: "2rem", 
+          gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))" 
+        }}>
+          
+          <div className="card">
+            <h3>Orthodontic Wire Techniques</h3>
+            <p>Learn modern wire bending and bracket placement.</p>
+            <a href="/courses" className="button" style={{ marginTop: "1rem", display: "inline-block" }}>
+              View Course
+            </a>
+          </div>
+
+          <div className="card">
+            <h3>Periodontal Therapy Advanced</h3>
+            <p>Deep dive into periodontal treatment strategies.</p>
+            <a href="/courses" className="button" style={{ marginTop: "1rem", display: "inline-block" }}>
+              View Course
+            </a>
+          </div>
+
+          <div className="card">
+            <h3>Cosmetic Veneers Masterclass</h3>
+            <p>Master veneer preparation and aesthetic design.</p>
+            <a href="/courses" className="button" style={{ marginTop: "1rem", display: "inline-block" }}>
+              View Course
+            </a>
+          </div>
+
         </div>
-      </main>
+      </section>
+
+      
     </div>
   );
 }
+1

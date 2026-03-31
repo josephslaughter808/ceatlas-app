@@ -1,11 +1,15 @@
 import CourseCard from "./components/coursecard";
 import { getCatalogOverview, getFeaturedCourses } from "@/lib/courses";
+import { getCatalogStats } from "@/lib/db";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
-  const [featuredCourses, overview] = await Promise.all([
+  const [featuredCourses, overview, stats] = await Promise.all([
     getFeaturedCourses(6),
     getCatalogOverview(),
+    getCatalogStats(),
   ]);
 
   return (
@@ -25,11 +29,11 @@ export default async function HomePage() {
 
         <div className="hero__stats">
           <div className="card">
-            <h2>{overview.courseCount}</h2>
+            <h2>{stats.courses}</h2>
             <p>Courses ready for the live catalog</p>
           </div>
           <div className="card">
-            <h2>{overview.providerCount}</h2>
+            <h2>{stats.providers}</h2>
             <p>Providers synced into one searchable source of truth</p>
           </div>
           <div className="card">

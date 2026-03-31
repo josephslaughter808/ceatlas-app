@@ -1,87 +1,74 @@
-export default function HomePage() {
+import CourseCard from "./components/coursecard";
+import { getCatalogOverview, getFeaturedCourses } from "@/lib/courses";
+import Link from "next/link";
+
+export default async function HomePage() {
+  const [featuredCourses, overview] = await Promise.all([
+    getFeaturedCourses(6),
+    getCatalogOverview(),
+  ]);
+
   return (
-    <div className="container">
-
-      {/* HERO SECTION */}
-      <section style={{ padding: "4rem 0" }}>
-        <h1 style={{ fontSize: "3rem", marginBottom: "1rem" }}>
-          Continuing Education, Simplified
-        </h1>
-
-        <p style={{ fontSize: "1.25rem", maxWidth: "600px", marginBottom: "2rem" }}>
-          CEAtlas helps dental professionals find, compare, and track the best CE courses — all in one clean, easy-to-use platform.
-        </p>
-
-        <a href="/courses" className="button">
-          Browse Courses
-        </a>
-      </section>
-
-      {/* VALUE PROPOSITION */}
-      <section style={{ marginTop: "4rem" }}>
-        <div style={{ 
-          display: "grid", 
-          gap: "2rem", 
-          gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))" 
-        }}>
-          
-          <div className="card">
-            <h3>Find Courses Fast</h3>
-            <p>Search and filter hundreds of CE courses from trusted providers.</p>
+    <div className="container home-page">
+      <section className="hero">
+        <div className="hero__copy">
+          <p className="hero__eyebrow">CEAtlas Catalog Sync</p>
+          <h1>Continuing education, cleaned up and ready to use.</h1>
+          <p>
+            CEAtlas pulls live provider catalogs, deduplicates them, and turns scattered CE listings
+            into one searchable catalog for your site and your database.
+          </p>
+          <div className="hero__actions">
+            <Link href="/courses" className="button">Browse Courses</Link>
           </div>
+        </div>
 
+        <div className="hero__stats">
           <div className="card">
-            <h3>Compare Providers</h3>
-            <p>See course details, locations, dates, and credits at a glance.</p>
+            <h2>{overview.courseCount}</h2>
+            <p>Courses ready for the live catalog</p>
           </div>
-
           <div className="card">
-            <h3>Stay Organized</h3>
-            <p>Track upcoming sessions and build your CE plan effortlessly.</p>
+            <h2>{overview.providerCount}</h2>
+            <p>Providers synced into one searchable source of truth</p>
           </div>
-
+          <div className="card">
+            <h2>{overview.formatCount}</h2>
+            <p>Formats surfaced cleanly for browsing and planning</p>
+          </div>
         </div>
       </section>
 
-      {/* FEATURED COURSES */}
-      <section style={{ marginTop: "4rem" }}>
-        <h2 style={{ marginBottom: "1.5rem" }}>Featured Courses</h2>
-
-        <div style={{ 
-          display: "grid", 
-          gap: "2rem", 
-          gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))" 
-        }}>
-          
+      <section className="home-section">
+        <h2>What the pipeline does</h2>
+        <div className="home-grid">
           <div className="card">
-            <h3>Orthodontic Wire Techniques</h3>
-            <p>Learn modern wire bending and bracket placement.</p>
-            <a href="/courses" className="button" style={{ marginTop: "1rem", display: "inline-block" }}>
-              View Course
-            </a>
+            <h3>Scrape Provider Catalogs</h3>
+            <p>Pulls CE listings from public and provider-specific catalog surfaces like ADA Engage.</p>
           </div>
-
           <div className="card">
-            <h3>Periodontal Therapy Advanced</h3>
-            <p>Deep dive into periodontal treatment strategies.</p>
-            <a href="/courses" className="button" style={{ marginTop: "1rem", display: "inline-block" }}>
-              View Course
-            </a>
+            <h3>Normalize for Supabase</h3>
+            <p>Maps course titles, pricing, dates, formats, instructors, credits, and tags into a stable row shape.</p>
           </div>
-
           <div className="card">
-            <h3>Cosmetic Veneers Masterclass</h3>
-            <p>Master veneer preparation and aesthetic design.</p>
-            <a href="/courses" className="button" style={{ marginTop: "1rem", display: "inline-block" }}>
-              View Course
-            </a>
+            <h3>Render Cleanly on Site</h3>
+            <p>Uses the synced database as the website source of truth so the UI stays current automatically.</p>
           </div>
-
         </div>
       </section>
 
-      
+      <section className="home-section">
+        <div className="section-heading">
+          <h2>Fresh Catalog Preview</h2>
+          <Link href="/courses">See all courses</Link>
+        </div>
+
+        <div className="course-grid">
+          {featuredCourses.map((course) => (
+            <CourseCard key={course.id} course={course} />
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
-1

@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model pending_courses {
+  id                    Int      @id @default(autoincrement())
+  source_key            String   @unique
+  provider              String?
+  provider_slug         String?
+  source_url            String?
+  title                 String?
+  url                   String?
+  description           String?
+  course_type           String?
+  format                String?
+  audience              String?
+  topic                 String?
+  credits_text          String?
+  credits               Float?
+  price                 String?
+  price_amount          Float?
+  currency              String?
+  start_date            String?
+  end_date              String?
+  date_text             String?
+  location              String?
+  city                  String?
+  state                 String?
+  country               String?
+  instructors           String?
+  accreditation         String?
+  registration_deadline String?
+  requirements          String?
+  tags                  Json?
+  metadata              Json?
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+}

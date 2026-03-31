@@ -1,0 +1,28 @@
+https://www.ada.org/education/continuing-education
+https://www.dentalcare.com/en-us/ce-courses
+https://campus.speareducation.com/calendar/
+https://www.pikosinstitute.com/
+https://facialesthetics.org/aafe-course-schedules/
+https://education.aaoinfo.org/live/1013/page/5556
+https://www.dentsplysirona.com/en-us/academy/ce/courses.html
+https://agd2026.eventscribe.net/agenda.asp?pfp=FullSchedule
+https://odc2026.eventscribe.net/agenda.asp?all=1
+https://aapd2026.eventscribe.net/agenda.asp?BCFO=&embedded=true&enddate=5%2F23%2F2026&fa=&fb=&fc=&fd=&pfp=&startdate=5%2F23%2F2026
+https://nohc2026.eventscribe.net/agenda.asp?pfp=FullSchedule
+https://pndc2026.eventscribe.net/agenda.asp?pfp=BrowsebyDay
+https://www.hinman.org/Education-Events/Courses
+https://pacificdentalconference.com/schedule/
+https://www.yankeedental.com/
+https://ce.edu.dental/online-dental-ce/viva-learning/
+https://www.colgateoralhealthnetwork.com/webinar/
+https://www.cdeworld.com/courses
+https://ultradent.cdeworld.com/courses
+https://mymembership.adha.org/Members/CE_Smart/Catalog/Course_Catalog.aspx#
+
+# Verified official sites queued for next provider chunks
+# Dentaltown CE — https://www.dentaltown.com/ce (bot-blocked on simple requests)
+# Pankey Institute — https://pankey.org/all-courses/ (bot-blocked on simple requests)
+# Greater New York Dental Meeting — https://www.gnydm.com/ (2026 course table currently empty)
+#
+# Verified official conference roots queued for next conference chunks
+# Pacific Dental Conference — https://www.pdconf.com/

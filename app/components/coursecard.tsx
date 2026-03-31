@@ -1,48 +1,100 @@
-export default function CourseCard({ course }: { course: any }) {
-  return (
-    <div className="card" style={{ padding: "1.25rem" }}>
+import Link from "next/link";
+import CompareButton from "./compare-button";
+import SaveCourseButton from "./save-course-button";
 
-      {/* TOP: Instructor photo + title */}
-      <div style={{ display: "flex", alignItems: "center", marginBottom: "1rem" }}>
-        <img 
-          src={course.instructorPhoto || "https://via.placeholder.com/70"} 
-          alt={course.instructor}
-          style={{
-            width: "70px",
-            height: "70px",
-            borderRadius: "50%",
-            objectFit: "cover",
-            marginRight: "1rem"
+type Course = {
+  id: string;
+  provider_name: string | null;
+  title: string | null;
+  description: string | null;
+  next_location: string | null;
+  next_start_date: string | null;
+  next_end_date: string | null;
+  next_format: string | null;
+  credits_text: string | null;
+  price_text: string | null;
+  price: number | null;
+  category: string | null;
+  headline_topic?: string | null;
+  card_price?: string | null;
+  instructor_display?: string | null;
+  rating_average?: number | null;
+  rating_count?: number | null;
+};
+
+function shortText(value: string | null | undefined, max = 180) {
+  if (!value) return '';
+  return value.length > max ? `${value.slice(0, max - 1)}…` : value;
+}
+
+export default function CourseCard({ course }: { course: Course }) {
+  const details = [
+    course.provider_name,
+    course.next_format || course.category,
+    course.credits_text ? `${course.credits_text} credits` : null,
+  ].filter(Boolean).join(' • ');
+
+  const nextSession = course.next_start_date || 'Available now';
+  const location = course.next_location || 'Online / self-paced';
+  const price = course.card_price || null;
+  const rating = typeof course.rating_average === "number" ? `${course.rating_average.toFixed(1)}★` : null;
+  const ratingCount = course.rating_count || 0;
+
+  return (
+    <article className="course-card">
+      <div className="course-card__content">
+        <div className="course-card__header">
+          <div className="course-card__eyebrow-row">
+            <span className="course-card__eyebrow">{course.provider_name || 'Provider pending'}</span>
+            {course.headline_topic ? (
+              <span className="course-card__topic">{course.headline_topic}</span>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="course-card__main">
+          <div className="course-card__copy">
+            <h2 className="course-card__title">{course.title || 'Untitled course'}</h2>
+            {course.instructor_display ? (
+              <p className="course-card__instructor">{course.instructor_display}</p>
+            ) : null}
+            <p className="course-card__details">{details || 'Continuing education course'}</p>
+          </div>
+
+          <div className="course-card__meta">
+            <span><strong>When:</strong> {nextSession}</span>
+            <span><strong>Where:</strong> {shortText(location, 80)}</span>
+            {price ? <span><strong>Price:</strong> {shortText(price, 80)}</span> : null}
+            {rating ? <span><strong>Rating:</strong> {rating} ({ratingCount})</span> : null}
+          </div>
+        </div>
+
+        <p className="course-card__description">{shortText(course.description, 220)}</p>
+      </div>
+
+      <div className="course-card__actions">
+        <SaveCourseButton courseId={course.id} />
+        <CompareButton
+          item={{
+            id: course.id,
+            kind: "course",
+            title: course.title || "Untitled course",
+            providerName: course.provider_name,
+            topic: course.headline_topic || course.category,
+            description: course.description,
+            location: location,
+            dateText: nextSession,
+            priceText: price,
+            ratingAverage: course.rating_average,
+            ratingCount: course.rating_count,
+            details: [details],
+            href: `/courses/${course.id}`,
           }}
         />
-
-        <div>
-          <h2 style={{ margin: "0 0 0.25rem 0" }}>{course.title}</h2>
-          <p style={{ margin: 0, fontSize: "0.9rem", color: "#555" }}>
-            Instructor: {course.instructor}
-          </p>
-        </div>
-      </div>
-
-      {/* DESCRIPTION */}
-      <p style={{ margin: "0.25rem 0" }}>{course.description}</p>
-
-      {/* DETAILS */}
-      <p style={{ margin: "0.25rem 0" }}><strong>Location:</strong> {course.location}</p>
-      <p style={{ margin: "0.25rem 0" }}><strong>Next Session:</strong> {course.session}</p>
-      <p style={{ margin: "0.25rem 0" }}><strong>Credits:</strong> {course.credits}</p>
-
-      {/* BUTTON RIGHT-ALIGNED */}
-      <div style={{ 
-        display: "flex", 
-        justifyContent: "flex-end",
-        marginTop: "0.75rem"
-      }}>
-        <a href={`/courses/${course.id}`} className="button">
+        <Link href={`/courses/${course.id}`} className="button">
           View Details
-        </a>
+        </Link>
       </div>
-
-    </div>
+    </article>
   );
 }

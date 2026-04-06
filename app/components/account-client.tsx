@@ -94,6 +94,8 @@ export default function AccountClient() {
       return;
     }
 
+    const activeSession = session;
+
     async function loadAccountData() {
       const [cardsResponse, ordersResponse, profileResponse, providerResponse] = await Promise.all([
         supabase
@@ -110,7 +112,7 @@ export default function AccountClient() {
           .maybeSingle(),
         fetch("/api/account/provider-links", {
           headers: {
-            Authorization: `Bearer ${session.access_token}`,
+            Authorization: `Bearer ${activeSession.access_token}`,
           },
         }),
       ]);

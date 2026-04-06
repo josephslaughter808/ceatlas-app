@@ -2,6 +2,8 @@ import { getCourseFilters, getCourses } from "@/lib/courses";
 import CourseCatalogClient from "../components/course-catalog-client";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 export default async function SavedPage() {
   const [courses, filters] = await Promise.all([
     getCourses(),

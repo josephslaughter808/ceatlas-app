@@ -1,6 +1,8 @@
 import { getCourses } from "@/lib/courses";
 import TravelPlannerClient from "../components/travel-planner-client";
 
+export const dynamic = "force-dynamic";
+
 export default async function TravelPage() {
   const courses = await getCourses();
 

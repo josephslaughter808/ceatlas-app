@@ -125,6 +125,7 @@ https://achievece.com/courses/sitemap.xml
 https://www.netce.com/continuing-education/dentist/california/
 https://www.ohi-s.com/courses
 https://cezoom.com/courses
+https://www.dentallearning.net/sitemap.xml
 
 # Verified official sites queued for next provider chunks
 # Dentaltown CE — https://www.dentaltown.com/ce (currently returning 403 to direct requests)

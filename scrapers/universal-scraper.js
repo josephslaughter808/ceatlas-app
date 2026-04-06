@@ -21,6 +21,7 @@ import { scrapeColoradoCE } from './providers/colorado.js';
 import { scrapeDigitellConference } from './providers/digitell.js';
 import { scrapeDMG } from './providers/dmg.js';
 import { scrapeDACE } from './providers/dace.js';
+import { scrapeDentalLearning } from './providers/dentallearning.js';
 import { scrapeDDSCommunities } from './providers/dds-communities.js';
 import { scrapeDDSWorld } from './providers/ddsworld.js';
 import { scrapeDentaltown } from './providers/dentaltown.js';
@@ -277,6 +278,10 @@ async function scrapeProvider(providerUrl) {
 
   if (hostname.includes('dentalacademyofce.com')) {
     return scrapeDACE();
+  }
+
+  if (hostname.includes('dentallearning.net')) {
+    return scrapeDentalLearning();
   }
 
   if (hostname.includes('dimensionsofdentalhygiene.com')) {

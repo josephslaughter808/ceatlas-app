@@ -11,6 +11,7 @@ import { scrapeColoradoCE } from '../scrapers/providers/colorado.js';
 import { scrapeColumbia } from '../scrapers/providers/columbia.js';
 import { scrapeDMG } from '../scrapers/providers/dmg.js';
 import { scrapeDACE } from '../scrapers/providers/dace.js';
+import { scrapeDentalLearning } from '../scrapers/providers/dentallearning.js';
 import { scrapeDDSCommunities } from '../scrapers/providers/dds-communities.js';
 import { scrapeDDSWorld } from '../scrapers/providers/ddsworld.js';
 import { scrapeDentaltown } from '../scrapers/providers/dentaltown.js';
@@ -128,6 +129,10 @@ const PROVIDERS = {
   dentaltown: {
     label: 'Dentaltown CE',
     scrape: () => scrapeDentaltown(),
+  },
+  dentallearning: {
+    label: 'Dental Learning',
+    scrape: () => scrapeDentalLearning(),
   },
   dace: {
     label: 'Dental Academy of Continuing Education',

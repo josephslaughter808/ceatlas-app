@@ -178,16 +178,24 @@ export async function scrapePikos(startUrl = 'https://www.pikosinstitute.com/') 
   ]);
 
   const results = [];
+  let skippedStaleLinks = 0;
 
   for (const detailUrl of detailUrls) {
     try {
       const course = await scrapePikosDetail(detailUrl, startUrl);
       if (course) results.push(course);
     } catch (error) {
+      if (error?.response?.status === 404) {
+        skippedStaleLinks += 1;
+        continue;
+      }
       console.log(`      ⚠️ Failed to load Pikos course ${detailUrl}: ${error.message}`);
     }
   }
 
+  if (skippedStaleLinks) {
+    console.log(`   • Skipped ${skippedStaleLinks} stale Pikos course links that now return 404`);
+  }
   console.log(`   • Extracted ${results.length} Pikos Institute courses`);
   return results;
 }

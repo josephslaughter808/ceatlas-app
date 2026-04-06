@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "./auth-provider";
+import StateRequirementsPanel from "./state-requirements-panel";
+import {
+  PRACTICE_STATES,
+  getPracticeStateName,
+  normalizePracticeStateCode,
+} from "@/lib/practice-states";
 
 type PaymentMethodRecord = {
   id: string;
@@ -26,6 +32,34 @@ type TravelOrderRecord = {
   created_at: string;
 };
 
+type ProviderLinkRecord = {
+  id: string;
+  provider_key: string;
+  provider_name: string;
+  login_label: string | null;
+  username_hint: string | null;
+  status: string | null;
+  last_synced_at: string | null;
+  last_error: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  metadata: Record<string, unknown>;
+};
+
+type SupportedProviderRecord = {
+  key: string;
+  name: string;
+  description: string;
+  loginUrl: string;
+  loginType: "email_or_username";
+  status: "available" | "planned";
+};
+
+type ProfileRecord = {
+  full_name: string | null;
+  state_of_practice: string | null;
+};
+
 export default function AccountClient() {
   const { user, session, loading } = useAuth();
   const [mode, setMode] = useState<"signin" | "signup">("signup");
@@ -35,18 +69,33 @@ export default function AccountClient() {
   const [authMessage, setAuthMessage] = useState<string | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
   const [cardsBusy, setCardsBusy] = useState(false);
+  const [profileBusy, setProfileBusy] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodRecord[]>([]);
   const [orders, setOrders] = useState<TravelOrderRecord[]>([]);
+  const [profile, setProfile] = useState<ProfileRecord | null>(null);
+  const [stateOfPractice, setStateOfPractice] = useState("");
+  const [profileMessage, setProfileMessage] = useState<string | null>(null);
+  const [providerLinks, setProviderLinks] = useState<ProviderLinkRecord[]>([]);
+  const [supportedProviders, setSupportedProviders] = useState<SupportedProviderRecord[]>([]);
+  const [providerKey, setProviderKey] = useState("adha");
+  const [providerLogin, setProviderLogin] = useState("");
+  const [providerPassword, setProviderPassword] = useState("");
+  const [providerLabel, setProviderLabel] = useState("");
+  const [providerBusy, setProviderBusy] = useState(false);
+  const [providerMessage, setProviderMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!session) {
       setPaymentMethods([]);
       setOrders([]);
+      setProfile(null);
+      setStateOfPractice("");
+      setProviderLinks([]);
       return;
     }
 
     async function loadAccountData() {
-      const [{ data: cards }, { data: travelOrders }] = await Promise.all([
+      const [cardsResponse, ordersResponse, profileResponse, providerResponse] = await Promise.all([
         supabase
           .from("payment_methods")
           .select("id, brand, last4, exp_month, exp_year, is_default")
@@ -55,14 +104,33 @@ export default function AccountClient() {
           .from("travel_orders")
           .select("id, status, destination, starts_on, ends_on, total_amount, service_fee_amount, currency, created_at")
           .order("created_at", { ascending: false }),
+        supabase
+          .from("profiles")
+          .select("full_name, state_of_practice")
+          .maybeSingle(),
+        fetch("/api/account/provider-links", {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }),
       ]);
+
+      const { data: cards } = cardsResponse;
+      const { data: travelOrders } = ordersResponse;
+      const { data: profileRow } = profileResponse;
+      const providerData = await providerResponse.json().catch(() => null);
 
       setPaymentMethods(cards || []);
       setOrders(travelOrders || []);
+      setProfile(profileRow || null);
+      setFullName(profileRow?.full_name || user?.user_metadata?.full_name || "");
+      setStateOfPractice(normalizePracticeStateCode(profileRow?.state_of_practice || user?.user_metadata?.state_of_practice));
+      setProviderLinks(providerData?.links || []);
+      setSupportedProviders(providerData?.supportedProviders || []);
     }
 
     loadAccountData();
-  }, [session]);
+  }, [session, user?.user_metadata?.full_name, user?.user_metadata?.state_of_practice]);
 
   async function handleAuthSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -77,6 +145,7 @@ export default function AccountClient() {
           options: {
             data: {
               full_name: fullName,
+              state_of_practice: normalizePracticeStateCode(stateOfPractice) || null,
             },
           },
         });
@@ -130,6 +199,140 @@ export default function AccountClient() {
     await supabase.auth.signOut();
   }
 
+  async function handleProfileSave(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!user) return;
+
+    setProfileBusy(true);
+    setProfileMessage(null);
+
+    try {
+      const nextState = normalizePracticeStateCode(stateOfPractice) || null;
+      const nextName = fullName.trim() || null;
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: nextName,
+          state_of_practice: nextState,
+        })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      await supabase.auth.updateUser({
+        data: {
+          full_name: nextName,
+          state_of_practice: nextState,
+        },
+      });
+
+      setProfile((current) => ({
+        full_name: nextName ?? current?.full_name ?? null,
+        state_of_practice: nextState,
+      }));
+      setProfileMessage("Practice profile updated.");
+    } catch (error) {
+      setProfileMessage(error instanceof Error ? error.message : "Unable to update your practice profile.");
+    } finally {
+      setProfileBusy(false);
+    }
+  }
+
+  async function refreshProviderLinks() {
+    if (!session?.access_token) return;
+
+    const response = await fetch("/api/account/provider-links", {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Unable to load provider links.");
+    }
+
+    setProviderLinks(data.links || []);
+    setSupportedProviders(data.supportedProviders || []);
+  }
+
+  async function handleProviderConnect(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!session?.access_token) return;
+
+    setProviderBusy(true);
+    setProviderMessage(null);
+
+    try {
+      const response = await fetch("/api/account/provider-links", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          providerKey,
+          login: providerLogin,
+          password: providerPassword,
+          label: providerLabel,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Unable to connect provider account.");
+      }
+
+      setProviderLogin("");
+      setProviderPassword("");
+      setProviderLabel("");
+      setProviderMessage("Provider account connected. The secure storage layer is ready for user-scoped sync.");
+      await refreshProviderLinks();
+    } catch (error) {
+      setProviderMessage(error instanceof Error ? error.message : "Unable to connect provider account.");
+    } finally {
+      setProviderBusy(false);
+    }
+  }
+
+  async function handleProviderDisconnect(id: string) {
+    if (!session?.access_token) return;
+
+    setProviderBusy(true);
+    setProviderMessage(null);
+
+    try {
+      const response = await fetch(`/api/account/provider-links/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Unable to disconnect provider account.");
+      }
+
+      setProviderMessage("Provider account removed.");
+      await refreshProviderLinks();
+    } catch (error) {
+      setProviderMessage(error instanceof Error ? error.message : "Unable to disconnect provider account.");
+    } finally {
+      setProviderBusy(false);
+    }
+  }
+
+  const availableProviders = supportedProviders.filter((provider) => provider.status === "available");
+  const plannedProviders = supportedProviders.filter((provider) => provider.status === "planned");
+  const profileStateName = useMemo(
+    () => getPracticeStateName(stateOfPractice || profile?.state_of_practice),
+    [profile?.state_of_practice, stateOfPractice],
+  );
+
   return (
     <div className="account-shell">
       <section className="page-header">
@@ -158,10 +361,22 @@ export default function AccountClient() {
 
             <form className="account-form" onSubmit={handleAuthSubmit}>
               {mode === "signup" ? (
-                <label>
-                  <span>Full name</span>
-                  <input value={fullName} onChange={(event) => setFullName(event.target.value)} />
-                </label>
+                <>
+                  <label>
+                    <span>Full name</span>
+                    <input value={fullName} onChange={(event) => setFullName(event.target.value)} />
+                  </label>
+
+                  <label>
+                    <span>State of practice</span>
+                    <select value={stateOfPractice} onChange={(event) => setStateOfPractice(event.target.value)}>
+                      <option value="">Select your state</option>
+                      {PRACTICE_STATES.map((state) => (
+                        <option key={state.code} value={state.code}>{state.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                </>
               ) : null}
 
               <label>
@@ -190,6 +405,7 @@ export default function AccountClient() {
               <span>Saved cards are stored by Stripe, not by us</span>
               <span>Purchase history will live in your CEAtlas account</span>
               <span>Upcoming trip checkout will build on this same profile</span>
+              <span>Member-only CE catalogs unlock through your own linked provider accounts</span>
             </div>
           </div>
         </section>
@@ -215,6 +431,14 @@ export default function AccountClient() {
                 <strong>{orders.length}</strong>
                 <span>Recorded travel purchases</span>
               </div>
+              <div>
+                <strong>{providerLinks.length}</strong>
+                <span>Linked CE provider accounts</span>
+              </div>
+              <div>
+                <strong>{profileStateName ? "1" : "0"}</strong>
+                <span>{profileStateName ? `${profileStateName} practice profile` : "Practice state not set"}</span>
+              </div>
             </div>
 
             <div className="account-actions">
@@ -225,6 +449,139 @@ export default function AccountClient() {
             </div>
 
             {authMessage ? <p className="account-message">{authMessage}</p> : null}
+          </div>
+
+          <div className="card account-card">
+            <div className="account-card__head">
+              <div>
+                <p className="packages-builder__eyebrow">Practice Profile</p>
+                <h2>State of practice</h2>
+              </div>
+            </div>
+
+            <form className="account-form" onSubmit={handleProfileSave}>
+              <label>
+                <span>Full name</span>
+                <input value={fullName} onChange={(event) => setFullName(event.target.value)} />
+              </label>
+
+              <label>
+                <span>State of practice</span>
+                <select value={stateOfPractice} onChange={(event) => setStateOfPractice(event.target.value)}>
+                  <option value="">Select your state</option>
+                  {PRACTICE_STATES.map((state) => (
+                    <option key={state.code} value={state.code}>{state.name}</option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="account-actions">
+                <button type="submit" className="travel-primary" disabled={profileBusy}>
+                  {profileBusy ? "Saving..." : "Save practice profile"}
+                </button>
+              </div>
+            </form>
+
+            {profileMessage ? <p className="account-message">{profileMessage}</p> : null}
+
+            <StateRequirementsPanel
+              stateCode={stateOfPractice || profile?.state_of_practice}
+              signedIn
+              compact
+            />
+          </div>
+
+          <div className="card account-card">
+            <p className="packages-builder__eyebrow">Locked Catalogs</p>
+            <h2>Provider connections</h2>
+            <p className="account-helper">
+              Link your own member or paid-provider accounts so CEAtlas can unlock login-blocked catalogs without sharing one global account across users.
+            </p>
+
+            {availableProviders.length > 0 ? (
+              <form className="account-form" onSubmit={handleProviderConnect}>
+                <label>
+                  <span>Provider</span>
+                  <select value={providerKey} onChange={(event) => setProviderKey(event.target.value)}>
+                    {availableProviders.map((provider) => (
+                      <option key={provider.key} value={provider.key}>{provider.name}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  <span>Provider login</span>
+                  <input
+                    value={providerLogin}
+                    onChange={(event) => setProviderLogin(event.target.value)}
+                    placeholder="Email or username"
+                    required
+                  />
+                </label>
+
+                <label>
+                  <span>Provider password</span>
+                  <input
+                    type="password"
+                    value={providerPassword}
+                    onChange={(event) => setProviderPassword(event.target.value)}
+                    placeholder="Password"
+                    required
+                  />
+                </label>
+
+                <label>
+                  <span>Label (optional)</span>
+                  <input
+                    value={providerLabel}
+                    onChange={(event) => setProviderLabel(event.target.value)}
+                    placeholder="Work membership or personal login"
+                  />
+                </label>
+
+                <div className="account-actions">
+                  <button type="submit" className="travel-primary" disabled={providerBusy}>
+                    {providerBusy ? "Connecting..." : "Connect provider"}
+                  </button>
+                  <a className="travel-secondary" href={availableProviders.find((provider) => provider.key === providerKey)?.loginUrl || "/account"} target="_blank" rel="noreferrer">
+                    Open provider login
+                  </a>
+                </div>
+              </form>
+            ) : null}
+
+            {providerMessage ? <p className="account-message">{providerMessage}</p> : null}
+
+            {providerLinks.length === 0 ? (
+              <p>No linked provider accounts yet. Start with ADHA so we can unlock CE Smart for the signed-in dentist who owns that membership.</p>
+            ) : (
+              <div className="account-list">
+                {providerLinks.map((link) => (
+                  <div key={link.id} className="account-list__item">
+                    <strong>{link.provider_name}</strong>
+                    <span>{link.login_label || link.username_hint || "Credential connected"}</span>
+                    <span>Status: {link.status || "connected"}{link.last_synced_at ? ` • last synced ${new Date(link.last_synced_at).toLocaleString()}` : ""}</span>
+                    {link.last_error ? <span>Last issue: {link.last_error}</span> : null}
+                    <div className="account-actions">
+                      <button type="button" className="travel-secondary" onClick={() => handleProviderDisconnect(link.id)} disabled={providerBusy}>
+                        Disconnect
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {plannedProviders.length > 0 ? (
+              <>
+                <p className="packages-builder__eyebrow">Queued next</p>
+                <div className="account-chip-row">
+                  {plannedProviders.map((provider) => (
+                    <span key={provider.key} className="account-chip">{provider.name}</span>
+                  ))}
+                </div>
+              </>
+            ) : null}
           </div>
 
           <div className="card account-card">

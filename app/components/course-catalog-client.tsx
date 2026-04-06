@@ -1,9 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { CourseRecord } from "@/lib/courses";
 import CourseCard from "./coursecard";
 import { useSavedCourses } from "./saved-courses-provider";
+import { useAuth } from "./auth-provider";
+import { supabase } from "@/lib/supabase";
+import StateRequirementsPanel from "./state-requirements-panel";
+import { getPracticeStateName, normalizePracticeStateCode } from "@/lib/practice-states";
 
 type FilterOption = {
   label: string;
@@ -105,6 +109,7 @@ export default function CourseCatalogClient({
   };
   defaultSavedOnly?: boolean;
 }) {
+  const { user } = useAuth();
   const { savedCourseIds } = useSavedCourses();
   const [savedOnly, setSavedOnly] = useState(defaultSavedOnly);
   const [sortBy, setSortBy] = useState("balanced");
@@ -112,6 +117,42 @@ export default function CourseCatalogClient({
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
   const [selectedFormats, setSelectedFormats] = useState<string[]>([]);
+  const [practiceStateCode, setPracticeStateCode] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPracticeState() {
+      if (!user) {
+        setPracticeStateCode("");
+        return;
+      }
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("state_of_practice")
+        .maybeSingle();
+
+      if (cancelled) return;
+      setPracticeStateCode(normalizePracticeStateCode(data?.state_of_practice || user.user_metadata?.state_of_practice));
+    }
+
+    loadPracticeState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const providerSuggestions = useMemo(() => {
+    const stateName = getPracticeStateName(practiceStateCode);
+    if (!stateName) return [];
+
+    return filters.providers
+      .map((provider) => provider.label)
+      .filter((provider) => provider.toLowerCase().includes(stateName.toLowerCase()))
+      .slice(0, 4);
+  }, [filters.providers, practiceStateCode]);
 
   const visibleCourses = useMemo(() => {
     const searchTerm = normalize(search);
@@ -188,6 +229,12 @@ export default function CourseCatalogClient({
 
   return (
     <>
+      <StateRequirementsPanel
+        stateCode={practiceStateCode}
+        providerSuggestions={providerSuggestions}
+        signedIn={Boolean(user)}
+      />
+
       <div className="course-filters">
         <div className="course-filters__search">
           <input

@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { filterCurrentOrFutureCourses } from '../lib/course-eligibility.js';
 
 const COLUMNS = [
   'provider',
@@ -49,12 +50,16 @@ function rowKey(row) {
   ].join('|');
 }
 
-export function writeCSV(rows) {
-  const csvPath = path.join(process.cwd(), 'data', 'pending_courses.csv');
-  const jsonPath = path.join(process.cwd(), 'data', 'pending_courses.json');
+export function writeCSV(rows, options = {}) {
+  const baseName = options.baseName || 'pending_courses';
+  const skippedName = options.skippedName || 'skipped_past_courses';
+  const csvPath = path.join(process.cwd(), 'data', `${baseName}.csv`);
+  const jsonPath = path.join(process.cwd(), 'data', `${baseName}.json`);
+  const skippedPath = path.join(process.cwd(), 'data', `${skippedName}.json`);
 
+  const filtered = filterCurrentOrFutureCourses(rows);
   const seen = new Set();
-  const deduped = rows.filter((row) => {
+  const deduped = filtered.rows.filter((row) => {
     const key = rowKey(row);
     if (seen.has(key)) return false;
     seen.add(key);
@@ -69,7 +74,17 @@ export function writeCSV(rows) {
 
   fs.writeFileSync(csvPath, [header, ...lines].join('\n'), 'utf8');
   fs.writeFileSync(jsonPath, JSON.stringify(deduped, null, 2), 'utf8');
+  fs.writeFileSync(skippedPath, JSON.stringify(filtered.skipped, null, 2), 'utf8');
 
   console.log(`✅ Wrote ${deduped.length} rows to ${csvPath}`);
   console.log(`✅ Wrote ${deduped.length} rows to ${jsonPath}`);
+  if (filtered.skipped.length) {
+    console.log(`🧹 Skipped ${filtered.skipped.length} past dated rows before CSV/upload review (${filtered.today}); details in ${skippedPath}`);
+  }
+
+  return {
+    rows: deduped,
+    skipped: filtered.skipped,
+    today: filtered.today,
+  };
 }

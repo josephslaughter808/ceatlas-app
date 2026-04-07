@@ -80,6 +80,16 @@ p {
   color: white;
 }
 
+.button--light {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--color-primary);
+}
+
+.button--light:hover {
+  background: white;
+  color: var(--color-accent);
+}
+
 .card,
 .course-card {
   background: rgba(255, 255, 255, 0.82);
@@ -301,6 +311,27 @@ button.auth-button {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1rem;
+}
+
+.launch-cta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1.5rem;
+  align-items: center;
+  padding: 1.4rem;
+  background:
+    radial-gradient(circle at top left, rgba(185, 109, 45, 0.16), transparent 30%),
+    rgba(255, 255, 255, 0.84);
+}
+
+.launch-cta > div {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.launch-cta p:not(.hero__eyebrow) {
+  color: var(--color-muted);
+  max-width: 78ch;
 }
 
 .course-grid {
@@ -1819,6 +1850,39 @@ button.auth-button {
   color: var(--color-muted);
 }
 
+.provider-hero {
+  background:
+    radial-gradient(circle at top right, rgba(29, 95, 143, 0.16), transparent 30%),
+    linear-gradient(140deg, rgba(255, 255, 255, 0.9), rgba(255, 253, 248, 0.9));
+}
+
+.provider-pitch-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.provider-checklist {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 1.25rem;
+  align-items: start;
+  margin-top: 1rem;
+  padding: 1.4rem;
+}
+
+.provider-checklist > div {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.provider-checklist ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--color-muted);
+}
+
 @keyframes drift {
   from {
     transform: translateX(0);
@@ -1842,6 +1906,9 @@ button.auth-button {
   .hero,
   .course-detail__grid,
   .legal-grid,
+  .provider-pitch-grid,
+  .provider-checklist,
+  .launch-cta,
   .packages-hero,
   .travel-hero,
   .travel-grid,

@@ -24,6 +24,7 @@ export default async function HomePage() {
           </p>
           <div className="hero__actions">
             <Link href="/courses" className="button">Browse Courses</Link>
+            <Link href="/list-your-ce" className="button button--light">List your CE</Link>
           </div>
         </div>
 
@@ -59,6 +60,18 @@ export default async function HomePage() {
             <p>Uses the synced database as the website source of truth so the UI stays current automatically.</p>
           </div>
         </div>
+      </section>
+
+      <section className="home-section launch-cta card">
+        <div>
+          <p className="hero__eyebrow">Beta Launch</p>
+          <h2>CE providers can help us clean up the catalog faster.</h2>
+          <p>
+            If you run dental CE, conferences, cruises, or hands-on training, send us the official catalog link.
+            We are prioritizing verified provider pages and beta sponsorship conversations before launch.
+          </p>
+        </div>
+        <Link href="/list-your-ce" className="button">List your CE</Link>
       </section>
 
       <section className="home-section">

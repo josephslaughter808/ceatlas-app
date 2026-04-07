@@ -39,6 +39,7 @@ export default function ContactPage() {
             CEAtlas is preparing beta sponsorship, featured placement, and provider-profile options for CE
             organizations that want to reach dentists planning their education calendar.
           </p>
+          <Link href="/list-your-ce">See provider options</Link>
         </article>
         <article className="card legal-card">
           <h2>Support</h2>

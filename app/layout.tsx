@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AuthProvider } from "./components/auth-provider";
 import { CompareProvider } from "./components/compare-provider";
 import { SavedCoursesProvider } from "./components/saved-courses-provider";
+import Analytics from "./components/analytics";
 import SiteHeader from "./components/site-header";
 import { TravelPlannerProvider } from "./components/travel-planner-provider";
 import "./globals.css";
@@ -19,8 +20,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://ceatlas-app.vercel.app"),
   title: "CEAtlas",
   description: "A searchable dental continuing education catalog for comparing courses, conferences, cruises, and CE travel ideas.",
+  openGraph: {
+    title: "CEAtlas",
+    description: "Search and compare dental CE courses, conferences, cruises, and CE travel ideas.",
+    url: "/",
+    siteName: "CEAtlas",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -31,6 +40,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <Analytics />
         <AuthProvider>
           <CompareProvider>
             <SavedCoursesProvider>
@@ -60,6 +70,7 @@ export default function RootLayout({
                         <Link href="/compare">Compare</Link>
                         <Link href="/account">Account</Link>
                         <Link href="/cruises">Cruises</Link>
+                        <Link href="/list-your-ce">List your CE</Link>
                         <Link href="/contact">Contact</Link>
                         <Link href="/privacy">Privacy</Link>
                         <Link href="/terms">Terms</Link>

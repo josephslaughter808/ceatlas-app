@@ -2,6 +2,8 @@ import { syncProviderCatalog, getCatalogStats } from '../lib/db.js';
 import { writeCSV } from '../scrapers/write-csv.js';
 import { scrapeAchieveCE } from '../scrapers/providers/achievece.js';
 import { scrapeADHA } from '../scrapers/providers/adha.js';
+import { scrapeAllConferenceAlertDentistry } from '../scrapers/providers/all-conference-alert-dentistry.js';
+import { scrapeAAPAnnualMeeting2026 } from '../scrapers/providers/aap-annual-meeting.js';
 import { scrapeBiolase } from '../scrapers/providers/biolase.js';
 import { scrapeBlueSkyBio } from '../scrapers/providers/blueskybio.js';
 import { scrapeBU } from '../scrapers/providers/bu.js';
@@ -12,17 +14,21 @@ import { scrapeCDEWorld } from '../scrapers/providers/cdeworld.js';
 import { scrapeColoradoCE } from '../scrapers/providers/colorado.js';
 import { scrapeColumbia } from '../scrapers/providers/columbia.js';
 import { scrapeConcordSeminars } from '../scrapers/providers/concordseminars.js';
+import { scrapeConferenceIndexDentistry } from '../scrapers/providers/conference-index-dentistry.js';
 import { scrapeDMG } from '../scrapers/providers/dmg.js';
 import { scrapeDACE } from '../scrapers/providers/dace.js';
 import { scrapeDentalCEAcademy } from '../scrapers/providers/dentalceacademy.js';
 import { scrapeDentalDidactics } from '../scrapers/providers/dentaldidactics.js';
 import { scrapeDentalLearning } from '../scrapers/providers/dentallearning.js';
 import { scrapeDentalXP } from '../scrapers/providers/dentalxp.js';
+import { scrapeDentalTribuneGlobalEvents } from '../scrapers/providers/dental-tribune-global.js';
+import { scrapeDentalTribuneEvents } from '../scrapers/providers/dental-tribune-events.js';
 import { scrapeDentEventsFutureInPerson } from '../scrapers/providers/dentevents.js';
 import { scrapeDDSCommunities } from '../scrapers/providers/dds-communities.js';
 import { scrapeDDSWorld } from '../scrapers/providers/ddsworld.js';
 import { scrapeDentaltown } from '../scrapers/providers/dentaltown.js';
 import { scrapeDimensions } from '../scrapers/providers/dimensions.js';
+import { scrapeDigitellConference } from '../scrapers/providers/digitell.js';
 import { scrapeEAOBatch } from '../scrapers/providers/eao-batch.js';
 import { scrapeFutureInPersonEventscribeListings } from '../scrapers/providers/eventscribe-listing.js';
 import { scrapeFDC2026 } from '../scrapers/providers/fdc.js';
@@ -84,6 +90,27 @@ import { scrapeOsteologyBatch } from '../scrapers/providers/osteology-batch.js';
 import { scrapeOrthotown } from '../scrapers/providers/orthotown.js';
 
 const PROVIDERS = {
+  'all-conference-alert-dentistry': {
+    label: 'All Conference Alert dentistry events',
+    scrape: () => scrapeAllConferenceAlertDentistry(),
+  },
+  'aap-annual-meeting-2026': {
+    label: 'AAP Annual Meeting 2026',
+    scrape: () => scrapeAAPAnnualMeeting2026(),
+  },
+  aao2026: {
+    label: 'AAO Annual Session 2026',
+    scrape: () => scrapeDigitellConference({
+      provider: 'AAO',
+      providerSlug: 'aao',
+      scheduleUrl: 'https://education.aaoinfo.org/live/1013/page/5556',
+      accreditation: 'American Association of Orthodontists Annual Session 2026',
+      city: 'Orlando',
+      state: 'FL',
+      country: 'USA',
+      format: 'In Person',
+    }),
+  },
   achievece: {
     label: 'AchieveCE Dental',
     scrape: () => scrapeAchieveCE(),
@@ -131,6 +158,10 @@ const PROVIDERS = {
   concordseminars: {
     label: 'Concord Seminars',
     scrape: () => scrapeConcordSeminars(),
+  },
+  'conference-index-dentistry': {
+    label: 'Conference Index dentistry events',
+    scrape: () => scrapeConferenceIndexDentistry(),
   },
   dmg: {
     label: 'DMG America CE',
@@ -183,6 +214,14 @@ const PROVIDERS = {
   dentalxp: {
     label: 'DentalXP',
     scrape: () => scrapeDentalXP(),
+  },
+  'dental-tribune-global': {
+    label: 'Dental Tribune International events',
+    scrape: () => scrapeDentalTribuneGlobalEvents(),
+  },
+  'dental-tribune-events': {
+    label: 'Dental Tribune current in-person events',
+    scrape: () => scrapeDentalTribuneEvents(),
   },
   dace: {
     label: 'Dental Academy of Continuing Education',

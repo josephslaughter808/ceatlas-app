@@ -156,6 +156,11 @@ https://events.floridadental.org/index.cfm?do=expomap.sessResults&event_id=79&re
 https://www.prereg.net/qListPlugin/indexTDA.html?qDataSource=2026_tda
 https://www.dentevents.com/sitemap.xml
 https://www.worlddentalevents.com/events
+https://am2026.perio.org/schedule-of-events-2/
+https://us.dental-tribune.com/topic/
+https://www.dental-tribune.com/event/
+https://conferenceindex.org/conferences/dentistry
+https://allconferencealert.net/topics/dentistry.php
 
 # Verified official sites queued for next provider chunks
 # Dentaltown CE — https://www.dentaltown.com/ce (currently returning 403 to direct requests)

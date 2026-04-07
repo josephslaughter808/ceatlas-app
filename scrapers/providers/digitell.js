@@ -73,18 +73,36 @@ export async function scrapeDigitellConference(config) {
   console.log(`   • Scraping ${config.provider} Digitell conference catalog`);
 
   const apiUrl = config.apiUrl || `${config.scheduleUrl.replace(/\/$/, '')}/api/sessions`;
-  const { data: payload } = await axios.get(apiUrl, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; CEAtlasBot/1.0)',
-      Accept: 'application/json, text/plain, */*',
-    },
-  });
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (compatible; CEAtlasBot/1.0)',
+    Accept: 'application/json, text/plain, */*',
+  };
 
-  const topLevelItems = Array.isArray(payload?.items)
-    ? payload.items
-    : Array.isArray(payload?.data)
-      ? payload.data
-      : [];
+  const topLevelItems = [];
+  const pageLimit = 50;
+
+  for (let offset = 0; offset < 1000; offset += pageLimit) {
+    const { data: payload } = await axios.get(apiUrl, {
+      headers,
+      params: {
+        limit: pageLimit,
+        offset,
+      },
+    });
+
+    const pageItems = Array.isArray(payload?.items)
+      ? payload.items
+      : Array.isArray(payload?.data)
+        ? payload.data
+        : [];
+
+    topLevelItems.push(...pageItems);
+
+    const totalCount = Number.parseInt(payload?.count, 10);
+    if (pageItems.length < pageLimit || (Number.isFinite(totalCount) && offset + pageItems.length >= totalCount)) {
+      break;
+    }
+  }
 
   if (topLevelItems.length === 0) {
     console.log(`   • No session payload found for ${config.provider}`);

@@ -73,9 +73,20 @@ const FUTURE_IN_PERSON_CONFERENCES = [
     country: 'USA',
     topic: 'General Dentistry',
   },
+  {
+    provider: 'AAE 2026',
+    providerSlug: 'aae-2026',
+    sourceUrl: 'https://aae26.eventscribe.net/agenda.asp?BCFO=AA|G|M|OR|P|SE|WS&pfp=FullSchedule&fa=&fb=&fc=&fd=&all=1',
+    accreditation: 'American Association of Endodontists Annual Meeting 2026',
+    location: 'Salt Palace Convention Center, Salt Lake City, UT',
+    city: 'Salt Lake City',
+    state: 'UT',
+    country: 'USA',
+    topic: 'Endodontics',
+  },
 ];
 
-const EXCLUDED_TITLE_PATTERN = /\b(registration|information|headquarters|speaker ready|committee|caucus|board meeting|business meeting|executive committee|delegates|luggage|first aid|mothers[’']? room|breakfast|lunch|dinner|reception|exhibit hall|coffee break|poster setup|staff meeting|volunteer|orientation)\b/i;
+const EXCLUDED_TITLE_PATTERN = /\b(registration|information|headquarters|speaker ready|committee|caucus|board meeting|business meeting|executive committee|delegates|luggage|first aid|mothers[’']? room|break|brunch|breakfast|lunch|dinner|reception|exhibit hall|coffee break|poster setup|staff meeting|volunteer|orientation|award ceremony|awards brunch)\b/i;
 
 function cleanText(value = '', max = 1200) {
   return String(value || '')

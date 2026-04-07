@@ -10,6 +10,8 @@ import {
 import { scrapeADA } from './providers/ada.js';
 import { scrapeAchieveCE } from './providers/achievece.js';
 import { scrapeADHA } from './providers/adha.js';
+import { scrapeAllConferenceAlertDentistry } from './providers/all-conference-alert-dentistry.js';
+import { scrapeAAPAnnualMeeting2026 } from './providers/aap-annual-meeting.js';
 import { scrapeAAFE } from './providers/aafe.js';
 import { scrapeBiolase } from './providers/biolase.js';
 import { scrapeBlueSkyBio } from './providers/blueskybio.js';
@@ -25,6 +27,8 @@ import { scrapeDentalCEAcademy } from './providers/dentalceacademy.js';
 import { scrapeDentalDidactics } from './providers/dentaldidactics.js';
 import { scrapeDentalLearning } from './providers/dentallearning.js';
 import { scrapeDentalXP } from './providers/dentalxp.js';
+import { scrapeDentalTribuneGlobalEvents } from './providers/dental-tribune-global.js';
+import { scrapeDentalTribuneEvents } from './providers/dental-tribune-events.js';
 import { scrapeDentEventsFutureInPerson } from './providers/dentevents.js';
 import { scrapeDDSCommunities } from './providers/dds-communities.js';
 import { scrapeDDSWorld } from './providers/ddsworld.js';
@@ -38,6 +42,7 @@ import { scrapeHygienetown } from './providers/hygienetown.js';
 import { scrapeIHS } from './providers/ihs.js';
 import { scrapeColumbia } from './providers/columbia.js';
 import { scrapeConcordSeminars } from './providers/concordseminars.js';
+import { scrapeConferenceIndexDentistry } from './providers/conference-index-dentistry.js';
 import { scrapeEventscribeConference } from './providers/eventscribe.js';
 import { scrapeFutureInPersonEventscribeListings } from './providers/eventscribe-listing.js';
 import { scrapeFDC2026 } from './providers/fdc.js';
@@ -320,6 +325,18 @@ async function scrapeProvider(providerUrl) {
     return scrapeWorldDentalEventsInPerson();
   }
 
+  if (hostname.includes('am2026.perio.org')) {
+    return scrapeAAPAnnualMeeting2026();
+  }
+
+  if (hostname === 'dental-tribune.com' && providerUrl.includes('/event')) {
+    return scrapeDentalTribuneGlobalEvents();
+  }
+
+  if (hostname.includes('us.dental-tribune.com') && providerUrl.includes('/topic')) {
+    return scrapeDentalTribuneEvents();
+  }
+
   if (hostname.includes('dimensionsofdentalhygiene.com')) {
     return scrapeDimensions();
   }
@@ -410,6 +427,14 @@ async function scrapeProvider(providerUrl) {
 
   if (hostname.includes('concordseminars.com')) {
     return scrapeConcordSeminars();
+  }
+
+  if (hostname.includes('conferenceindex.org') && providerUrl.includes('/conferences/dentistry')) {
+    return scrapeConferenceIndexDentistry();
+  }
+
+  if (hostname.includes('allconferencealert.net') && providerUrl.includes('/topics/dentistry')) {
+    return scrapeAllConferenceAlertDentistry();
   }
 
   if (hostname.includes('events.floridadental.org')) {

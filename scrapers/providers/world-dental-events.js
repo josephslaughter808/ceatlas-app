@@ -7,9 +7,10 @@ const execFileAsync = promisify(execFile);
 
 const BASE_URL = 'https://www.worlddentalevents.com';
 const SOURCE_URL = `${BASE_URL}/events`;
-const MAX_ROWS = 1200;
-const MAX_PAGES_PER_TYPE = 40;
+const MAX_ROWS = 5000;
+const MAX_PAGES_PER_TYPE = 80;
 const EVENT_TYPES = [
+  '',
   'Conference',
   'Congress',
   'Convention',
@@ -43,7 +44,6 @@ const MONTHS = {
   Dec: '12',
 };
 
-const DENTAL_RELEVANCE_PATTERN = /\b(dental|dentist|dentistry|orthodont|endodont|periodont|prosthodont|implant|oral|maxillofacial|hygien|stomatolog|odont|osseointegration|gnatholog|orofacial|craniofacial|smile|teeth|tooth|dentur|caries|occlusion)\b/i;
 const REMOTE_PATTERN = /\b(webinar|online|virtual|livestream|remote|on[-\s]?demand)\b/i;
 const WEAK_TITLE_PATTERN = /^(read more|learn more|click here)$/i;
 
@@ -95,7 +95,6 @@ function keepEvent({ title, eventType, location, organisation }) {
   if (!title || WEAK_TITLE_PATTERN.test(title)) return false;
   if (REMOTE_PATTERN.test(combined)) return false;
   if (/^online$/i.test(location)) return false;
-  if (/^(Course|Seminar|Training|Lecture|Study Club)$/i.test(eventType) && !DENTAL_RELEVANCE_PATTERN.test(combined)) return false;
   return true;
 }
 
@@ -189,7 +188,8 @@ export async function scrapeWorldDentalEventsInPerson() {
   for (const eventType of EVENT_TYPES) {
     if (rows.length >= MAX_ROWS) break;
 
-    const firstUrl = `${SOURCE_URL}?type=${encodeURIComponent(eventType)}`;
+    const firstUrl = eventType ? `${SOURCE_URL}?type=${encodeURIComponent(eventType)}` : SOURCE_URL;
+    const eventTypeLabel = eventType || 'All Events';
     let parsed;
 
     try {
@@ -216,15 +216,17 @@ export async function scrapeWorldDentalEventsInPerson() {
     collect(parsed.rows);
 
     for (let page = 2; page <= maxPage && rows.length < MAX_ROWS; page += 1) {
-      const pageUrl = `${SOURCE_URL}?type=${encodeURIComponent(eventType)}&page=${page}`;
+      const pageUrl = eventType
+        ? `${SOURCE_URL}?type=${encodeURIComponent(eventType)}&page=${page}`
+        : `${SOURCE_URL}?page=${page}`;
       try {
         collect(parsePage(await fetchPage(pageUrl)).rows);
       } catch (error) {
-        console.log(`      ⚠️ ${eventType} page ${page} skipped: ${error.message}`);
+        console.log(`      ⚠️ ${eventTypeLabel} page ${page} skipped: ${error.message}`);
       }
     }
 
-    console.log(`      • ${eventType}: ${pageRows.length} in-person rows`);
+    console.log(`      • ${eventTypeLabel}: ${pageRows.length} in-person rows`);
   }
 
   console.log(`   • Extracted ${rows.length} World Dental Events in-person rows`);

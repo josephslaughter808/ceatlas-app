@@ -13,6 +13,7 @@ import { scrapeADHA } from './providers/adha.js';
 import { scrapeAGD } from './providers/agd.js';
 import { scrapeAAFE } from './providers/aafe.js';
 import { scrapeBiolase } from './providers/biolase.js';
+import { scrapeBlueSkyBio } from './providers/blueskybio.js';
 import { scrapeBU } from './providers/bu.js';
 import { scrapeBuffalo } from './providers/buffalo.js';
 import { scrapeCarestream } from './providers/carestream.js';
@@ -21,6 +22,8 @@ import { scrapeColoradoCE } from './providers/colorado.js';
 import { scrapeDigitellConference } from './providers/digitell.js';
 import { scrapeDMG } from './providers/dmg.js';
 import { scrapeDACE } from './providers/dace.js';
+import { scrapeDentalCEAcademy } from './providers/dentalceacademy.js';
+import { scrapeDentalDidactics } from './providers/dentaldidactics.js';
 import { scrapeDentalLearning } from './providers/dentallearning.js';
 import { scrapeDentalXP } from './providers/dentalxp.js';
 import { scrapeDDSCommunities } from './providers/dds-communities.js';
@@ -28,11 +31,13 @@ import { scrapeDDSWorld } from './providers/ddsworld.js';
 import { scrapeDentaltown } from './providers/dentaltown.js';
 import { scrapeDimensions } from './providers/dimensions.js';
 import { scrapeGIDE } from './providers/gide.js';
+import { scrapeGIIA } from './providers/giia.js';
 import { scrapeGNYDM } from './providers/gnydm.js';
 import { scrapeHenryScheinOrtho } from './providers/henryscheinortho.js';
 import { scrapeHygienetown } from './providers/hygienetown.js';
 import { scrapeIHS } from './providers/ihs.js';
 import { scrapeColumbia } from './providers/columbia.js';
+import { scrapeConcordSeminars } from './providers/concordseminars.js';
 import { scrapeEventscribeConference } from './providers/eventscribe.js';
 import { scrapeGlidewell } from './providers/glidewell.js';
 import { scrapeHinman } from './providers/hinman.js';
@@ -41,6 +46,7 @@ import { scrapeIvoclar } from './providers/ivoclar.js';
 import { scrapeKuraray } from './providers/kuraray.js';
 import { scrapeLLU } from './providers/llu.js';
 import { scrapeMarylandMSDA } from './providers/maryland.js';
+import { scrapeMyDentalCE } from './providers/mydentalce.js';
 import { scrapeNetCE } from './providers/netce.js';
 import { scrapeNova } from './providers/nova.js';
 import { scrapeOHIS } from './providers/ohis.js';
@@ -77,6 +83,7 @@ import { scrapeUMN } from './providers/umn.js';
 import { scrapeUKYBatch } from './providers/uky-batch.js';
 import { scrapeUW } from './providers/uw.js';
 import { scrapeViva, scrapeVivaDirectOnDemand } from './providers/viva.js';
+import { scrapeVivaPartnerLearning } from './providers/viva-partners.js';
 import { scrapeWorldDentalAcademy } from './providers/worlddentalacademy.js';
 import { scrapeYankee } from './providers/yankee.js';
 import { scrapeZahn } from './providers/zahn.js';
@@ -285,6 +292,18 @@ async function scrapeProvider(providerUrl) {
     return scrapeDentalLearning();
   }
 
+  if (hostname.includes('dentalceacademy.com')) {
+    return scrapeDentalCEAcademy();
+  }
+
+  if (hostname.includes('dentaldidacticsce.com')) {
+    return scrapeDentalDidactics();
+  }
+
+  if (hostname.includes('mydentalce.com')) {
+    return scrapeMyDentalCE();
+  }
+
   if (hostname.includes('dentalxp.com')) {
     return scrapeDentalXP();
   }
@@ -307,6 +326,10 @@ async function scrapeProvider(providerUrl) {
 
   if (hostname.includes('events.gidedental.com') || hostname.includes('gidedental.com')) {
     return scrapeGIDE();
+  }
+
+  if (hostname.includes('giiausa.com')) {
+    return scrapeGIIA();
   }
 
   if (hostname.includes('dtstudyclub.com') && providerUrl.includes('dds-world-communities')) {
@@ -353,6 +376,10 @@ async function scrapeProvider(providerUrl) {
     return scrapeBiolase();
   }
 
+  if (hostname.includes('blueskybio.university') || hostname.includes('blueskybio.digital')) {
+    return scrapeBlueSkyBio();
+  }
+
   if (hostname.includes('bu.edu')) {
     return scrapeBU();
   }
@@ -367,6 +394,10 @@ async function scrapeProvider(providerUrl) {
 
   if (hostname.includes('dental.columbia.edu')) {
     return scrapeColumbia();
+  }
+
+  if (hostname.includes('concordseminars.com')) {
+    return scrapeConcordSeminars();
   }
 
   if (hostname.includes('dmg-america.com')) {
@@ -530,6 +561,24 @@ async function scrapeProvider(providerUrl) {
 
   if (hostname.includes('vivalearning.com')) {
     return scrapeVivaDirectOnDemand();
+  }
+
+  if (
+    hostname.includes('kulzerlearning.com')
+    || hostname.includes('sdilearning.com')
+    || hostname.includes('vocolearning.com')
+    || hostname.includes('shofulearning.com')
+    || hostname.includes('dentalezlearning.com')
+    || hostname.includes('airtechniqueslearning.com')
+    || hostname.includes('biscolearning.com')
+    || hostname.includes('gcatraining.com')
+    || hostname.includes('coltenelearning.com')
+    || hostname.includes('kuraraydentallearning.com')
+    || hostname.includes('septodontlearning.com')
+    || hostname.includes('pulpdentlearning.com')
+    || hostname.includes('dmglearning.com')
+  ) {
+    return scrapeVivaPartnerLearning();
   }
 
   if (hostname.includes('courses.worlddentalacademy.com') || hostname.includes('worlddentalacademy.com')) {

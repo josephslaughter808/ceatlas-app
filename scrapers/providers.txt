@@ -127,6 +127,25 @@ https://www.ohi-s.com/courses
 https://cezoom.com/courses
 https://www.dentallearning.net/sitemap.xml
 https://www.dentalxp.com/sitemap.xml
+https://www.dentalceacademy.com/pages-sitemap.xml
+https://www.dentaldidacticsce.com/ce-courses/
+https://www.mydentalce.com/products.json?limit=250
+https://www.blueskybio.university/webinarsrecorded
+https://giiausa.com/products.json?limit=250
+https://www.concordseminars.com/sitemap.xml
+https://kulzerlearning.com/training.asp
+https://www.sdilearning.com/training.asp
+https://vocolearning.com/training.asp
+https://shofulearning.com/training.asp
+https://www.dentalezlearning.com/training.asp
+https://airtechniqueslearning.com/training.asp
+https://biscolearning.com/training.asp
+https://gcatraining.com/training.asp
+https://coltenelearning.com/training.asp
+https://kuraraydentallearning.com/training.asp
+https://septodontlearning.com/training.asp
+https://www.pulpdentlearning.com/training.asp
+https://dmglearning.com/training.asp
 
 # Verified official sites queued for next provider chunks
 # Dentaltown CE — https://www.dentaltown.com/ce (currently returning 403 to direct requests)

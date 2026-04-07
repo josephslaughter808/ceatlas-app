@@ -3,14 +3,19 @@ import { writeCSV } from '../scrapers/write-csv.js';
 import { scrapeAchieveCE } from '../scrapers/providers/achievece.js';
 import { scrapeADHA } from '../scrapers/providers/adha.js';
 import { scrapeBiolase } from '../scrapers/providers/biolase.js';
+import { scrapeBlueSkyBio } from '../scrapers/providers/blueskybio.js';
 import { scrapeBU } from '../scrapers/providers/bu.js';
 import { scrapeBuffalo } from '../scrapers/providers/buffalo.js';
 import { scrapeCarestream } from '../scrapers/providers/carestream.js';
 import { scrapeCEZoom } from '../scrapers/providers/cezoom.js';
+import { scrapeCDEWorld } from '../scrapers/providers/cdeworld.js';
 import { scrapeColoradoCE } from '../scrapers/providers/colorado.js';
 import { scrapeColumbia } from '../scrapers/providers/columbia.js';
+import { scrapeConcordSeminars } from '../scrapers/providers/concordseminars.js';
 import { scrapeDMG } from '../scrapers/providers/dmg.js';
 import { scrapeDACE } from '../scrapers/providers/dace.js';
+import { scrapeDentalCEAcademy } from '../scrapers/providers/dentalceacademy.js';
+import { scrapeDentalDidactics } from '../scrapers/providers/dentaldidactics.js';
 import { scrapeDentalLearning } from '../scrapers/providers/dentallearning.js';
 import { scrapeDentalXP } from '../scrapers/providers/dentalxp.js';
 import { scrapeDDSCommunities } from '../scrapers/providers/dds-communities.js';
@@ -19,6 +24,7 @@ import { scrapeDentaltown } from '../scrapers/providers/dentaltown.js';
 import { scrapeDimensions } from '../scrapers/providers/dimensions.js';
 import { scrapeEAOBatch } from '../scrapers/providers/eao-batch.js';
 import { scrapeGIDE } from '../scrapers/providers/gide.js';
+import { scrapeGIIA } from '../scrapers/providers/giia.js';
 import { scrapeGNYDM } from '../scrapers/providers/gnydm.js';
 import { scrapeGlidewell } from '../scrapers/providers/glidewell.js';
 import { scrapeHenryScheinOrtho } from '../scrapers/providers/henryscheinortho.js';
@@ -29,6 +35,7 @@ import { scrapeIvoclar } from '../scrapers/providers/ivoclar.js';
 import { scrapeLLU } from '../scrapers/providers/llu.js';
 import { scrapeLLUPrograms } from '../scrapers/providers/llu-programs.js';
 import { scrapeMarylandMSDA } from '../scrapers/providers/maryland.js';
+import { scrapeMyDentalCE } from '../scrapers/providers/mydentalce.js';
 import { scrapeNetCE } from '../scrapers/providers/netce.js';
 import { scrapeNova } from '../scrapers/providers/nova.js';
 import { scrapeOHIS } from '../scrapers/providers/ohis.js';
@@ -65,6 +72,7 @@ import { scrapeUMN } from '../scrapers/providers/umn.js';
 import { scrapeUKYBatch } from '../scrapers/providers/uky-batch.js';
 import { scrapeUW } from '../scrapers/providers/uw.js';
 import { scrapeVivaDirectOnDemand } from '../scrapers/providers/viva.js';
+import { scrapeVivaPartnerLearning } from '../scrapers/providers/viva-partners.js';
 import { scrapeWorldDentalAcademy } from '../scrapers/providers/worlddentalacademy.js';
 import { scrapeZahn } from '../scrapers/providers/zahn.js';
 import { scrapeOsteologyBatch } from '../scrapers/providers/osteology-batch.js';
@@ -78,6 +86,10 @@ const PROVIDERS = {
   biolase: {
     label: 'BIOLASE Education',
     scrape: () => scrapeBiolase(),
+  },
+  blueskybio: {
+    label: 'BlueSkyBio University',
+    scrape: () => scrapeBlueSkyBio(),
   },
   adha: {
     label: 'ADHA CE Smart',
@@ -99,6 +111,10 @@ const PROVIDERS = {
     label: 'CE Zoom Dental CE',
     scrape: () => scrapeCEZoom(),
   },
+  cdeworld: {
+    label: 'CDEWorld',
+    scrape: () => scrapeCDEWorld(),
+  },
   colorado: {
     label: 'CU Anschutz Dental CE',
     scrape: () => scrapeColoradoCE(),
@@ -106,6 +122,10 @@ const PROVIDERS = {
   columbia: {
     label: 'Columbia Dental CE',
     scrape: () => scrapeColumbia(),
+  },
+  concordseminars: {
+    label: 'Concord Seminars',
+    scrape: () => scrapeConcordSeminars(),
   },
   dmg: {
     label: 'DMG America CE',
@@ -127,6 +147,10 @@ const PROVIDERS = {
     label: 'gIDE Europe',
     scrape: () => scrapeGIDE(),
   },
+  giia: {
+    label: 'GIIA USA',
+    scrape: () => scrapeGIIA(),
+  },
   dentaltown: {
     label: 'Dentaltown CE',
     scrape: () => scrapeDentaltown(),
@@ -142,6 +166,14 @@ const PROVIDERS = {
   dace: {
     label: 'Dental Academy of Continuing Education',
     scrape: () => scrapeDACE(),
+  },
+  dentalceacademy: {
+    label: 'Dental CE Academy',
+    scrape: () => scrapeDentalCEAcademy(),
+  },
+  dentaldidactics: {
+    label: 'Dental Didactics CE',
+    scrape: () => scrapeDentalDidactics(),
   },
   dimensions: {
     label: 'Dimensions of Dental Hygiene CE',
@@ -182,6 +214,10 @@ const PROVIDERS = {
   maryland: {
     label: 'Maryland State Dental Association CE',
     scrape: () => scrapeMarylandMSDA(),
+  },
+  mydentalce: {
+    label: 'MyDentalCE',
+    scrape: () => scrapeMyDentalCE(),
   },
   netce: {
     label: 'NetCE Dental',
@@ -322,6 +358,10 @@ const PROVIDERS = {
   'viva-direct': {
     label: 'Viva Learning direct on-demand catalog',
     scrape: () => scrapeVivaDirectOnDemand(),
+  },
+  'viva-partners': {
+    label: 'Viva-powered partner learning sites',
+    scrape: () => scrapeVivaPartnerLearning(),
   },
   worlddentalacademy: {
     label: 'World Dental Academy',

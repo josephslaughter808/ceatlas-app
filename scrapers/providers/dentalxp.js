@@ -58,6 +58,36 @@ function extractCourseUrls(xml = '') {
     .map((url) => url.replace(/^https:\/\/dentalxp\.com/i, BASE_URL));
 }
 
+function extractWebinarUrls(xml = '') {
+  return [...xml.matchAll(/<loc>(.*?)<\/loc>/g)]
+    .map((match) => match[1].trim())
+    .filter((url) => /dentalxp\.com\/catalogue\/category\/.+\/webinar\/[^/]+/i.test(url))
+    .map((url) => url.replace(/^https:\/\/dentalxp\.com/i, BASE_URL));
+}
+
+function titleFromUrl(url = '') {
+  try {
+    const slug = new URL(url).pathname.split('/').filter(Boolean).pop() || '';
+    return cleanText(decodeURIComponent(slug).replace(/[-_]+/g, ' '), 250)
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  } catch {
+    return '';
+  }
+}
+
+function categoryFromUrl(url = '') {
+  try {
+    const parts = new URL(url).pathname.split('/').filter(Boolean);
+    const categoryIndex = parts.indexOf('category');
+    return {
+      category: cleanText((parts[categoryIndex + 1] || '').replace(/-/g, ' '), 120).replace(/\b\w/g, (char) => char.toUpperCase()),
+      subcategory: cleanText((parts[categoryIndex + 2] || '').replace(/-/g, ' '), 120).replace(/\b\w/g, (char) => char.toUpperCase()),
+    };
+  } catch {
+    return { category: '', subcategory: '' };
+  }
+}
+
 function unescapePayloadValue(value = '') {
   return String(value || '')
     .replace(/\\u003c/g, '<')
@@ -242,12 +272,47 @@ async function scrapeCourse(url) {
   }
 }
 
+function scrapeWebinarUrl(url) {
+  const title = titleFromUrl(url);
+  const { category, subcategory } = categoryFromUrl(url);
+  if (!title) return null;
+
+  return normalizeCourse({
+    provider: PROVIDER,
+    provider_slug: PROVIDER_SLUG,
+    source_url: SOURCE_URL,
+    url,
+    title,
+    description: `${title} is listed in DentalXP's public webinar catalog.${category ? ` Category: ${category}.` : ''}${subcategory ? ` Topic: ${subcategory}.` : ''}`,
+    course_type: 'On-Demand Webinar',
+    format: 'Online',
+    audience: 'Dentists and Dental Team',
+    topic: inferTopic(`${title} ${category} ${subcategory}`),
+    price: 'Premium membership',
+    date_text: 'On-demand webinar',
+    location: 'Online',
+    country: 'USA',
+    accreditation: 'DentalXP online CE',
+    tags: ['DentalXP', 'Online', 'Webinar', category, subcategory].filter(Boolean),
+    metadata: {
+      extracted_from: 'dentalxp-sitemap-webinar-url-fallback',
+      category: category || null,
+      subcategory: subcategory || null,
+    },
+  });
+}
+
 export async function scrapeDentalXP() {
   console.log(`   • Scraping ${PROVIDER}`);
   const xml = await fetchText(SOURCE_URL, 'application/xml,text/xml,*/*;q=0.8');
   const courseUrls = extractCourseUrls(xml);
+  const webinarUrls = extractWebinarUrls(xml);
   console.log(`   • Found ${courseUrls.length} DentalXP course URLs`);
-  const rows = await mapWithConcurrency(courseUrls, DETAIL_CONCURRENCY, scrapeCourse);
+  console.log(`   • Found ${webinarUrls.length} DentalXP webinar URLs`);
+  const rows = [
+    ...(await mapWithConcurrency(courseUrls, DETAIL_CONCURRENCY, scrapeCourse)),
+    ...webinarUrls.map(scrapeWebinarUrl),
+  ];
   const deduped = [];
   const seen = new Set();
 

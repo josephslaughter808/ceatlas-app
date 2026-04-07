@@ -19,16 +19,44 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://ceatlas.co";
+const siteDescription =
+  "Search dental CE courses, conferences, cruises, and hands-on events from providers across the U.S. and beyond. Compare topics, formats, locations, credits, and travel options in one place.";
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://ceatlas-app.vercel.app"),
-  title: "CEAtlas",
-  description: "A searchable dental continuing education catalog for comparing courses, conferences, cruises, and CE travel ideas.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "CEAtlas | Dental CE Courses, Conferences, Cruises & Travel",
+    template: "%s | CEAtlas",
+  },
+  description: siteDescription,
+  icons: {
+    icon: [
+      { url: "/icon.png", sizes: "512x512", type: "image/png" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
   openGraph: {
-    title: "CEAtlas",
-    description: "Search and compare dental CE courses, conferences, cruises, and CE travel ideas.",
+    title: "CEAtlas | Dental CE Courses, Conferences, Cruises & Travel",
+    description: siteDescription,
     url: "/",
     siteName: "CEAtlas",
+    images: [
+      {
+        url: "/logo-search.png",
+        width: 1024,
+        height: 1024,
+        alt: "CEAtlas logo",
+      },
+    ],
     type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "CEAtlas | Dental CE Courses, Conferences, Cruises & Travel",
+    description: siteDescription,
+    images: ["/logo-search.png"],
   },
 };
 
@@ -37,9 +65,34 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const organizationJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "CEAtlas",
+    url: siteUrl,
+    logo: `${siteUrl}/logo-search.png`,
+    email: "support@ceatlas.co",
+    contactPoint: [
+      {
+        "@type": "ContactPoint",
+        email: "support@ceatlas.co",
+        contactType: "customer support",
+      },
+      {
+        "@type": "ContactPoint",
+        email: "providers@ceatlas.co",
+        contactType: "provider inquiries",
+      },
+    ],
+  };
+
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
         <Analytics />
         <AuthProvider>
           <CompareProvider>

@@ -164,7 +164,7 @@ export default function CourseCatalogClient({
         if (selectedTopics.length === 0) return true;
         return selectedTopics.some((topic) => course.topic_bucket === topic);
       })
-      .filter((course) => (selectedProviders.length === 0 ? true : selectedProviders.includes(course.provider_name || "")))
+      .filter((course) => (selectedProviders.length === 0 ? true : selectedProviders.includes(course.provider_filter_name || "")))
       .filter((course) => (selectedFormats.length === 0 ? true : selectedFormats.includes(course.next_format || "")))
       .filter((course) => {
         if (!searchTerm) return true;

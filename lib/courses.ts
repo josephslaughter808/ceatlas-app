@@ -64,6 +64,29 @@ const TOPIC_BUCKETS: Array<{ label: string; patterns: RegExp[] }> = [
   { label: 'General Dentistry', patterns: [/\bmulti-disciplinary\b/i, /\bclinical dentistry\b/i, /\belectives\b/i, /\bgeneral dental/i] },
 ];
 
+const AGGREGATOR_PROVIDER_LABELS: Array<{ label: string; patterns: RegExp[] }> = [
+  {
+    label: 'All Conference Alert Dentistry',
+    patterns: [/all-conference-alert-dentistry/i, /allconferencealert\.net/i],
+  },
+  {
+    label: 'World Dental Events',
+    patterns: [/world-dental-events/i, /worlddental\.events/i],
+  },
+  {
+    label: 'DentEvents Global Dental Events',
+    patterns: [/\bdentevents\b/i, /dentevents\.com/i],
+  },
+  {
+    label: 'Conference Index Dentistry',
+    patterns: [/conference-index-dentistry/i, /conferenceindex\.org/i],
+  },
+  {
+    label: 'Dental Tribune Events',
+    patterns: [/dental-tribune-events/i, /dental-tribune-global/i, /dental-tribune\.com/i],
+  },
+];
+
 function titleCaseWord(word: string) {
   if (!word) return word;
   if (/^[A-Z0-9&/-]{2,}$/.test(word) && word.length <= 4) return word;
@@ -126,6 +149,29 @@ function classifyTopicBucket(values: Array<string | null | undefined>) {
   }
 
   return 'General Dentistry';
+}
+
+function aggregatorSourceText(row: CatalogRow) {
+  return [
+    row.source_url,
+    row.registration_url,
+    row.metadata?.provider_catalog_url,
+    typeof row.metadata?.original_metadata === 'object' && row.metadata?.original_metadata
+      ? (row.metadata.original_metadata as Record<string, unknown>).extracted_from
+      : null,
+  ].filter(Boolean).join(' | ');
+}
+
+function providerFilterName(row: CatalogRow, providerName: string | null) {
+  const sourceText = aggregatorSourceText(row);
+
+  for (const aggregator of AGGREGATOR_PROVIDER_LABELS) {
+    if (aggregator.patterns.some((pattern) => pattern.test(sourceText))) {
+      return aggregator.label;
+    }
+  }
+
+  return providerName || 'Unknown provider';
 }
 
 function looksLikeInstructor(value: string) {
@@ -230,6 +276,7 @@ function normalizeCourse(row: CatalogRow) {
   return {
     ...row,
     provider_name: providerName,
+    provider_filter_name: providerFilterName(row, providerName),
     category,
     next_format: normalizedFormat,
     headline_topic: headlineTopic,
@@ -308,7 +355,7 @@ export async function getCourses(searchParams: CourseSearchParams = {}, take?: n
 
   const filtered = rows
     .filter((course) => matchesSearch(course, search))
-    .filter((course) => (provider ? course.provider_name === provider : true))
+    .filter((course) => (provider ? course.provider_filter_name === provider : true))
     .filter((course) => (format ? course.next_format === format : true))
     .filter((course) => (topic ? course.topic_tags.includes(topic) || course.headline_topic === topic : true))
     .sort(compareCourses);
@@ -337,10 +384,7 @@ export async function getCatalogOverview() {
 }
 
 export async function getCourseFilters() {
-  const [rows, providers] = await Promise.all([
-    getNormalizedCatalog(),
-    getPublicProviders(),
-  ]);
+  const rows = await getNormalizedCatalog();
 
   const formats = [...new Set(rows.map((row) => row.next_format).filter(Boolean))]
     .sort((a, b) => String(a).localeCompare(String(b)));
@@ -350,10 +394,10 @@ export async function getCourseFilters() {
   const normalizedTopics = [...new Set(topics)].sort((a, b) => String(a).localeCompare(String(b)));
 
   return {
-    providers: providers
+    providers: [...new Set(rows.map((row) => row.provider_filter_name).filter(Boolean))]
       .map((provider) => ({
-        provider: formatProviderName(provider.name),
-        provider_slug: provider.slug,
+        provider,
+        provider_slug: String(provider).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
       }))
       .sort((a, b) => String(a.provider).localeCompare(String(b.provider))),
     formats,

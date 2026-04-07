@@ -16,7 +16,7 @@ export default function ContactPage() {
           We are prioritizing data quality, discoverability, and launch readiness first.
         </p>
         <div className="legal-actions">
-          <a className="button" href="mailto:josephslaughter13@gmail.com?subject=CEAtlas%20feedback">
+          <a className="button" href="mailto:support@ceatlas.co?subject=CEAtlas%20feedback">
             Email CEAtlas
           </a>
           <Link className="auth-button auth-button--ghost" href="/courses">
@@ -32,6 +32,7 @@ export default function ContactPage() {
             If a course is missing, stale, duplicated, or listed under the wrong provider, send the course URL and
             a short note. Provider-confirmed corrections get prioritized.
           </p>
+          <a href="mailto:providers@ceatlas.co?subject=CEAtlas%20provider%20update">providers@ceatlas.co</a>
         </article>
         <article className="card legal-card">
           <h2>Partnerships</h2>
@@ -47,6 +48,7 @@ export default function ContactPage() {
             For now, CEAtlas is discovery and planning software. Registration, CE credit issuance, refunds, and
             attendance records remain with the original course provider.
           </p>
+          <a href="mailto:support@ceatlas.co?subject=CEAtlas%20support">support@ceatlas.co</a>
         </article>
       </section>
     </main>

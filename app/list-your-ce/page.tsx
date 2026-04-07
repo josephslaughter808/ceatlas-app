@@ -34,7 +34,7 @@ export default function ListYourCEPage() {
         <div className="legal-actions">
           <a
             className="button"
-            href="mailto:josephslaughter13@gmail.com?subject=List%20my%20CE%20on%20CEAtlas"
+            href="mailto:providers@ceatlas.co?subject=List%20my%20CE%20on%20CEAtlas"
           >
             Request provider review
           </a>

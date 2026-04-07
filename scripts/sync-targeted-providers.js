@@ -78,6 +78,7 @@ import { scrapeUW } from '../scrapers/providers/uw.js';
 import { scrapeVivaDirectOnDemand } from '../scrapers/providers/viva.js';
 import { scrapeVivaPartnerLearning } from '../scrapers/providers/viva-partners.js';
 import { scrapeWorldDentalAcademy } from '../scrapers/providers/worlddentalacademy.js';
+import { scrapeWorldDentalEventsInPerson } from '../scrapers/providers/world-dental-events.js';
 import { scrapeZahn } from '../scrapers/providers/zahn.js';
 import { scrapeOsteologyBatch } from '../scrapers/providers/osteology-batch.js';
 import { scrapeOrthotown } from '../scrapers/providers/orthotown.js';
@@ -386,6 +387,10 @@ const PROVIDERS = {
   worlddentalacademy: {
     label: 'World Dental Academy',
     scrape: () => scrapeWorldDentalAcademy(),
+  },
+  'world-dental-events': {
+    label: 'World Dental Events in-person listings',
+    scrape: () => scrapeWorldDentalEventsInPerson(),
   },
   zahn: {
     label: 'Zahn Continuing Education',

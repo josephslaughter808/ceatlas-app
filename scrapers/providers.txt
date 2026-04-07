@@ -155,6 +155,7 @@ https://agd2026.eventscribe.net/agenda.asp?pfp=BrowsebyDay&all=1
 https://events.floridadental.org/index.cfm?do=expomap.sessResults&event_id=79&regs_id=0&search_type=all
 https://www.prereg.net/qListPlugin/indexTDA.html?qDataSource=2026_tda
 https://www.dentevents.com/sitemap.xml
+https://www.worlddentalevents.com/events
 
 # Verified official sites queued for next provider chunks
 # Dentaltown CE — https://www.dentaltown.com/ce (currently returning 403 to direct requests)

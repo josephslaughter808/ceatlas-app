@@ -88,6 +88,7 @@ import { scrapeUW } from './providers/uw.js';
 import { scrapeViva, scrapeVivaDirectOnDemand } from './providers/viva.js';
 import { scrapeVivaPartnerLearning } from './providers/viva-partners.js';
 import { scrapeWorldDentalAcademy } from './providers/worlddentalacademy.js';
+import { scrapeWorldDentalEventsInPerson } from './providers/world-dental-events.js';
 import { scrapeYankee } from './providers/yankee.js';
 import { scrapeZahn } from './providers/zahn.js';
 import { scrapeOsteologyBatch } from './providers/osteology-batch.js';
@@ -313,6 +314,10 @@ async function scrapeProvider(providerUrl) {
 
   if (hostname.includes('dentevents.com')) {
     return scrapeDentEventsFutureInPerson();
+  }
+
+  if (hostname.includes('worlddentalevents.com')) {
+    return scrapeWorldDentalEventsInPerson();
   }
 
   if (hostname.includes('dimensionsofdentalhygiene.com')) {

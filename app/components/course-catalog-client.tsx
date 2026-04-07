@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { track } from "@vercel/analytics";
 import type { CourseRecord } from "@/lib/courses";
 import CourseCard from "./coursecard";
 import { useSavedCourses } from "./saved-courses-provider";
@@ -227,6 +228,13 @@ export default function CourseCatalogClient({
     sortBy,
   ]);
 
+  function handleFilterToggle(filterName: "topic" | "provider" | "format", value: string) {
+    track("course_filter_toggle", {
+      filter: filterName,
+      value: filterName === "provider" ? "provider_selected" : value,
+    });
+  }
+
   return (
     <>
       <StateRequirementsPanel
@@ -240,7 +248,13 @@ export default function CourseCatalogClient({
           <input
             type="search"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              const value = event.target.value;
+              if (!search && value) {
+                track("course_search_start");
+              }
+              setSearch(value);
+            }}
             placeholder="Search title, topic, description, provider, or instructor"
             aria-label="Search courses"
           />
@@ -251,7 +265,10 @@ export default function CourseCatalogClient({
             label="Topics"
             options={filters.topics.map((topic) => ({ label: topic, value: topic }))}
             selectedValues={selectedTopics}
-            onToggle={(value) => setSelectedTopics((current) => toggleSelection(current, value))}
+            onToggle={(value) => {
+              handleFilterToggle("topic", value);
+              setSelectedTopics((current) => toggleSelection(current, value));
+            }}
           />
 
           <MultiSelectFilter
@@ -261,20 +278,27 @@ export default function CourseCatalogClient({
               value: provider.value,
             }))}
             selectedValues={selectedProviders}
-            onToggle={(value) => setSelectedProviders((current) => toggleSelection(current, value))}
+            onToggle={(value) => {
+              handleFilterToggle("provider", value);
+              setSelectedProviders((current) => toggleSelection(current, value));
+            }}
           />
 
           <MultiSelectFilter
             label="Formats"
             options={filters.formats.map((format) => ({ label: format, value: format }))}
             selectedValues={selectedFormats}
-            onToggle={(value) => setSelectedFormats((current) => toggleSelection(current, value))}
+            onToggle={(value) => {
+              handleFilterToggle("format", value);
+              setSelectedFormats((current) => toggleSelection(current, value));
+            }}
           />
 
           <button
             type="button"
             className="button"
             onClick={() => {
+              track("course_filters_clear");
               setSearch("");
               setSelectedTopics([]);
               setSelectedProviders([]);
@@ -292,14 +316,23 @@ export default function CourseCatalogClient({
             <input
               type="checkbox"
               checked={savedOnly}
-              onChange={(event) => setSavedOnly(event.target.checked)}
+              onChange={(event) => {
+                track("course_saved_only_toggle", { enabled: event.target.checked });
+                setSavedOnly(event.target.checked);
+              }}
             />
             <span>Saved only</span>
           </label>
 
           <label className="sort-filter">
             <span>Sort</span>
-            <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+            <select
+              value={sortBy}
+              onChange={(event) => {
+                track("course_sort_change", { sort: event.target.value });
+                setSortBy(event.target.value);
+              }}
+            >
               <option value="balanced">Balanced providers</option>
               <option value="popularity">Popularity</option>
               <option value="rating-high">Highest rated</option>

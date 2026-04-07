@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { track } from "@vercel/analytics";
 import type { CourseRecord } from "@/lib/courses";
 import { useSavedCourses } from "./saved-courses-provider";
 import { useTravelPlanner } from "./travel-planner-provider";
@@ -150,6 +151,13 @@ export default function TravelPlannerClient({ courses }: TravelPlannerClientProp
   function handleCreatePlan() {
     if (!selectedCourse) return;
 
+    track("travel_itinerary_save", {
+      course_id: selectedCourse.id,
+      has_departure_airport: Boolean(form.departureAirport.trim()),
+      has_destination_code: Boolean(form.destinationCode.trim()),
+      needs_car: form.needsCar,
+    });
+
     addPlan({
       title: `${selectedCourse.title} Trip`,
       courseId: selectedCourse.id,
@@ -176,6 +184,13 @@ export default function TravelPlannerClient({ courses }: TravelPlannerClientProp
   async function handleLiveSearch() {
     if (!user) return;
     if (!selectedCourse || !tripStartDate) return;
+
+    track("travel_live_search", {
+      course_id: selectedCourse.id,
+      has_departure_airport: Boolean(form.departureAirport.trim()),
+      has_destination_code: Boolean(form.destinationCode.trim()),
+      travelers: Number(form.travelers) || 1,
+    });
 
     setIsSearching(true);
     setLiveResults(null);

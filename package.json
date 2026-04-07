@@ -16,6 +16,8 @@
     "@prisma/client": "^7.6.0",
     "@prisma/config": "^7.6.0",
     "@supabase/supabase-js": "^2.99.2",
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "axios": "^1.14.0",
     "cheerio": "^1.2.0",
     "next": "16.1.7",

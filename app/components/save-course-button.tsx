@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { track } from "@vercel/analytics";
 import { useSavedCourses } from "./saved-courses-provider";
 import { useAuth } from "./auth-provider";
 
@@ -34,7 +35,10 @@ export default function SaveCourseButton({ courseId }: { courseId: string }) {
     <button
       type="button"
       className={saved ? "save-button save-button--active" : "save-button"}
-      onClick={() => toggleSavedCourse(courseId)}
+      onClick={() => {
+        track(saved ? "course_unsave" : "course_save", { course_id: courseId });
+        toggleSavedCourse(courseId);
+      }}
       aria-pressed={saved}
       aria-label={saved ? "Remove from saved courses" : "Save course"}
       title={saved ? "Saved" : "Save course"}

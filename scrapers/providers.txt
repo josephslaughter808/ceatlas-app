@@ -146,6 +146,15 @@ https://kuraraydentallearning.com/training.asp
 https://septodontlearning.com/training.asp
 https://www.pulpdentlearning.com/training.asp
 https://dmglearning.com/training.asp
+https://aapd2026.eventscribe.net/agenda.asp?BCFO=&pfp=FullSchedule&fa=&fb=&fc=&fd=&all=1
+https://aaoms-annual-meeting-2026.eventscribe.net/agenda.asp?BCFO=EE|G|IP|M&pfp=FullSchedule&fa=&fb=&fc=&fd=&all=1
+https://pndc2026.eventscribe.net/agenda.asp?pfp=BrowsebyDay&all=1
+https://nohc2026.eventscribe.net/agenda.asp?pfp=BrowsebyDay&all=1
+https://odc2026.eventscribe.net/agenda.asp?all=1
+https://agd2026.eventscribe.net/agenda.asp?pfp=BrowsebyDay&all=1
+https://events.floridadental.org/index.cfm?do=expomap.sessResults&event_id=79&regs_id=0&search_type=all
+https://www.prereg.net/qListPlugin/indexTDA.html?qDataSource=2026_tda
+https://www.dentevents.com/sitemap.xml
 
 # Verified official sites queued for next provider chunks
 # Dentaltown CE — https://www.dentaltown.com/ce (currently returning 403 to direct requests)

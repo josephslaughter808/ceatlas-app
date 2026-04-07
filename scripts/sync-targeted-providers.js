@@ -18,11 +18,14 @@ import { scrapeDentalCEAcademy } from '../scrapers/providers/dentalceacademy.js'
 import { scrapeDentalDidactics } from '../scrapers/providers/dentaldidactics.js';
 import { scrapeDentalLearning } from '../scrapers/providers/dentallearning.js';
 import { scrapeDentalXP } from '../scrapers/providers/dentalxp.js';
+import { scrapeDentEventsFutureInPerson } from '../scrapers/providers/dentevents.js';
 import { scrapeDDSCommunities } from '../scrapers/providers/dds-communities.js';
 import { scrapeDDSWorld } from '../scrapers/providers/ddsworld.js';
 import { scrapeDentaltown } from '../scrapers/providers/dentaltown.js';
 import { scrapeDimensions } from '../scrapers/providers/dimensions.js';
 import { scrapeEAOBatch } from '../scrapers/providers/eao-batch.js';
+import { scrapeFutureInPersonEventscribeListings } from '../scrapers/providers/eventscribe-listing.js';
+import { scrapeFDC2026 } from '../scrapers/providers/fdc.js';
 import { scrapeGIDE } from '../scrapers/providers/gide.js';
 import { scrapeGIIA } from '../scrapers/providers/giia.js';
 import { scrapeGNYDM } from '../scrapers/providers/gnydm.js';
@@ -59,6 +62,7 @@ import {
 } from '../scrapers/providers/state-associations.js';
 import { scrapeStyleItalianoBatch } from '../scrapers/providers/styleitaliano-batch.js';
 import { scrapeTemple } from '../scrapers/providers/temple.js';
+import { scrapeTDAMeeting2026 } from '../scrapers/providers/tda-meeting.js';
 import { scrapeITIWorldSymposium } from '../scrapers/providers/iti-world-symposium.js';
 import { scrapeTufts } from '../scrapers/providers/tufts.js';
 import { scrapeTuftsGlobalEurope } from '../scrapers/providers/tufts-global-europe.js';
@@ -143,6 +147,18 @@ const PROVIDERS = {
     label: 'EAO Europe batch',
     scrape: () => scrapeEAOBatch(),
   },
+  'eventscribe-inperson': {
+    label: 'Future in-person Eventscribe conference listings',
+    scrape: () => scrapeFutureInPersonEventscribeListings(),
+  },
+  fdc2026: {
+    label: 'Florida Dental Convention 2026',
+    scrape: () => scrapeFDC2026(),
+  },
+  tda2026: {
+    label: 'Texas Dental Association Meeting 2026',
+    scrape: () => scrapeTDAMeeting2026(),
+  },
   gide: {
     label: 'gIDE Europe',
     scrape: () => scrapeGIDE(),
@@ -154,6 +170,10 @@ const PROVIDERS = {
   dentaltown: {
     label: 'Dentaltown CE',
     scrape: () => scrapeDentaltown(),
+  },
+  dentevents: {
+    label: 'DentEvents future in-person dental events',
+    scrape: () => scrapeDentEventsFutureInPerson(),
   },
   dentallearning: {
     label: 'Dental Learning',

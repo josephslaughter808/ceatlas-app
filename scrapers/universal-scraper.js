@@ -10,7 +10,6 @@ import {
 import { scrapeADA } from './providers/ada.js';
 import { scrapeAchieveCE } from './providers/achievece.js';
 import { scrapeADHA } from './providers/adha.js';
-import { scrapeAGD } from './providers/agd.js';
 import { scrapeAAFE } from './providers/aafe.js';
 import { scrapeBiolase } from './providers/biolase.js';
 import { scrapeBlueSkyBio } from './providers/blueskybio.js';
@@ -26,6 +25,7 @@ import { scrapeDentalCEAcademy } from './providers/dentalceacademy.js';
 import { scrapeDentalDidactics } from './providers/dentaldidactics.js';
 import { scrapeDentalLearning } from './providers/dentallearning.js';
 import { scrapeDentalXP } from './providers/dentalxp.js';
+import { scrapeDentEventsFutureInPerson } from './providers/dentevents.js';
 import { scrapeDDSCommunities } from './providers/dds-communities.js';
 import { scrapeDDSWorld } from './providers/ddsworld.js';
 import { scrapeDentaltown } from './providers/dentaltown.js';
@@ -39,6 +39,8 @@ import { scrapeIHS } from './providers/ihs.js';
 import { scrapeColumbia } from './providers/columbia.js';
 import { scrapeConcordSeminars } from './providers/concordseminars.js';
 import { scrapeEventscribeConference } from './providers/eventscribe.js';
+import { scrapeFutureInPersonEventscribeListings } from './providers/eventscribe-listing.js';
+import { scrapeFDC2026 } from './providers/fdc.js';
 import { scrapeGlidewell } from './providers/glidewell.js';
 import { scrapeHinman } from './providers/hinman.js';
 import { scrapeIowa } from './providers/iowa.js';
@@ -72,6 +74,7 @@ import { scrapeTemple } from './providers/temple.js';
 import { scrapeITIWorldSymposium } from './providers/iti-world-symposium.js';
 import { scrapeStyleItalianoBatch } from './providers/styleitaliano-batch.js';
 import { scrapeTufts } from './providers/tufts.js';
+import { scrapeTDAMeeting2026 } from './providers/tda-meeting.js';
 import { scrapeTuftsGlobalEurope } from './providers/tufts-global-europe.js';
 import { scrapeUBCCPE } from './providers/ubc-cpe.js';
 import { scrapeUBC } from './providers/ubc.js';
@@ -308,6 +311,10 @@ async function scrapeProvider(providerUrl) {
     return scrapeDentalXP();
   }
 
+  if (hostname.includes('dentevents.com')) {
+    return scrapeDentEventsFutureInPerson();
+  }
+
   if (hostname.includes('dimensionsofdentalhygiene.com')) {
     return scrapeDimensions();
   }
@@ -398,6 +405,14 @@ async function scrapeProvider(providerUrl) {
 
   if (hostname.includes('concordseminars.com')) {
     return scrapeConcordSeminars();
+  }
+
+  if (hostname.includes('events.floridadental.org')) {
+    return scrapeFDC2026();
+  }
+
+  if (hostname.includes('prereg.net') && providerUrl.includes('qDataSource=2026_tda')) {
+    return scrapeTDAMeeting2026();
   }
 
   if (hostname.includes('dmg-america.com')) {
@@ -586,7 +601,23 @@ async function scrapeProvider(providerUrl) {
   }
 
   if (hostname.includes('agd2026.eventscribe.net')) {
-    return scrapeAGD(providerUrl);
+    return scrapeFutureInPersonEventscribeListings();
+  }
+
+  if (hostname.includes('aaoms-annual-meeting-2026.eventscribe.net')) {
+    return scrapeFutureInPersonEventscribeListings();
+  }
+
+  if (hostname.includes('aapd2026.eventscribe.net')) {
+    return scrapeFutureInPersonEventscribeListings();
+  }
+
+  if (
+    hostname.includes('pndc2026.eventscribe.net')
+    || hostname.includes('nohc2026.eventscribe.net')
+    || hostname.includes('odc2026.eventscribe.net')
+  ) {
+    return scrapeFutureInPersonEventscribeListings();
   }
 
   if (DIGITELL_PROVIDERS[hostname]) {

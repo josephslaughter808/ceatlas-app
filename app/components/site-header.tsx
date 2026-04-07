@@ -47,6 +47,7 @@ export default function SiteHeader() {
           <Link href="/travel">Travel</Link>
           <Link href="/packages">Packages</Link>
           <Link href="/cruises">Cruises</Link>
+          <Link href="/contact">Contact</Link>
         </div>
       </div>
     </nav>

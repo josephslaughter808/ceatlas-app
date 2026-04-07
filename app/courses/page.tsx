@@ -16,6 +16,13 @@ export default async function CoursesPage() {
         <p>
           Browse the latest CE inventory synced from provider catalogs and cleaned for easy comparison.
         </p>
+        <div className="launch-note">
+          <strong>Beta catalog note:</strong>
+          <span>
+            CEAtlas helps you discover and compare CE options. Always confirm credits, fees, cancellation rules,
+            and state-board eligibility directly with the provider before registering.
+          </span>
+        </div>
       </section>
 
       <CourseCatalogClient

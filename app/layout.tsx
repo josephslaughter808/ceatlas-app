@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "CEAtlas",
-  description: "A deduplicated dental continuing education catalog synced from provider data.",
+  description: "A searchable dental continuing education catalog for comparing courses, conferences, cruises, and CE travel ideas.",
 };
 
 export default function RootLayout({
@@ -36,6 +36,14 @@ export default function RootLayout({
             <SavedCoursesProvider>
               <TravelPlannerProvider>
                 <div className="site-shell">
+                  <div className="beta-banner">
+                    <div className="container beta-banner__inner">
+                      <strong>CEAtlas beta</strong>
+                      <span>Verify CE eligibility, registration status, price, and state-board fit with the provider before enrolling.</span>
+                      <Link href="/contact">Send feedback</Link>
+                    </div>
+                  </div>
+
                   <div className="container">
                     <SiteHeader />
                   </div>
@@ -52,6 +60,9 @@ export default function RootLayout({
                         <Link href="/compare">Compare</Link>
                         <Link href="/account">Account</Link>
                         <Link href="/cruises">Cruises</Link>
+                        <Link href="/contact">Contact</Link>
+                        <Link href="/privacy">Privacy</Link>
+                        <Link href="/terms">Terms</Link>
                         <a href="https://www.ada.org/" target="_blank" rel="noreferrer">ADA</a>
                         <a href="https://www.dentalcare.com/" target="_blank" rel="noreferrer">Dentalcare</a>
                       </div>

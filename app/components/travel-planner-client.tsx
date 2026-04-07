@@ -217,7 +217,7 @@ export default function TravelPlannerClient({ courses }: TravelPlannerClientProp
             <p className="packages-builder__eyebrow">Travel Planner</p>
             <h1>Build CE travel plans once you sign in.</h1>
             <p>
-              The catalog stays public, but itinerary building, live travel search, saved cards, and future checkout are account-only tools.
+              The catalog stays public, but itinerary building, live travel search, and saved planning boards are account-only tools.
             </p>
           </div>
           <div className="travel-hero__stats">
@@ -227,7 +227,7 @@ export default function TravelPlannerClient({ courses }: TravelPlannerClientProp
             </div>
             <div>
               <strong>Account</strong>
-              <span>Required for saved itineraries, checkout, and purchase history</span>
+              <span>Required for saved itineraries and personalized planning tools</span>
             </div>
           </div>
         </section>
@@ -403,7 +403,8 @@ export default function TravelPlannerClient({ courses }: TravelPlannerClientProp
           <p className="packages-builder__eyebrow">Live Search-Out</p>
           <h2>Use real travel sites now while we prepare direct booking integrations.</h2>
           <p>
-            This gets dentists planning today: choose the CE course, then jump straight into live inventory for travel.
+            This gets dentists planning today: choose the CE course, then jump straight into live travel inventory.
+            CEAtlas is not completing travel checkout yet.
           </p>
 
           {previewPlan ? (
@@ -427,7 +428,7 @@ export default function TravelPlannerClient({ courses }: TravelPlannerClientProp
           <div className="travel-links__note">
             <strong>Next step:</strong>
             <span>
-              Once we add an affiliate or booking API, these buttons can turn into in-app inventory rather than search-outs.
+              These are planning/search links during beta. Confirm all travel prices and booking terms on the travel provider site.
             </span>
           </div>
         </div>

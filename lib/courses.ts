@@ -4,6 +4,7 @@ import {
   getCourseRatingSummariesForCourseIds,
   getPublicCourseCatalog,
   getPublicCourseCatalogPage,
+  getPublicCourseProviderFilterRows,
   getPublicSessionFormats,
 } from './db.js';
 
@@ -49,6 +50,8 @@ type CourseSearchParams = {
   topic?: string | string[];
   sort?: string;
 };
+
+type ProviderFilterSource = Pick<CatalogRow, 'source_url' | 'registration_url' | 'metadata'>;
 
 const TOPIC_BUCKETS: Array<{ label: string; patterns: RegExp[] }> = [
   { label: 'Endodontics', patterns: [/\bendo\b/i, /\bendodont/i, /\broot canal/i] },
@@ -159,7 +162,7 @@ function classifyTopicBucket(values: Array<string | null | undefined>) {
   return 'General Dentistry';
 }
 
-function aggregatorSourceText(row: CatalogRow) {
+function aggregatorSourceText(row: ProviderFilterSource) {
   return [
     row.source_url,
     row.registration_url,
@@ -170,7 +173,7 @@ function aggregatorSourceText(row: CatalogRow) {
   ].filter(Boolean).join(' | ');
 }
 
-function providerFilterName(row: CatalogRow, providerName: string | null) {
+function providerFilterName(row: ProviderFilterSource, providerName: string | null) {
   const sourceText = aggregatorSourceText(row);
 
   for (const aggregator of AGGREGATOR_PROVIDER_LABELS) {
@@ -529,17 +532,21 @@ export async function getCatalogOverview() {
 }
 
 export async function getCourseFilters() {
-  const rows: Array<ReturnType<typeof normalizeCourse>> = await getNormalizedCatalog();
+  const [providerRows, sessionFormats] = await Promise.all([
+    getPublicCourseProviderFilterRows(),
+    getPublicSessionFormats(),
+  ]);
 
-  const formats = [...new Set(rows.map((row: ReturnType<typeof normalizeCourse>) => row.next_format).filter(Boolean))]
+  const formats = [...new Set(sessionFormats.map((format) => normalizeFormatLabel(String(format))).filter(Boolean))]
     .sort((a, b) => String(a).localeCompare(String(b)));
-  const topics = [...new Set(rows.flatMap((row: ReturnType<typeof normalizeCourse>) => row.topic_tags || []).filter(Boolean))]
-    .map((topic: string) => classifyTopicBucket([topic]))
-    .filter(Boolean);
-  const normalizedTopics = [...new Set(topics)].sort((a, b) => String(a).localeCompare(String(b)));
+  const normalizedTopics = TOPIC_BUCKETS.map((bucket) => bucket.label)
+    .sort((a, b) => String(a).localeCompare(String(b)));
+  const providerNames = [...new Set(providerRows
+    .map((row) => providerFilterName(row, formatProviderName(row.provider_name)))
+    .filter(Boolean))];
 
   return {
-    providers: [...new Set(rows.map((row: ReturnType<typeof normalizeCourse>) => row.provider_filter_name).filter(Boolean))]
+    providers: providerNames
       .map((provider) => ({
         provider,
         provider_slug: String(provider).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
@@ -547,6 +554,15 @@ export async function getCourseFilters() {
       .sort((a, b) => String(a.provider).localeCompare(String(b.provider))),
     formats,
     topics: normalizedTopics,
+  };
+}
+
+export function getDefaultCourseFilters() {
+  return {
+    providers: [] as Array<{ provider: string; provider_slug: string }>,
+    formats: [] as string[],
+    topics: TOPIC_BUCKETS.map((bucket) => bucket.label)
+      .sort((a, b) => String(a).localeCompare(String(b))),
   };
 }
 

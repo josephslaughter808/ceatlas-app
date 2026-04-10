@@ -27,11 +27,13 @@ function MultiSelectFilter({
   options,
   selectedValues,
   onToggle,
+  loading = false,
 }: {
   label: string;
   options: FilterOption[];
   selectedValues: string[];
   onToggle: (value: string) => void;
+  loading?: boolean;
 }) {
   const summary = selectedValues.length === 0
     ? `All ${label.toLowerCase()}`
@@ -47,6 +49,9 @@ function MultiSelectFilter({
       </summary>
 
       <div className="multi-filter__menu">
+        {loading && options.length === 0 ? (
+          <div className="multi-filter__empty">Loading {label.toLowerCase()}...</div>
+        ) : null}
         {options.map((option) => (
           <label key={option.value} className="multi-filter__option">
             <input
@@ -102,6 +107,8 @@ export default function CourseCatalogClient({
   const [selectedProviders, setSelectedProviders] = useState<string[]>(initialState.providers);
   const [selectedFormats, setSelectedFormats] = useState<string[]>(initialState.formats);
   const [practiceStateCode, setPracticeStateCode] = useState("");
+  const [availableFilters, setAvailableFilters] = useState(filters);
+  const [filtersLoading, setFiltersLoading] = useState(filters.providers.length === 0 || filters.formats.length === 0);
 
   useEffect(() => {
     setSortBy(initialState.sort);
@@ -110,6 +117,32 @@ export default function CourseCatalogClient({
     setSelectedProviders(initialState.providers);
     setSelectedFormats(initialState.formats);
   }, [initialState]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadFilters() {
+      setFiltersLoading(true);
+      try {
+        const response = await fetch("/api/course-filters");
+        if (!response.ok) return;
+        const nextFilters = await response.json();
+        if (!cancelled) {
+          setAvailableFilters(nextFilters);
+        }
+      } finally {
+        if (!cancelled) {
+          setFiltersLoading(false);
+        }
+      }
+    }
+
+    loadFilters();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -140,11 +173,11 @@ export default function CourseCatalogClient({
     const stateName = getPracticeStateName(practiceStateCode);
     if (!stateName) return [];
 
-    return filters.providers
+    return availableFilters.providers
       .map((provider) => provider.label)
       .filter((provider) => provider.toLowerCase().includes(stateName.toLowerCase()))
       .slice(0, 4);
-  }, [filters.providers, practiceStateCode]);
+  }, [availableFilters.providers, practiceStateCode]);
 
   const visibleCourses = useMemo(
     () => courses.filter((course) => (savedOnly ? savedCourseIds.includes(course.id) : true)),
@@ -222,7 +255,7 @@ export default function CourseCatalogClient({
         <div className="course-filters__row">
           <MultiSelectFilter
             label="Topics"
-            options={filters.topics.map((topic) => ({ label: topic, value: topic }))}
+            options={availableFilters.topics.map((topic) => ({ label: topic, value: topic }))}
             selectedValues={selectedTopics}
             onToggle={(value) => {
               handleFilterToggle("topic", value);
@@ -234,11 +267,12 @@ export default function CourseCatalogClient({
 
           <MultiSelectFilter
             label="Providers"
-            options={filters.providers.map((provider) => ({
+            options={availableFilters.providers.map((provider) => ({
               label: provider.label,
               value: provider.value,
             }))}
             selectedValues={selectedProviders}
+            loading={filtersLoading}
             onToggle={(value) => {
               handleFilterToggle("provider", value);
               const nextProviders = toggleSelection(selectedProviders, value);
@@ -249,8 +283,9 @@ export default function CourseCatalogClient({
 
           <MultiSelectFilter
             label="Formats"
-            options={filters.formats.map((format) => ({ label: format, value: format }))}
+            options={availableFilters.formats.map((format) => ({ label: format, value: format }))}
             selectedValues={selectedFormats}
+            loading={filtersLoading}
             onToggle={(value) => {
               handleFilterToggle("format", value);
               const nextFormats = toggleSelection(selectedFormats, value);

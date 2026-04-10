@@ -1,4 +1,4 @@
-import { getCourseFilters, getCoursesPage } from "@/lib/courses";
+import { getCoursesPage, getDefaultCourseFilters } from "@/lib/courses";
 import CourseCatalogClient from "../components/course-catalog-client";
 
 export const dynamic = "force-dynamic";
@@ -12,16 +12,14 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
   const page = Number(Array.isArray(params.page) ? params.page[0] : params.page) || 1;
   const pageSize = Number(Array.isArray(params.pageSize) ? params.pageSize[0] : params.pageSize) || 50;
 
-  const [catalog, filters] = await Promise.all([
-    getCoursesPage({
-      search: Array.isArray(params.search) ? params.search[0] : params.search,
-      provider: params.provider,
-      format: params.format,
-      topic: params.topic,
-      sort: Array.isArray(params.sort) ? params.sort[0] : params.sort,
-    }, page, pageSize),
-    getCourseFilters(),
-  ]);
+  const catalog = await getCoursesPage({
+    search: Array.isArray(params.search) ? params.search[0] : params.search,
+    provider: params.provider,
+    format: params.format,
+    topic: params.topic,
+    sort: Array.isArray(params.sort) ? params.sort[0] : params.sort,
+  }, page, pageSize);
+  const filters = getDefaultCourseFilters();
 
   return (
     <div className="container">

@@ -11,6 +11,12 @@ export async function POST(request: Request) {
 
     const user = await getUserFromRequest(request);
 
+    if (!user.email_confirmed_at) {
+      return NextResponse.json({
+        error: "Please verify your email before saving a card or checking out.",
+      }, { status: 403 });
+    }
+
     const { data: existingCustomer, error: customerError } = await supabaseAdmin
       .from("stripe_customers")
       .select("stripe_customer_id")

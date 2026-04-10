@@ -1,14 +1,9 @@
-import { getCourses } from "@/lib/courses";
 import TravelPlannerClient from "../components/travel-planner-client";
 
-export const dynamic = "force-dynamic";
-
-export default async function TravelPage() {
-  const courses = await getCourses();
-
+export default function TravelPage() {
   return (
     <div className="container">
-      <TravelPlannerClient courses={courses} />
+      <TravelPlannerClient />
       <section className="travel-cta-strip">
         <div className="card">
           <h2>Ready for real checkout?</h2>

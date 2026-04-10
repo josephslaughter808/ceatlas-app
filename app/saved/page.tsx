@@ -1,15 +1,6 @@
-import { getCourseFilters, getCourses } from "@/lib/courses";
-import CourseCatalogClient from "../components/course-catalog-client";
-import Link from "next/link";
+import SavedPlanningClient from "../components/saved-planning-client";
 
-export const dynamic = "force-dynamic";
-
-export default async function SavedPage() {
-  const [courses, filters] = await Promise.all([
-    getCourses(),
-    getCourseFilters(),
-  ]);
-
+export default function SavedPage() {
   return (
     <div className="container">
       <section className="page-header">
@@ -34,38 +25,7 @@ export default async function SavedPage() {
         </div>
       </section>
 
-      <section className="saved-overview">
-        <div className="card saved-overview__card">
-          <h2>Travel Planning</h2>
-          <p>Build a CE trip around any saved course, keep your itinerary in one place, and open live hotel, flight, and car searches from there.</p>
-          <p>
-            <Link href="/travel">Open travel planner</Link>
-          </p>
-        </div>
-      </section>
-      <CourseCatalogClient
-        courses={courses}
-        total={courses.length}
-        currentPage={1}
-        totalPages={1}
-        pageSize={50}
-        initialState={{
-          search: "",
-          sort: "balanced",
-          topics: [],
-          providers: [],
-          formats: [],
-        }}
-        filters={{
-          providers: filters.providers.map((provider) => ({
-            label: String(provider.provider || ""),
-            value: String(provider.provider || ""),
-          })),
-          formats: filters.formats.filter((format): format is string => Boolean(format)),
-          topics: filters.topics.filter((topic): topic is string => Boolean(topic)),
-        }}
-        defaultSavedOnly
-      />
+      <SavedPlanningClient />
     </div>
   );
 }

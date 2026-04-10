@@ -5,6 +5,7 @@ import {
   getPublicCourseCatalog,
   getPublicCourseCatalogPage,
   getPublicCourseProviderFilterRows,
+  getPublicCoursesByIds,
   getPublicSessionFormats,
 } from './db.js';
 
@@ -516,6 +517,32 @@ export async function getCoursesPage(
 export async function getFeaturedCourses(take = 6) {
   const { rows } = await getNormalizedCatalogPage(1, Math.max(take, 12));
   return rows.slice(0, take);
+}
+
+export async function getCoursesByIds(ids: string[]) {
+  const rows = await getPublicCoursesByIds(ids);
+  const ratingRows = await getCourseRatingSummariesForCourseIds(rows.map((row: CatalogRow) => row.id));
+  const ratingsByCourseId = new Map(
+    ratingRows.map((row: { course_id: string; average_overall_rating: number | null; rating_count: number | null }) => [
+      row.course_id,
+      {
+        rating_average: row.average_overall_rating,
+        rating_count: row.rating_count,
+      },
+    ])
+  );
+
+  const rowsById = new Map(
+    rows.map((row: CatalogRow) => [
+      row.id,
+      normalizeCourse({
+        ...(row as CatalogRow),
+        ...(ratingsByCourseId.get(row.id) || {}),
+      }),
+    ])
+  );
+
+  return ids.map((id) => rowsById.get(id)).filter(Boolean);
 }
 
 export async function getCatalogOverview() {

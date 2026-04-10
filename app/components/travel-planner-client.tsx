@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { track } from "@vercel/analytics";
 import type { CourseRecord } from "@/lib/courses";
@@ -10,7 +10,7 @@ import { useAuth } from "./auth-provider";
 import CompareButton from "./compare-button";
 
 type TravelPlannerClientProps = {
-  courses: CourseRecord[];
+  courses?: CourseRecord[];
 };
 
 type PlannerFormState = {
@@ -114,20 +114,78 @@ function formatPlanDates(startDate: string | null, endDate: string | null) {
   return startDate || endDate || "Dates flexible";
 }
 
-export default function TravelPlannerClient({ courses }: TravelPlannerClientProps) {
+export default function TravelPlannerClient({ courses: initialCourses = [] }: TravelPlannerClientProps) {
   const { user } = useAuth();
   const { savedCourseIds } = useSavedCourses();
   const { plans, addPlan, removePlan } = useTravelPlanner();
   const [form, setForm] = useState<PlannerFormState>(defaultFormState);
   const [isSearching, setIsSearching] = useState(false);
   const [liveResults, setLiveResults] = useState<TravelSearchResponse | null>(null);
+  const [catalogCourses, setCatalogCourses] = useState<CourseRecord[]>(initialCourses);
+  const [savedCourseRecords, setSavedCourseRecords] = useState<CourseRecord[]>([]);
+  const [coursesLoading, setCoursesLoading] = useState(initialCourses.length === 0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCatalogCourses() {
+      setCoursesLoading(true);
+      try {
+        const response = await fetch("/api/featured-courses?limit=60");
+        if (!response.ok) return;
+        const nextCourses = await response.json();
+        if (!cancelled) {
+          setCatalogCourses(nextCourses);
+        }
+      } finally {
+        if (!cancelled) {
+          setCoursesLoading(false);
+        }
+      }
+    }
+
+    loadCatalogCourses();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSavedCourseRecords() {
+      if (savedCourseIds.length === 0) {
+        setSavedCourseRecords([]);
+        return;
+      }
+
+      const response = await fetch("/api/courses-by-ids", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ids: savedCourseIds }),
+      });
+      if (!response.ok) return;
+      const nextCourses = await response.json();
+      if (!cancelled) {
+        setSavedCourseRecords(nextCourses);
+      }
+    }
+
+    loadSavedCourseRecords();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [savedCourseIds]);
 
   const savedCourses = useMemo(() => {
-    const filtered = courses.filter((course) => savedCourseIds.includes(course.id));
-    return filtered.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
-  }, [courses, savedCourseIds]);
+    return [...savedCourseRecords].sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+  }, [savedCourseRecords]);
 
-  const availableCourses = savedCourses.length > 0 ? savedCourses : courses.slice(0, 60);
+  const availableCourses = savedCourses.length > 0 ? savedCourses : catalogCourses;
   const selectedCourse = availableCourses.find((course) => course.id === form.courseId) || availableCourses[0] || null;
 
   const tripStartDate = selectedCourse?.next_start_date || null;
@@ -237,7 +295,7 @@ export default function TravelPlannerClient({ courses }: TravelPlannerClientProp
           </div>
           <div className="travel-hero__stats">
             <div>
-              <strong>{courses.length}</strong>
+              <strong>{coursesLoading ? "..." : catalogCourses.length}</strong>
               <span>Courses still visible across the public catalog</span>
             </div>
             <div>
@@ -308,12 +366,19 @@ export default function TravelPlannerClient({ courses }: TravelPlannerClientProp
               <select
                 value={form.courseId || selectedCourse?.id || ""}
                 onChange={(event) => updateField("courseId", event.target.value)}
+                disabled={coursesLoading || availableCourses.length === 0}
               >
-                {availableCourses.map((course) => (
-                  <option key={course.id} value={course.id}>
-                    {course.title} — {course.next_location || course.provider_name}
-                  </option>
-                ))}
+                {coursesLoading ? (
+                  <option>Loading courses...</option>
+                ) : availableCourses.length === 0 ? (
+                  <option>No courses available yet</option>
+                ) : (
+                  availableCourses.map((course) => (
+                    <option key={course.id} value={course.id}>
+                      {course.title} — {course.next_location || course.provider_name}
+                    </option>
+                  ))
+                )}
               </select>
             </label>
 

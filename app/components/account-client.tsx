@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "./auth-provider";
 import StateRequirementsPanel from "./state-requirements-panel";
@@ -61,6 +62,7 @@ type ProfileRecord = {
 };
 
 export default function AccountClient() {
+  const router = useRouter();
   const { user, session, loading } = useAuth();
   const [mode, setMode] = useState<"signin" | "signup">("signup");
   const [email, setEmail] = useState("");
@@ -141,10 +143,14 @@ export default function AccountClient() {
 
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const emailRedirectTo = typeof window === "undefined"
+          ? undefined
+          : `${window.location.origin}/account?verified=1`;
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
+            emailRedirectTo,
             data: {
               full_name: fullName,
               state_of_practice: normalizePracticeStateCode(stateOfPractice) || null,
@@ -153,7 +159,12 @@ export default function AccountClient() {
         });
 
         if (error) throw error;
-        setAuthMessage("Account created. If Supabase email confirmation is enabled, check your inbox before signing in.");
+        if (data.session) {
+          setAuthMessage("Account created. Welcome to CEAtlas.");
+        } else {
+          setAuthMessage("Account created. Check your email when you are ready to verify before checkout.");
+        }
+        router.push("/courses?account=created");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -172,6 +183,10 @@ export default function AccountClient() {
 
   async function handleSaveCard() {
     if (!session?.access_token) return;
+    if (!user?.email_confirmed_at) {
+      setAuthMessage("Please verify your email before saving a card or checking out.");
+      return;
+    }
 
     setCardsBusy(true);
     setAuthMessage(null);

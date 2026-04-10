@@ -315,6 +315,31 @@ button.auth-button {
   margin-bottom: 0.25rem;
 }
 
+.hero-stat-card {
+  min-height: 10.25rem;
+  display: grid;
+  align-content: center;
+  gap: 0.55rem;
+  padding: 1.65rem 1.5rem;
+  border-radius: 28px;
+  box-shadow: 0 18px 40px rgba(18, 59, 74, 0.08);
+}
+
+.hero-stat-card__value {
+  font-size: clamp(2.7rem, 4vw, 4rem);
+  line-height: 0.95;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--color-primary);
+}
+
+.hero-stat-card__label {
+  font-size: 1.02rem;
+  line-height: 1.45;
+  color: var(--color-text);
+  max-width: 22ch;
+}
+
 .home-page,
 .course-detail {
   padding-top: 1rem;
@@ -324,10 +349,41 @@ button.auth-button {
   margin-top: 3rem;
 }
 
+.home-section--centered {
+  display: grid;
+  gap: 1.4rem;
+}
+
 .home-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1rem;
+  gap: 1.2rem;
+  align-items: stretch;
+}
+
+.home-feature-card {
+  min-height: 13.5rem;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  text-align: center;
+  gap: 0.85rem;
+  padding: 1.8rem 1.6rem;
+  border-radius: 24px;
+}
+
+.home-feature-card h3 {
+  font-size: 1.35rem;
+  line-height: 1.15;
+  max-width: 16ch;
+  margin: 0 auto;
+}
+
+.home-feature-card p {
+  max-width: 30ch;
+  margin: 0 auto;
+  color: var(--color-muted);
+  line-height: 1.65;
 }
 
 .launch-cta {
@@ -363,6 +419,24 @@ button.auth-button {
   gap: 1rem;
   align-items: center;
   margin-bottom: 1rem;
+}
+
+.section-heading--stacked {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 0.75rem;
+  margin-bottom: 0;
+}
+
+.section-heading--stacked h2 {
+  max-width: 18ch;
+  font-size: clamp(2rem, 3vw, 2.9rem);
+  line-height: 1.06;
+}
+
+.hero__eyebrow--dark {
+  color: var(--color-accent);
 }
 
 .page-header {

@@ -45,10 +45,21 @@ export default async function SavedPage() {
       </section>
       <CourseCatalogClient
         courses={courses}
+        total={courses.length}
+        currentPage={1}
+        totalPages={1}
+        pageSize={50}
+        initialState={{
+          search: "",
+          sort: "balanced",
+          topics: [],
+          providers: [],
+          formats: [],
+        }}
         filters={{
           providers: filters.providers.map((provider) => ({
-            label: provider.provider || "",
-            value: provider.provider || "",
+            label: String(provider.provider || ""),
+            value: String(provider.provider || ""),
           })),
           formats: filters.formats.filter((format): format is string => Boolean(format)),
           topics: filters.topics.filter((topic): topic is string => Boolean(topic)),

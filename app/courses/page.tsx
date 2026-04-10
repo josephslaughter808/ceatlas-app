@@ -1,11 +1,25 @@
-import { getCourseFilters, getCourses } from "@/lib/courses";
+import { getCourseFilters, getCoursesPage } from "@/lib/courses";
 import CourseCatalogClient from "../components/course-catalog-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function CoursesPage() {
-  const [courses, filters] = await Promise.all([
-    getCourses(),
+type CoursesPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function CoursesPage({ searchParams }: CoursesPageProps) {
+  const params = (await searchParams) || {};
+  const page = Number(Array.isArray(params.page) ? params.page[0] : params.page) || 1;
+  const pageSize = Number(Array.isArray(params.pageSize) ? params.pageSize[0] : params.pageSize) || 50;
+
+  const [catalog, filters] = await Promise.all([
+    getCoursesPage({
+      search: Array.isArray(params.search) ? params.search[0] : params.search,
+      provider: params.provider,
+      format: params.format,
+      topic: params.topic,
+      sort: Array.isArray(params.sort) ? params.sort[0] : params.sort,
+    }, page, pageSize),
     getCourseFilters(),
   ]);
 
@@ -26,11 +40,22 @@ export default async function CoursesPage() {
       </section>
 
       <CourseCatalogClient
-        courses={courses}
+        courses={catalog.courses}
+        total={catalog.total}
+        currentPage={catalog.currentPage}
+        totalPages={catalog.totalPages}
+        pageSize={catalog.pageSize}
+        initialState={{
+          search: Array.isArray(params.search) ? params.search[0] || "" : params.search || "",
+          sort: Array.isArray(params.sort) ? params.sort[0] || "balanced" : params.sort || "balanced",
+          topics: typeof params.topic === "string" ? params.topic.split(",").filter(Boolean) : Array.isArray(params.topic) ? params.topic : [],
+          providers: typeof params.provider === "string" ? params.provider.split(",").filter(Boolean) : Array.isArray(params.provider) ? params.provider : [],
+          formats: typeof params.format === "string" ? params.format.split(",").filter(Boolean) : Array.isArray(params.format) ? params.format : [],
+        }}
         filters={{
           providers: filters.providers.map((provider) => ({
-            label: provider.provider || "",
-            value: provider.provider || "",
+            label: String(provider.provider || ""),
+            value: String(provider.provider || ""),
           })),
           formats: filters.formats.filter((format): format is string => Boolean(format)),
           topics: filters.topics.filter((topic): topic is string => Boolean(topic)),

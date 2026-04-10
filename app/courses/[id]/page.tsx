@@ -50,7 +50,7 @@ export default async function CourseDetailPage({
     notFound();
   }
 
-  const audience = course.topic_tags.filter((tag) => tag !== course.category);
+  const audience = course.topic_tags.filter((tag: string) => tag !== course.category);
   const providerLinks = [course.registration_url, course.source_url].filter(Boolean);
 
   return (

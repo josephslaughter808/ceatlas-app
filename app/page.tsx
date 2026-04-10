@@ -1,5 +1,5 @@
 import CourseCard from "./components/coursecard";
-import { getCatalogOverview, getFeaturedCourses } from "@/lib/courses";
+import { getCatalogOverview, getFeaturedCourses, type CourseRecord } from "@/lib/courses";
 import { getCatalogStats } from "@/lib/db";
 import Link from "next/link";
 
@@ -16,59 +16,59 @@ export default async function HomePage() {
     <div className="container home-page">
       <section className="hero">
         <div className="hero__copy">
-          <p className="hero__eyebrow">CEAtlas Catalog Sync</p>
-          <h1>Continuing education, cleaned up and ready to use.</h1>
+          <p className="hero__eyebrow">Dental CE, Conferences, Travel</p>
+          <h1>Find the right CE faster, and plan the trip around it.</h1>
           <p>
-            CEAtlas pulls live provider catalogs, deduplicates them, and turns scattered CE listings
-            into one searchable catalog for your site and your database.
+            CEAtlas helps dentists compare continuing education courses, conferences, cruises, and hands-on trainings
+            in one place. Search by topic, provider, format, and location, then save the options that fit your goals.
           </p>
           <div className="hero__actions">
             <Link href="/courses" className="button">Browse Courses</Link>
-            <Link href="/list-your-ce" className="button button--light">List your CE</Link>
+            <Link href="/packages" className="button button--light">Explore Packages</Link>
           </div>
         </div>
 
         <div className="hero__stats">
           <div className="card">
             <h2>{stats.courses}</h2>
-            <p>Courses ready for the live catalog</p>
+            <p>Courses and events to compare</p>
           </div>
           <div className="card">
             <h2>{stats.providers}</h2>
-            <p>Providers synced into one searchable source of truth</p>
+            <p>Providers, societies, and event hosts</p>
           </div>
           <div className="card">
             <h2>{overview.formatCount}</h2>
-            <p>Formats surfaced cleanly for browsing and planning</p>
+            <p>Formats to browse, compare, and plan around</p>
           </div>
         </div>
       </section>
 
       <section className="home-section">
-        <h2>What the pipeline does</h2>
+        <h2>Why Dentists Use CEAtlas</h2>
         <div className="home-grid">
           <div className="card">
-            <h3>Scrape Provider Catalogs</h3>
-            <p>Pulls CE listings from public and provider-specific catalog surfaces like ADA Engage.</p>
+            <h3>Compare Options Side by Side</h3>
+            <p>See topics, providers, prices, locations, and formats together instead of bouncing between dozens of provider websites.</p>
           </div>
           <div className="card">
-            <h3>Normalize for Supabase</h3>
-            <p>Maps course titles, pricing, dates, formats, instructors, credits, and tags into a stable row shape.</p>
+            <h3>Plan CE Around Real Life</h3>
+            <p>Use CEAtlas to narrow choices by specialty, save favorites, and build a trip around conferences, cruises, and destination courses.</p>
           </div>
           <div className="card">
-            <h3>Render Cleanly on Site</h3>
-            <p>Uses the synced database as the website source of truth so the UI stays current automatically.</p>
+            <h3>Stay Focused on What Matters</h3>
+            <p>Spend less time hunting through scattered calendars and more time choosing the CE that actually fits your practice and goals.</p>
           </div>
         </div>
       </section>
 
       <section className="home-section launch-cta card">
         <div>
-          <p className="hero__eyebrow">Beta Launch</p>
-          <h2>CE providers can help us clean up the catalog faster.</h2>
+          <p className="hero__eyebrow">For Providers</p>
+          <h2>Get your CE in front of dentists who are actively looking.</h2>
           <p>
-            If you run dental CE, conferences, cruises, or hands-on training, send us the official catalog link.
-            We are prioritizing verified provider pages and beta sponsorship conversations before launch.
+            If you run dental CE, conferences, cruises, or hands-on training, CEAtlas can help more dentists discover
+            your courses, compare them confidently, and plan travel around your events.
           </p>
         </div>
         <Link href="/list-your-ce" className="button">List your CE</Link>
@@ -76,12 +76,12 @@ export default async function HomePage() {
 
       <section className="home-section">
         <div className="section-heading">
-          <h2>Fresh Catalog Preview</h2>
+          <h2>Featured CE Right Now</h2>
           <Link href="/courses">See all courses</Link>
         </div>
 
         <div className="course-grid">
-          {featuredCourses.map((course) => (
+          {featuredCourses.map((course: CourseRecord) => (
             <CourseCard key={course.id} course={course} />
           ))}
         </div>

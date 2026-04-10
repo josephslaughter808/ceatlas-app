@@ -1,4 +1,11 @@
-import { getCourseRatingSummaries, getPublicCourseCatalog, getPublicProviders } from './db.js';
+import {
+  getCatalogStats,
+  getCourseRatingSummaries,
+  getCourseRatingSummariesForCourseIds,
+  getPublicCourseCatalog,
+  getPublicCourseCatalogPage,
+  getPublicSessionFormats,
+} from './db.js';
 
 type CatalogRow = {
   id: string;
@@ -37,9 +44,10 @@ type PriceOption = {
 
 type CourseSearchParams = {
   search?: string;
-  provider?: string;
-  format?: string;
-  topic?: string;
+  provider?: string | string[];
+  format?: string | string[];
+  topic?: string | string[];
+  sort?: string;
 };
 
 const TOPIC_BUCKETS: Array<{ label: string; patterns: RegExp[] }> = [
@@ -312,6 +320,78 @@ function matchesSearch(course: ReturnType<typeof normalizeCourse>, search: strin
   return haystack.includes(search.toLowerCase());
 }
 
+function toList(value: string | string[] | undefined) {
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => String(item).split(',')).map((item) => item.trim()).filter(Boolean);
+  }
+  if (typeof value === 'string') {
+    return value.split(',').map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+function numericValue(value: number | null | undefined) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function interleaveByProvider(items: Array<ReturnType<typeof normalizeCourse>>) {
+  const providerBuckets = new Map<string, Array<ReturnType<typeof normalizeCourse>>>();
+
+  for (const item of items) {
+    const provider = item.provider_name || 'Unknown provider';
+    const bucket = providerBuckets.get(provider) || [];
+    bucket.push(item);
+    providerBuckets.set(provider, bucket);
+  }
+
+  const orderedProviders = [...providerBuckets.keys()].sort((a, b) => a.localeCompare(b));
+  const result: Array<ReturnType<typeof normalizeCourse>> = [];
+  let added = true;
+
+  while (added) {
+    added = false;
+
+    for (const provider of orderedProviders) {
+      const bucket = providerBuckets.get(provider);
+      if (!bucket || bucket.length === 0) continue;
+      result.push(bucket.shift() as ReturnType<typeof normalizeCourse>);
+      added = true;
+    }
+  }
+
+  return result;
+}
+
+function sortCourses(rows: Array<ReturnType<typeof normalizeCourse>>, sortBy = 'balanced') {
+  if (sortBy === 'balanced') {
+    return interleaveByProvider(rows);
+  }
+
+  return [...rows].sort((a, b) => {
+    if (sortBy === 'credits-high') {
+      return (numericValue(b.credits) ?? -1) - (numericValue(a.credits) ?? -1);
+    }
+
+    if (sortBy === 'rating-high') {
+      return (numericValue(b.rating_average) ?? -1) - (numericValue(a.rating_average) ?? -1);
+    }
+
+    if (sortBy === 'instructor') {
+      return String(a.instructor_display || 'ZZZ').localeCompare(String(b.instructor_display || 'ZZZ'));
+    }
+
+    if (sortBy === 'price-low') {
+      return (numericValue(a.price) ?? Number.MAX_SAFE_INTEGER) - (numericValue(b.price) ?? Number.MAX_SAFE_INTEGER);
+    }
+
+    if (sortBy === 'price-high') {
+      return (numericValue(b.price) ?? -1) - (numericValue(a.price) ?? -1);
+    }
+
+    return String(a.title || '').localeCompare(String(b.title || ''));
+  });
+}
+
 function compareCourses(a: ReturnType<typeof normalizeCourse>, b: ReturnType<typeof normalizeCourse>) {
   return [
     a.next_start_date || '',
@@ -340,61 +420,126 @@ async function getNormalizedCatalog() {
     ])
   );
 
-  return rows.map((row) => normalizeCourse({
+  return rows.map((row: CatalogRow) => normalizeCourse({
     ...(row as CatalogRow),
     ...(ratingsByCourseId.get(row.id) || {}),
   }));
 }
 
-export async function getCourses(searchParams: CourseSearchParams = {}, take?: number) {
-  const rows = await getNormalizedCatalog();
-  const search = typeof searchParams.search === 'string' ? searchParams.search.trim() : '';
-  const provider = typeof searchParams.provider === 'string' ? searchParams.provider.trim() : '';
-  const format = typeof searchParams.format === 'string' ? searchParams.format.trim() : '';
-  const topic = typeof searchParams.topic === 'string' ? searchParams.topic.trim() : '';
+async function getNormalizedCatalogPage(page = 1, pageSize = 50) {
+  const { rows, total } = await getPublicCourseCatalogPage(page, pageSize);
+  const ratingRows = await getCourseRatingSummariesForCourseIds(rows.map((row: CatalogRow) => row.id));
 
-  const filtered = rows
-    .filter((course) => matchesSearch(course, search))
-    .filter((course) => (provider ? course.provider_filter_name === provider : true))
-    .filter((course) => (format ? course.next_format === format : true))
-    .filter((course) => (topic ? course.topic_tags.includes(topic) || course.headline_topic === topic : true))
-    .sort(compareCourses);
+  const ratingsByCourseId = new Map(
+    ratingRows.map((row: { course_id: string; average_overall_rating: number | null; rating_count: number | null }) => [
+      row.course_id,
+      {
+        rating_average: row.average_overall_rating,
+        rating_count: row.rating_count,
+      },
+    ])
+  );
+
+  return {
+    rows: rows.map((row: CatalogRow) => normalizeCourse({
+      ...(row as CatalogRow),
+      ...(ratingsByCourseId.get(row.id) || {}),
+    })),
+    total,
+  };
+}
+
+export async function getCourses(searchParams: CourseSearchParams = {}, take?: number) {
+  const rows: Array<ReturnType<typeof normalizeCourse>> = await getNormalizedCatalog();
+  const search = typeof searchParams.search === 'string' ? searchParams.search.trim() : '';
+  const providers = toList(searchParams.provider);
+  const formats = toList(searchParams.format);
+  const topics = toList(searchParams.topic);
+  const sortBy = typeof searchParams.sort === 'string' ? searchParams.sort.trim() : 'balanced';
+
+  const filtered = sortCourses(rows
+    .filter((course: ReturnType<typeof normalizeCourse>) => matchesSearch(course, search))
+    .filter((course: ReturnType<typeof normalizeCourse>) => (providers.length ? providers.includes(course.provider_filter_name || '') : true))
+    .filter((course: ReturnType<typeof normalizeCourse>) => (formats.length ? formats.includes(course.next_format || '') : true))
+    .filter((course: ReturnType<typeof normalizeCourse>) => (topics.length ? topics.some((topic) => course.topic_bucket === topic || course.topic_tags.includes(topic) || course.headline_topic === topic) : true))
+    .sort(compareCourses), sortBy);
 
   return typeof take === 'number' ? filtered.slice(0, take) : filtered;
 }
 
+export async function getCoursesPage(
+  searchParams: CourseSearchParams = {},
+  page = 1,
+  pageSize = 50,
+) {
+  const safePageSize = pageSize === 100 ? 100 : 50;
+  const search = typeof searchParams.search === 'string' ? searchParams.search.trim() : '';
+  const providers = toList(searchParams.provider);
+  const formats = toList(searchParams.format);
+  const topics = toList(searchParams.topic);
+  const sortBy = typeof searchParams.sort === 'string' ? searchParams.sort.trim() : 'balanced';
+  const hasFilters = Boolean(search || providers.length || formats.length || topics.length || sortBy !== 'balanced');
+
+  if (!hasFilters) {
+    const { rows, total } = await getNormalizedCatalogPage(page, safePageSize);
+    const totalPages = Math.max(1, Math.ceil(total / safePageSize));
+    const currentPage = Math.min(Math.max(page, 1), totalPages);
+
+    return {
+      courses: rows,
+      total,
+      totalPages,
+      currentPage,
+      pageSize: safePageSize,
+    };
+  }
+
+  const rows = await getCourses(searchParams);
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / safePageSize));
+  const currentPage = Math.min(Math.max(page, 1), totalPages);
+  const start = (currentPage - 1) * safePageSize;
+  const end = start + safePageSize;
+
+  return {
+    courses: rows.slice(start, end),
+    total,
+    totalPages,
+    currentPage,
+    pageSize: safePageSize,
+  };
+}
+
 export async function getFeaturedCourses(take = 6) {
-  const rows = await getNormalizedCatalog();
-  return [...rows]
-    .sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')))
-    .slice(0, take);
+  const { rows } = await getNormalizedCatalogPage(1, Math.max(take, 12));
+  return rows.slice(0, take);
 }
 
 export async function getCatalogOverview() {
-  const [rows, providers] = await Promise.all([
-    getNormalizedCatalog(),
-    getPublicProviders(),
+  const [stats, formats] = await Promise.all([
+    getCatalogStats(),
+    getPublicSessionFormats(),
   ]);
 
   return {
-    courseCount: rows.length,
-    providerCount: providers.length,
-    formatCount: new Set(rows.map((row) => row.next_format).filter(Boolean)).size,
+    courseCount: stats.courses,
+    providerCount: stats.providers,
+    formatCount: new Set(formats.filter(Boolean)).size,
   };
 }
 
 export async function getCourseFilters() {
-  const rows = await getNormalizedCatalog();
+  const rows: Array<ReturnType<typeof normalizeCourse>> = await getNormalizedCatalog();
 
-  const formats = [...new Set(rows.map((row) => row.next_format).filter(Boolean))]
+  const formats = [...new Set(rows.map((row: ReturnType<typeof normalizeCourse>) => row.next_format).filter(Boolean))]
     .sort((a, b) => String(a).localeCompare(String(b)));
-  const topics = [...new Set(rows.flatMap((row) => row.topic_tags || []).filter(Boolean))]
-    .map((topic) => classifyTopicBucket([topic]))
+  const topics = [...new Set(rows.flatMap((row: ReturnType<typeof normalizeCourse>) => row.topic_tags || []).filter(Boolean))]
+    .map((topic: string) => classifyTopicBucket([topic]))
     .filter(Boolean);
   const normalizedTopics = [...new Set(topics)].sort((a, b) => String(a).localeCompare(String(b)));
 
   return {
-    providers: [...new Set(rows.map((row) => row.provider_filter_name).filter(Boolean))]
+    providers: [...new Set(rows.map((row: ReturnType<typeof normalizeCourse>) => row.provider_filter_name).filter(Boolean))]
       .map((provider) => ({
         provider,
         provider_slug: String(provider).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
@@ -406,6 +551,6 @@ export async function getCourseFilters() {
 }
 
 export async function getCourseById(id: string) {
-  const rows = await getNormalizedCatalog();
-  return rows.find((row) => row.id === id) || null;
+  const rows: Array<ReturnType<typeof normalizeCourse>> = await getNormalizedCatalog();
+  return rows.find((row: ReturnType<typeof normalizeCourse>) => row.id === id) || null;
 }

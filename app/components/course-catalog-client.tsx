@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { track } from "@vercel/analytics";
+import { usePathname, useRouter } from "next/navigation";
 import type { CourseRecord } from "@/lib/courses";
 import CourseCard from "./coursecard";
 import { useSavedCourses } from "./saved-courses-provider";
@@ -14,42 +15,6 @@ type FilterOption = {
   label: string;
   value: string;
 };
-
-function numericValue(value: number | null | undefined) {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function normalize(value: string | null | undefined) {
-  return String(value || "").trim().toLowerCase();
-}
-
-function interleaveByProvider(items: CourseRecord[]) {
-  const providerBuckets = new Map<string, CourseRecord[]>();
-
-  for (const item of items) {
-    const provider = item.provider_name || "Unknown provider";
-    const bucket = providerBuckets.get(provider) || [];
-    bucket.push(item);
-    providerBuckets.set(provider, bucket);
-  }
-
-  const orderedProviders = [...providerBuckets.keys()].sort((a, b) => a.localeCompare(b));
-  const result: CourseRecord[] = [];
-  let added = true;
-
-  while (added) {
-    added = false;
-
-    for (const provider of orderedProviders) {
-      const bucket = providerBuckets.get(provider);
-      if (!bucket || bucket.length === 0) continue;
-      result.push(bucket.shift() as CourseRecord);
-      added = true;
-    }
-  }
-
-  return result;
-}
 
 function toggleSelection(values: string[], nextValue: string) {
   return values.includes(nextValue)
@@ -99,10 +64,26 @@ function MultiSelectFilter({
 
 export default function CourseCatalogClient({
   courses,
+  total,
+  currentPage,
+  totalPages,
+  pageSize,
+  initialState,
   filters,
   defaultSavedOnly = false,
 }: {
   courses: CourseRecord[];
+  total: number;
+  currentPage: number;
+  totalPages: number;
+  pageSize: number;
+  initialState: {
+    search: string;
+    sort: string;
+    topics: string[];
+    providers: string[];
+    formats: string[];
+  };
   filters: {
     providers: FilterOption[];
     formats: string[];
@@ -110,15 +91,25 @@ export default function CourseCatalogClient({
   };
   defaultSavedOnly?: boolean;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const { user } = useAuth();
   const { savedCourseIds } = useSavedCourses();
   const [savedOnly, setSavedOnly] = useState(defaultSavedOnly);
-  const [sortBy, setSortBy] = useState("balanced");
-  const [search, setSearch] = useState("");
-  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
-  const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
-  const [selectedFormats, setSelectedFormats] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState(initialState.sort);
+  const [search, setSearch] = useState(initialState.search);
+  const [selectedTopics, setSelectedTopics] = useState<string[]>(initialState.topics);
+  const [selectedProviders, setSelectedProviders] = useState<string[]>(initialState.providers);
+  const [selectedFormats, setSelectedFormats] = useState<string[]>(initialState.formats);
   const [practiceStateCode, setPracticeStateCode] = useState("");
+
+  useEffect(() => {
+    setSortBy(initialState.sort);
+    setSearch(initialState.search);
+    setSelectedTopics(initialState.topics);
+    setSelectedProviders(initialState.providers);
+    setSelectedFormats(initialState.formats);
+  }, [initialState]);
 
   useEffect(() => {
     let cancelled = false;
@@ -155,78 +146,45 @@ export default function CourseCatalogClient({
       .slice(0, 4);
   }, [filters.providers, practiceStateCode]);
 
-  const visibleCourses = useMemo(() => {
-    const searchTerm = normalize(search);
+  const visibleCourses = useMemo(
+    () => courses.filter((course) => (savedOnly ? savedCourseIds.includes(course.id) : true)),
+    [courses, savedCourseIds, savedOnly]
+  );
 
-    const filtered = courses
-      .filter((course) => (savedOnly ? savedCourseIds.includes(course.id) : true))
-      .filter((course) => {
-        if (selectedTopics.length === 0) return true;
-        return selectedTopics.some((topic) => course.topic_bucket === topic);
-      })
-      .filter((course) => (selectedProviders.length === 0 ? true : selectedProviders.includes(course.provider_filter_name || "")))
-      .filter((course) => (selectedFormats.length === 0 ? true : selectedFormats.includes(course.next_format || "")))
-      .filter((course) => {
-        if (!searchTerm) return true;
+  const visibleTotal = savedOnly ? visibleCourses.length : total;
+  const currentPageSafe = Math.min(currentPage, totalPages);
+  const pageStart = visibleTotal === 0 ? 0 : (savedOnly ? 1 : ((currentPageSafe - 1) * pageSize + 1));
+  const pageEnd = visibleTotal === 0 ? 0 : (savedOnly ? visibleCourses.length : Math.min(currentPageSafe * pageSize, visibleTotal));
 
-        const haystack = normalize([
-          course.title,
-          course.description,
-          course.category,
-          course.topic,
-          course.provider_name,
-          course.next_location,
-          course.next_format,
-          course.instructor_display,
-          ...(course.tags || []),
-        ].join(" "));
+  function pushQuery(next: {
+    search?: string;
+    sort?: string;
+    topics?: string[];
+    providers?: string[];
+    formats?: string[];
+    page?: number;
+    pageSize?: number;
+  }) {
+    const params = new URLSearchParams();
+    const nextSearch = next.search ?? search;
+    const nextSort = next.sort ?? sortBy;
+    const nextTopics = next.topics ?? selectedTopics;
+    const nextProviders = next.providers ?? selectedProviders;
+    const nextFormats = next.formats ?? selectedFormats;
+    const nextPage = next.page ?? 1;
+    const nextPageSize = next.pageSize ?? pageSize;
 
-        return haystack.includes(searchTerm);
-      });
+    if (nextSearch.trim()) params.set("search", nextSearch.trim());
+    if (nextSort && nextSort !== "balanced") params.set("sort", nextSort);
+    if (nextTopics.length) params.set("topic", nextTopics.join(","));
+    if (nextProviders.length) params.set("provider", nextProviders.join(","));
+    if (nextFormats.length) params.set("format", nextFormats.join(","));
+    if (nextPage > 1) params.set("page", String(nextPage));
+    if (nextPageSize !== 50) params.set("pageSize", String(nextPageSize));
 
-    if (sortBy === "balanced") {
-      return interleaveByProvider(filtered);
-    }
-
-    return [...filtered].sort((a, b) => {
-      if (sortBy === "popularity") {
-        const aSaved = savedCourseIds.includes(a.id);
-        const bSaved = savedCourseIds.includes(b.id);
-        if (aSaved !== bSaved) return aSaved ? -1 : 1;
-      }
-
-      if (sortBy === "credits-high") {
-        return (numericValue(b.credits) ?? -1) - (numericValue(a.credits) ?? -1);
-      }
-
-      if (sortBy === "rating-high") {
-        return (numericValue(b.rating_average) ?? -1) - (numericValue(a.rating_average) ?? -1);
-      }
-
-      if (sortBy === "instructor") {
-        return String(a.instructor_display || "ZZZ").localeCompare(String(b.instructor_display || "ZZZ"));
-      }
-
-      if (sortBy === "price-low") {
-        return (numericValue(a.price) ?? Number.MAX_SAFE_INTEGER) - (numericValue(b.price) ?? Number.MAX_SAFE_INTEGER);
-      }
-
-      if (sortBy === "price-high") {
-        return (numericValue(b.price) ?? -1) - (numericValue(a.price) ?? -1);
-      }
-
-      return String(a.title || "").localeCompare(String(b.title || ""));
-    });
-  }, [
-    courses,
-    savedCourseIds,
-    savedOnly,
-    search,
-    selectedFormats,
-    selectedProviders,
-    selectedTopics,
-    sortBy,
-  ]);
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }
 
   function handleFilterToggle(filterName: "topic" | "provider" | "format", value: string) {
     track("course_filter_toggle", {
@@ -254,6 +212,7 @@ export default function CourseCatalogClient({
                 track("course_search_start");
               }
               setSearch(value);
+              pushQuery({ search: value, page: 1 });
             }}
             placeholder="Search title, topic, description, provider, or instructor"
             aria-label="Search courses"
@@ -267,7 +226,9 @@ export default function CourseCatalogClient({
             selectedValues={selectedTopics}
             onToggle={(value) => {
               handleFilterToggle("topic", value);
-              setSelectedTopics((current) => toggleSelection(current, value));
+              const nextTopics = toggleSelection(selectedTopics, value);
+              setSelectedTopics(nextTopics);
+              pushQuery({ topics: nextTopics, page: 1 });
             }}
           />
 
@@ -280,7 +241,9 @@ export default function CourseCatalogClient({
             selectedValues={selectedProviders}
             onToggle={(value) => {
               handleFilterToggle("provider", value);
-              setSelectedProviders((current) => toggleSelection(current, value));
+              const nextProviders = toggleSelection(selectedProviders, value);
+              setSelectedProviders(nextProviders);
+              pushQuery({ providers: nextProviders, page: 1 });
             }}
           />
 
@@ -290,7 +253,9 @@ export default function CourseCatalogClient({
             selectedValues={selectedFormats}
             onToggle={(value) => {
               handleFilterToggle("format", value);
-              setSelectedFormats((current) => toggleSelection(current, value));
+              const nextFormats = toggleSelection(selectedFormats, value);
+              setSelectedFormats(nextFormats);
+              pushQuery({ formats: nextFormats, page: 1 });
             }}
           />
 
@@ -303,6 +268,16 @@ export default function CourseCatalogClient({
               setSelectedTopics([]);
               setSelectedProviders([]);
               setSelectedFormats([]);
+              setSortBy("balanced");
+              pushQuery({
+                search: "",
+                topics: [],
+                providers: [],
+                formats: [],
+                sort: "balanced",
+                page: 1,
+                pageSize: 50,
+              });
             }}
           >
             Clear Filters
@@ -331,6 +306,7 @@ export default function CourseCatalogClient({
               onChange={(event) => {
                 track("course_sort_change", { sort: event.target.value });
                 setSortBy(event.target.value);
+                pushQuery({ sort: event.target.value, page: 1 });
               }}
             >
               <option value="balanced">Balanced providers</option>
@@ -343,16 +319,31 @@ export default function CourseCatalogClient({
               <option value="title">Title A–Z</option>
             </select>
           </label>
+
+          <label className="sort-filter">
+            <span>Page size</span>
+            <select
+              value={pageSize}
+              onChange={(event) => {
+                const nextSize = Number(event.target.value);
+                track("course_page_size_change", { size: nextSize });
+                pushQuery({ pageSize: nextSize, page: 1 });
+              }}
+            >
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </label>
         </div>
 
         <div className="catalog-toolbar__meta">
           <span>{savedCourseIds.length} saved</span>
-          <span>{visibleCourses.length} showing</span>
+          <span>{pageStart}-{pageEnd || 0} of {visibleTotal}</span>
         </div>
       </div>
 
       <div className="course-count">
-        Showing <strong>{visibleCourses.length}</strong> courses
+        Showing <strong>{pageStart}-{pageEnd || 0}</strong> of <strong>{visibleTotal}</strong> courses
       </div>
 
       {visibleCourses.length === 0 ? (
@@ -361,11 +352,37 @@ export default function CourseCatalogClient({
           <p>Try clearing filters or broadening one of your selections.</p>
         </div>
       ) : (
-        <div className="course-grid">
-          {visibleCourses.map((course) => (
-            <CourseCard key={course.id} course={course} />
-          ))}
-        </div>
+        <>
+          <div className="course-grid">
+            {visibleCourses.map((course) => (
+              <CourseCard key={course.id} course={course} />
+            ))}
+          </div>
+
+          {!savedOnly ? <div className="catalog-pagination">
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={() => pushQuery({ page: Math.max(1, currentPageSafe - 1) })}
+              disabled={currentPageSafe === 1}
+            >
+              Previous
+            </button>
+
+            <span className="catalog-pagination__label">
+              Page {currentPageSafe} of {totalPages}
+            </span>
+
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={() => pushQuery({ page: Math.min(totalPages, currentPageSafe + 1) })}
+              disabled={currentPageSafe === totalPages}
+            >
+              Next
+            </button>
+          </div> : null}
+        </>
       )}
     </>
   );

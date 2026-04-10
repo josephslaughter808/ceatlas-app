@@ -1,17 +1,8 @@
-import CourseCard from "./components/coursecard";
-import { getCatalogOverview, getFeaturedCourses, type CourseRecord } from "@/lib/courses";
-import { getCatalogStats } from "@/lib/db";
 import Link from "next/link";
+import HomeStatsClient from "./components/home-stats-client";
+import HomeFeaturedCoursesClient from "./components/home-featured-courses-client";
 
-export const dynamic = "force-dynamic";
-
-export default async function HomePage() {
-  const [featuredCourses, overview, stats] = await Promise.all([
-    getFeaturedCourses(6),
-    getCatalogOverview(),
-    getCatalogStats(),
-  ]);
-
+export default function HomePage() {
   return (
     <div className="container home-page">
       <section className="hero">
@@ -28,20 +19,7 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <div className="hero__stats">
-          <div className="card hero-stat-card">
-            <p className="hero-stat-card__value">{stats.courses.toLocaleString()}</p>
-            <p className="hero-stat-card__label">Courses and events to compare</p>
-          </div>
-          <div className="card hero-stat-card">
-            <p className="hero-stat-card__value">{stats.providers.toLocaleString()}</p>
-            <p className="hero-stat-card__label">Providers, societies, and event hosts</p>
-          </div>
-          <div className="card hero-stat-card">
-            <p className="hero-stat-card__value">{overview.formatCount.toLocaleString()}</p>
-            <p className="hero-stat-card__label">Formats to browse, compare, and plan around</p>
-          </div>
-        </div>
+        <HomeStatsClient />
       </section>
 
       <section className="home-section home-section--centered">
@@ -83,11 +61,7 @@ export default async function HomePage() {
           <Link href="/courses">See all courses</Link>
         </div>
 
-        <div className="course-grid">
-          {featuredCourses.map((course: CourseRecord) => (
-            <CourseCard key={course.id} course={course} />
-          ))}
-        </div>
+        <HomeFeaturedCoursesClient />
       </section>
     </div>
   );

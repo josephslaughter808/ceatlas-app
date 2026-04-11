@@ -65,10 +65,10 @@ export const metadata: Metadata = {
   description: siteDescription,
   icons: {
     icon: [
-      { url: "/favicon.ico?v=8", sizes: "any" },
-      { url: "/icon.png?v=8", sizes: "512x512", type: "image/png" },
+      { url: "/favicon.ico?v=9", sizes: "any" },
+      { url: "/icon.png?v=9", sizes: "512x512", type: "image/png" },
     ],
-    apple: [{ url: "/apple-icon.png?v=8", sizes: "180x180", type: "image/png" }],
+    apple: [{ url: "/apple-icon.png?v=9", sizes: "180x180", type: "image/png" }],
   },
   openGraph: {
     title: "CEAtlas | Dental CE Courses, Conferences, Cruises & Travel",

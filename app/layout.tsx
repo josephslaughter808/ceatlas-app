@@ -7,6 +7,7 @@ import { SavedCoursesProvider } from "./components/saved-courses-provider";
 import Analytics from "./components/analytics";
 import SiteHeader from "./components/site-header";
 import { TravelPlannerProvider } from "./components/travel-planner-provider";
+import "leaflet/dist/leaflet.css";
 import "./globals.css";
 
 const geistSans = Geist({

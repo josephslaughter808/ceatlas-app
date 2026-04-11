@@ -20,6 +20,7 @@
     "@vercel/speed-insights": "^2.0.0",
     "axios": "^1.14.0",
     "cheerio": "^1.2.0",
+    "leaflet": "^1.9.4",
     "next": "16.1.7",
     "playwright": "^1.58.2",
     "react": "19.2.3",
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/leaflet": "^1.9.21",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

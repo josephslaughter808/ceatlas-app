@@ -10,6 +10,7 @@ import { useAuth } from "./auth-provider";
 import { supabase } from "@/lib/supabase";
 import StateRequirementsPanel from "./state-requirements-panel";
 import { getPracticeStateName, normalizePracticeStateCode } from "@/lib/practice-states";
+import WorldCourseMap, { type WorldCourseMapPoint } from "./world-course-map";
 
 type FilterOption = {
   label: string;
@@ -76,7 +77,23 @@ function MultiSelectFilter({
   );
 }
 
-function CourseMapPanel({ courses }: { courses: CourseRecord[] }) {
+function CourseMapShell({
+  courses,
+  selectedLocation,
+  onSelectLocation,
+  dateStart,
+  dateEnd,
+  onDateStartChange,
+  onDateEndChange,
+}: {
+  courses: CourseRecord[];
+  selectedLocation: string;
+  onSelectLocation: (location: string) => void;
+  dateStart: string;
+  dateEnd: string;
+  onDateStartChange: (value: string) => void;
+  onDateEndChange: (value: string) => void;
+}) {
   const locations = useMemo(() => {
     const grouped = new Map<string, CourseRecord[]>();
 
@@ -96,13 +113,65 @@ function CourseMapPanel({ courses }: { courses: CourseRecord[] }) {
       .sort((a, b) => b.courses.length - a.courses.length || a.location.localeCompare(b.location));
   }, [courses]);
 
-  const [selectedLocation, setSelectedLocation] = useState("");
+  useEffect(() => {
+    if (!locations.length && selectedLocation) {
+      onSelectLocation("");
+      return;
+    }
+
+    if (selectedLocation && !locations.some((entry) => entry.location === selectedLocation)) {
+      onSelectLocation("");
+    }
+  }, [locations, onSelectLocation, selectedLocation]);
+
+  const activeLocation = locations.find((entry) => entry.location === selectedLocation) || null;
+  const [points, setPoints] = useState<WorldCourseMapPoint[]>([]);
+  const [pointsLoading, setPointsLoading] = useState(false);
 
   useEffect(() => {
-    setSelectedLocation(locations[0]?.location || "");
-  }, [locations]);
+    let cancelled = false;
 
-  const activeLocation = locations.find((entry) => entry.location === selectedLocation) || locations[0] || null;
+    async function loadPoints() {
+      const locationNames = locations.map((entry) => entry.location);
+      if (!locationNames.length) {
+        setPoints([]);
+        return;
+      }
+
+      setPointsLoading(true);
+      try {
+        const response = await fetch("/api/course-map-points", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ locations: locationNames }),
+        });
+        if (!response.ok) return;
+        const data = await response.json() as {
+          points?: Array<{ location: string; latitude: number; longitude: number; label: string }>;
+        };
+
+        if (cancelled) return;
+
+        const counts = new Map(locations.map((entry) => [entry.location, entry.courses.length]));
+        setPoints((data.points || []).map((point) => ({
+          ...point,
+          count: counts.get(point.location) || 0,
+        })));
+      } finally {
+        if (!cancelled) {
+          setPointsLoading(false);
+        }
+      }
+    }
+
+    loadPoints();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [locations]);
 
   if (!locations.length) {
     return (
@@ -118,16 +187,36 @@ function CourseMapPanel({ courses }: { courses: CourseRecord[] }) {
     );
   }
 
-  const mapUrl = `https://www.google.com/maps?q=${encodeURIComponent(activeLocation?.location || "")}&output=embed`;
-
   return (
     <div className="course-map-panel card">
       <div className="course-map-panel__sidebar">
         <div className="course-map-panel__heading">
           <span className="course-map-panel__kicker">Map View</span>
-          <h2>Explore current results by location</h2>
-          <p>Select a location to preview it on the map and see the matching courses there.</p>
+          <h2>Explore current results on the map</h2>
+          <p>Start with a global city view, then click a city pin to zoom in and reveal the courses there.</p>
+          <p>Most locations are city-level unless the provider publishes a venue address.</p>
         </div>
+
+        <div className="course-map-panel__dates">
+          <label>
+            <span>From</span>
+            <input type="date" value={dateStart} onChange={(event) => onDateStartChange(event.target.value)} />
+          </label>
+          <label>
+            <span>To</span>
+            <input type="date" value={dateEnd} onChange={(event) => onDateEndChange(event.target.value)} />
+          </label>
+        </div>
+
+        {selectedLocation ? (
+          <button
+            type="button"
+            className="course-map-panel__reset button button-secondary"
+            onClick={() => onSelectLocation("")}
+          >
+            Back to world map
+          </button>
+        ) : null}
 
         <div className="course-map-panel__locations">
           {locations.map((entry) => (
@@ -135,7 +224,7 @@ function CourseMapPanel({ courses }: { courses: CourseRecord[] }) {
               key={entry.location}
               type="button"
               className={`course-map-panel__location${entry.location === activeLocation?.location ? " is-active" : ""}`}
-              onClick={() => setSelectedLocation(entry.location)}
+              onClick={() => onSelectLocation(entry.location)}
             >
               <span>{entry.location}</span>
               <strong>{entry.courses.length}</strong>
@@ -156,11 +245,12 @@ function CourseMapPanel({ courses }: { courses: CourseRecord[] }) {
       </div>
 
       <div className="course-map-panel__viewer">
-        <iframe
-          title={activeLocation?.location || "Course map"}
-          src={mapUrl}
-          loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
+        {pointsLoading ? <div className="course-map-panel__loading">Loading map pins...</div> : null}
+        <WorldCourseMap
+          points={points}
+          activeLocation={activeLocation?.location || ""}
+          activeCourses={activeLocation?.courses || []}
+          onSelectLocation={onSelectLocation}
         />
       </div>
     </div>
@@ -208,6 +298,9 @@ export default function CourseCatalogClient({
   const [selectedProviders, setSelectedProviders] = useState<string[]>(initialState.providers);
   const [selectedFormats, setSelectedFormats] = useState<string[]>(initialState.formats);
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
+  const [mapLocation, setMapLocation] = useState("");
+  const [mapDateStart, setMapDateStart] = useState("");
+  const [mapDateEnd, setMapDateEnd] = useState("");
   const [practiceStateCode, setPracticeStateCode] = useState("");
   const [availableFilters, setAvailableFilters] = useState(filters);
   const [filtersLoading, setFiltersLoading] = useState(filters.providers.length === 0 || filters.formats.length === 0);
@@ -285,6 +378,20 @@ export default function CourseCatalogClient({
     () => courses.filter((course) => (savedOnly ? savedCourseIds.includes(course.id) : true)),
     [courses, savedCourseIds, savedOnly]
   );
+  const dateScopedMapCourses = useMemo(() => {
+    return visibleCourses.filter((course) => {
+      if (!mapDateStart && !mapDateEnd) return true;
+      const start = String(course.next_start_date || "").trim();
+      if (!start) return false;
+      if (mapDateStart && start < mapDateStart) return false;
+      if (mapDateEnd && start > mapDateEnd) return false;
+      return true;
+    });
+  }, [mapDateEnd, mapDateStart, visibleCourses]);
+  const mapScopedCourses = useMemo(() => {
+    if (!mapLocation) return dateScopedMapCourses;
+    return dateScopedMapCourses.filter((course) => String(course.next_location || "").trim() === mapLocation);
+  }, [dateScopedMapCourses, mapLocation]);
   const hasPendingFilterChanges = search.trim() !== initialState.search.trim()
     || sortBy !== initialState.sort
     || !sameSelections(selectedTopics, initialState.topics)
@@ -531,6 +638,9 @@ export default function CourseCatalogClient({
 
       <div className="course-count">
         Showing <strong>{pageStart}-{pageEnd || 0}</strong> of <strong>{visibleTotal}</strong> courses
+        {viewMode === "map" && mapLocation ? (
+          <span className="course-count__map-note"> focused on <strong>{mapLocation}</strong></span>
+        ) : null}
       </div>
 
       {visibleCourses.length === 0 ? (
@@ -540,10 +650,20 @@ export default function CourseCatalogClient({
         </div>
       ) : (
         <>
-          {viewMode === "map" ? <CourseMapPanel courses={visibleCourses} /> : null}
+          {viewMode === "map" ? (
+            <CourseMapShell
+              courses={dateScopedMapCourses}
+              selectedLocation={mapLocation}
+              onSelectLocation={setMapLocation}
+              dateStart={mapDateStart}
+              dateEnd={mapDateEnd}
+              onDateStartChange={setMapDateStart}
+              onDateEndChange={setMapDateEnd}
+            />
+          ) : null}
 
           <div className="course-grid">
-            {visibleCourses.map((course) => (
+            {(viewMode === "map" ? mapScopedCourses : visibleCourses).map((course) => (
               <CourseCard key={course.id} course={course} />
             ))}
           </div>

@@ -91,6 +91,7 @@ function CourseMapShell({
   dateEnd,
   onDateStartChange,
   onDateEndChange,
+  page,
   onCoursesChange,
 }: {
   appliedFilters: {
@@ -106,10 +107,13 @@ function CourseMapShell({
   dateEnd: string;
   onDateStartChange: (value: string) => void;
   onDateEndChange: (value: string) => void;
+  page: number;
   onCoursesChange: (payload: {
     courses: CourseRecord[];
     totalMappableCourses: number;
     courseCountForSelection: number;
+    currentPage: number;
+    totalPages: number;
     loading: boolean;
   }) => void;
 }) {
@@ -143,6 +147,8 @@ function CourseMapShell({
         courses: [],
         totalMappableCourses: 0,
         courseCountForSelection: 0,
+        currentPage: 1,
+        totalPages: 1,
         loading: true,
       });
 
@@ -155,6 +161,7 @@ function CourseMapShell({
       if (selectedLocation) params.set("location", selectedLocation);
       if (dateStart) params.set("dateStart", dateStart);
       if (dateEnd) params.set("dateEnd", dateEnd);
+      if (page > 1) params.set("page", String(page));
 
       const response = await fetch(`/api/course-map-data?${params.toString()}`);
       if (!response.ok) {
@@ -168,6 +175,8 @@ function CourseMapShell({
             courses: [],
             totalMappableCourses: 0,
             courseCountForSelection: 0,
+            currentPage: 1,
+            totalPages: 1,
             loading: false,
           });
         }
@@ -179,6 +188,8 @@ function CourseMapShell({
         courses?: CourseRecord[];
         totalMappableCourses?: number;
         courseCountForSelection?: number;
+        currentPage?: number;
+        totalPages?: number;
       };
 
       if (cancelled) return;
@@ -192,6 +203,8 @@ function CourseMapShell({
         courses: data.courses || [],
         totalMappableCourses: Number(data.totalMappableCourses || 0),
         courseCountForSelection: Number(data.courseCountForSelection || 0),
+        currentPage: Number(data.currentPage || 1),
+        totalPages: Number(data.totalPages || 1),
         loading: false,
       });
     }
@@ -201,7 +214,7 @@ function CourseMapShell({
     return () => {
       cancelled = true;
     };
-  }, [appliedFilters, dateEnd, dateStart, onCoursesChange, selectedLocation]);
+  }, [appliedFilters, dateEnd, dateStart, onCoursesChange, page, selectedLocation]);
 
   useEffect(() => {
     let cancelled = false;
@@ -384,6 +397,8 @@ export default function CourseCatalogClient({
   const [mapCourses, setMapCourses] = useState<CourseRecord[]>([]);
   const [mapTotalCourses, setMapTotalCourses] = useState(0);
   const [mapSelectionCount, setMapSelectionCount] = useState(0);
+  const [mapCurrentPage, setMapCurrentPage] = useState(1);
+  const [mapTotalPages, setMapTotalPages] = useState(1);
   const [mapLoading, setMapLoading] = useState(false);
   const [practiceStateCode, setPracticeStateCode] = useState("");
   const [availableFilters, setAvailableFilters] = useState(filters);
@@ -401,20 +416,31 @@ export default function CourseCatalogClient({
     initialState.sort,
     initialState.topics,
   ]);
+
+  useEffect(() => {
+    setMapCurrentPage(1);
+  }, [mapLocation, mapDateStart, mapDateEnd, appliedMapFilters]);
+
   const handleMapCoursesChange = useCallback(({
     courses: nextCourses,
     totalMappableCourses,
     courseCountForSelection,
+    currentPage,
+    totalPages,
     loading,
   }: {
     courses: CourseRecord[];
     totalMappableCourses: number;
     courseCountForSelection: number;
+    currentPage: number;
+    totalPages: number;
     loading: boolean;
   }) => {
     setMapCourses(nextCourses);
     setMapTotalCourses(totalMappableCourses);
     setMapSelectionCount(courseCountForSelection);
+    setMapCurrentPage(currentPage);
+    setMapTotalPages(totalPages);
     setMapLoading(loading);
   }, []);
 
@@ -738,10 +764,17 @@ export default function CourseCatalogClient({
       <div className="course-count">
         {viewMode === "map" ? (
           <>
-            Showing <strong>{mapCourses.length}</strong> of <strong>{mapLocation ? mapSelectionCount : mapTotalCourses}</strong>
-            {" "}courses on the map
             {mapLocation ? (
-              <span className="course-count__map-note"> in <strong>{mapLocation}</strong></span>
+              <>
+                Showing <strong>{mapCourses.length}</strong> of <strong>{mapSelectionCount}</strong> courses in <strong>{mapLocation}</strong>
+              </>
+            ) : (
+              <>
+                Showing <strong>{mapTotalCourses}</strong> location-based courses on the map
+              </>
+            )}
+            {mapLocation ? (
+              <span className="course-count__map-note"> page <strong>{mapCurrentPage}</strong> of <strong>{mapTotalPages}</strong></span>
             ) : null}
           </>
         ) : (
@@ -767,6 +800,7 @@ export default function CourseCatalogClient({
               dateEnd={mapDateEnd}
               onDateStartChange={setMapDateStart}
               onDateEndChange={setMapDateEnd}
+              page={mapCurrentPage}
               onCoursesChange={handleMapCoursesChange}
             />
           ) : null}
@@ -780,6 +814,32 @@ export default function CourseCatalogClient({
           {viewMode === "map" && mapLoading ? (
             <div className="card">
               <p>Loading map courses...</p>
+            </div>
+          ) : null}
+
+          {viewMode === "map" && mapLocation && mapTotalPages > 1 && !mapLoading ? (
+            <div className="catalog-pagination">
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() => setMapCurrentPage((current) => Math.max(1, current - 1))}
+                disabled={mapCurrentPage === 1}
+              >
+                Previous 10
+              </button>
+
+              <span className="catalog-pagination__label">
+                Page {mapCurrentPage} of {mapTotalPages}
+              </span>
+
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() => setMapCurrentPage((current) => Math.min(mapTotalPages, current + 1))}
+                disabled={mapCurrentPage === mapTotalPages}
+              >
+                Next 10
+              </button>
             </div>
           ) : null}
 

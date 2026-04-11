@@ -85,6 +85,18 @@ export default function AccountClient() {
   const [providerLabel, setProviderLabel] = useState("");
   const [providerBusy, setProviderBusy] = useState(false);
   const [providerMessage, setProviderMessage] = useState<string | null>(null);
+  const siteUrl = useMemo(() => (
+    (process.env.NEXT_PUBLIC_SITE_URL || "https://ceatlas.co").replace(/\/$/, "")
+  ), []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("verified") === "1") {
+      setMode("signin");
+      setAuthMessage("Email verified. You can sign in and keep testing CEAtlas.");
+    }
+  }, []);
 
   useEffect(() => {
     if (!session) {
@@ -143,9 +155,7 @@ export default function AccountClient() {
 
     try {
       if (mode === "signup") {
-        const emailRedirectTo = typeof window === "undefined"
-          ? undefined
-          : `${window.location.origin}/account?verified=1`;
+        const emailRedirectTo = `${siteUrl}/account?verified=1`;
         const { data, error } = await supabase.auth.signUp({
           email,
           password,

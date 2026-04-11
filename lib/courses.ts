@@ -8,6 +8,7 @@ import {
   getPublicCoursesByIds,
   getPublicSessionFormats,
 } from './db.js';
+import { unstable_cache } from 'next/cache';
 
 type CatalogRow = {
   id: string;
@@ -435,6 +436,12 @@ async function getNormalizedCatalogLite() {
   return rows.map((row: CatalogRow) => normalizeCourse(row as CatalogRow));
 }
 
+const getCachedNormalizedCatalogLite = unstable_cache(
+  async () => getNormalizedCatalogLite(),
+  ['course-map-catalog-lite'],
+  { revalidate: 60 * 30 }
+);
+
 async function getNormalizedCatalogPage(page = 1, pageSize = 50) {
   const { rows, total } = await getPublicCourseCatalogPage(page, pageSize);
   const ratingRows = await getCourseRatingSummariesForCourseIds(rows.map((row: CatalogRow) => row.id));
@@ -477,7 +484,7 @@ export async function getCourses(searchParams: CourseSearchParams = {}, take?: n
 }
 
 export async function getMapCourses(searchParams: CourseSearchParams = {}, take?: number) {
-  const rows: Array<ReturnType<typeof normalizeCourse>> = await getNormalizedCatalogLite();
+  const rows: Array<ReturnType<typeof normalizeCourse>> = await getCachedNormalizedCatalogLite();
   const search = typeof searchParams.search === 'string' ? searchParams.search.trim() : '';
   const providers = toList(searchParams.provider);
   const formats = toList(searchParams.format);

@@ -67,7 +67,7 @@ export async function GET(request: Request) {
   const visiblePool = mappableCourses.filter((course) => locationSet.has(String(course.next_location || "").trim()));
   const visibleCourses = location
     ? visiblePool.filter((course) => String(course.next_location || "").trim() === location)
-    : visiblePool;
+    : [];
 
   return NextResponse.json({
     locations: locationEntries,

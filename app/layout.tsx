@@ -153,13 +153,13 @@ export default function RootLayout({
                         <p className="site-footer__tagline">Dental CE discovery, comparison, and travel planning in one place.</p>
                       </div>
                       <div className="site-footer__actions">
-                        <a className="site-footer__button" href="mailto:support@ceatlas.co">Support</a>
+                        <a className="site-footer__button site-footer__button--secondary" href="mailto:support@ceatlas.co">Support</a>
                         <a className="site-footer__button site-footer__button--secondary" href="mailto:providers@ceatlas.co">Providers</a>
                         <div className="site-footer__socials" aria-label="CEAtlas social media">
                           {socialLinks.map((link) => (
                             <a
                               key={link.label}
-                              className="site-footer__social-link"
+                              className={`site-footer__social-link site-footer__social-link--${link.label.toLowerCase()}`}
                               href={link.href}
                               target="_blank"
                               rel="noreferrer"

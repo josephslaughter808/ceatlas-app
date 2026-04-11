@@ -3,12 +3,14 @@ import { writeCSV } from '../scrapers/write-csv.js';
 import { scrapeAchieveCE } from '../scrapers/providers/achievece.js';
 import { scrapeADHA } from '../scrapers/providers/adha.js';
 import { scrapeAllConferenceAlertDentistry } from '../scrapers/providers/all-conference-alert-dentistry.js';
+import { scrapeAllConferenceAlertExpanded } from '../scrapers/providers/all-conference-alert-expanded.js';
 import { scrapeAAPAnnualMeeting2026 } from '../scrapers/providers/aap-annual-meeting.js';
 import { scrapeBiolase } from '../scrapers/providers/biolase.js';
 import { scrapeBlueSkyBio } from '../scrapers/providers/blueskybio.js';
 import { scrapeBU } from '../scrapers/providers/bu.js';
 import { scrapeBuffalo } from '../scrapers/providers/buffalo.js';
 import { scrapeCarestream } from '../scrapers/providers/carestream.js';
+import { scrapeCEBrokerDental } from '../scrapers/providers/cebroker-dental.js';
 import { scrapeCEZoom } from '../scrapers/providers/cezoom.js';
 import { scrapeCDEWorld } from '../scrapers/providers/cdeworld.js';
 import { scrapeColoradoCE } from '../scrapers/providers/colorado.js';
@@ -94,6 +96,10 @@ const PROVIDERS = {
     label: 'All Conference Alert dentistry events',
     scrape: () => scrapeAllConferenceAlertDentistry(),
   },
+  'all-conference-alert-expanded': {
+    label: 'All Conference Alert expanded dental-topic events',
+    scrape: () => scrapeAllConferenceAlertExpanded(),
+  },
   'aap-annual-meeting-2026': {
     label: 'AAP Annual Meeting 2026',
     scrape: () => scrapeAAPAnnualMeeting2026(),
@@ -138,6 +144,10 @@ const PROVIDERS = {
   carestream: {
     label: 'Carestream Dental Education',
     scrape: () => scrapeCarestream(),
+  },
+  'cebroker-dental': {
+    label: 'CE Broker dental approved listings',
+    scrape: () => scrapeCEBrokerDental(),
   },
   cezoom: {
     label: 'CE Zoom Dental CE',
@@ -467,7 +477,7 @@ async function main() {
     });
     const result = await syncProviderCatalog(review.rows);
     if (review.skipped.length || result.skippedPastCourses) {
-      console.log(`   • skipped ${review.skipped.length + result.skippedPastCourses} past dated rows before upload`);
+      console.log(`   • skipped ${review.skipped.length + result.skippedPastCourses} rows before upload`);
     }
     const stats = await getCatalogStats();
 

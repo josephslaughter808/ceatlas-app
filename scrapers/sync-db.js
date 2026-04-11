@@ -11,7 +11,7 @@ async function main() {
 
   console.log(`✅ Synced ${result.total} current/future scraped rows`);
   if (review.skipped.length) {
-    console.log(`   • skipped past rows before upload: ${review.skipped.length}`);
+    console.log(`   • skipped rows before upload: ${review.skipped.length}`);
   }
   console.log(`   • providers inserted: ${result.insertedProviders}`);
   console.log(`   • courses inserted: ${result.insertedCourses}`);

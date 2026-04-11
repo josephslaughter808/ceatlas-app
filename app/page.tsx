@@ -15,7 +15,6 @@ export default function HomePage() {
           </p>
           <div className="hero__actions">
             <Link href="/courses" className="button">Browse Courses</Link>
-            <Link href="/events" className="button button--light">Browse Events</Link>
             <Link href="/packages" className="button button--light">Explore Packages</Link>
           </div>
         </div>

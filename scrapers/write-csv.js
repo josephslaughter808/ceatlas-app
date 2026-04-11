@@ -79,7 +79,7 @@ export function writeCSV(rows, options = {}) {
   console.log(`✅ Wrote ${deduped.length} rows to ${csvPath}`);
   console.log(`✅ Wrote ${deduped.length} rows to ${jsonPath}`);
   if (filtered.skipped.length) {
-    console.log(`🧹 Skipped ${filtered.skipped.length} past dated rows before CSV/upload review (${filtered.today}); details in ${skippedPath}`);
+    console.log(`🧹 Skipped ${filtered.skipped.length} rows before CSV/upload review (${filtered.today}); details in ${skippedPath}`);
   }
 
   return {

@@ -171,6 +171,24 @@ function buildTopLevelLocations(sessions: MapSession[]) {
     .slice(0, 250);
 }
 
+function findCitySelection(sessions: MapSession[], selectedLocation: string) {
+  const matchingSessions = sessions.filter((session) => deriveSessionLabels(session).cityLabel === selectedLocation);
+  if (!matchingSessions.length) return null;
+
+  const firstMatch = deriveSessionLabels(matchingSessions[0]);
+  const parentLocation = firstMatch.countryLabel && firstMatch.countryLabel !== "United States"
+    ? firstMatch.countryLabel
+    : (firstMatch.stateLabel || firstMatch.topLevelLabel);
+
+  const siblingCities = parentLocation ? buildDrilldownLocations(sessions, parentLocation) : [];
+  const selectedEntry = siblingCities.find((entry) => entry.location === selectedLocation) || null;
+
+  return {
+    siblingCities,
+    selectedEntry,
+  };
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const location = normalizeMapLocation(searchParams.get("location")) || "";
@@ -206,18 +224,27 @@ export async function GET(request: Request) {
     });
 
     const topLevelLocations = buildTopLevelLocations(filteredSessions);
-    const drilldownLocations = location ? buildDrilldownLocations(filteredSessions, location) : [];
-    const selectedEntry = topLevelLocations.find((entry) => entry.location === location) || null;
-    const leafEntry = drilldownLocations.find((entry) => entry.location === location) || null;
-    const hasChildCities = drilldownLocations.length > 0 && !leafEntry;
+    const topLevelSelection = location
+      ? topLevelLocations.find((entry) => entry.location === location) || null
+      : null;
+    const drilldownLocations = topLevelSelection ? buildDrilldownLocations(filteredSessions, location) : [];
+    const citySelection = location && !topLevelSelection
+      ? findCitySelection(filteredSessions, location)
+      : null;
+    const hasChildCities = drilldownLocations.length > 0;
 
+    const visibleLocations = hasChildCities
+      ? drilldownLocations
+      : (citySelection?.siblingCities.length ? citySelection.siblingCities : topLevelLocations);
     const selectedCourseIds = hasChildCities
       ? []
-      : (leafEntry?.courseIds || selectedEntry?.courseIds || []);
-
+      : (citySelection?.selectedEntry?.courseIds || topLevelSelection?.courseIds || []);
     const totalSelectedCourses = hasChildCities
-      ? Number(selectedEntry?.count || 0)
+      ? Number(topLevelSelection?.count || 0)
       : selectedCourseIds.length;
+    const selectedLocationType = hasChildCities
+      ? "region"
+      : (selectedCourseIds.length ? "city" : "world");
     const totalPages = Math.max(1, Math.ceil(totalSelectedCourses / MAP_PAGE_SIZE));
     const currentPage = Math.min(page, totalPages);
     const start = (currentPage - 1) * MAP_PAGE_SIZE;
@@ -226,12 +253,12 @@ export async function GET(request: Request) {
       : [];
 
     return NextResponse.json({
-      locations: (hasChildCities ? drilldownLocations : topLevelLocations).map(({ location: name, count }) => ({ location: name, count })),
+      locations: visibleLocations.map(({ location: name, count }) => ({ location: name, count })),
       totalMappableCourses: filteredSessions.length,
       courseCountForSelection: totalSelectedCourses,
       currentPage,
       totalPages,
-      selectedLocationType: hasChildCities ? "region" : (location ? "city" : "world"),
+      selectedLocationType,
       courses,
     }, {
       headers: {

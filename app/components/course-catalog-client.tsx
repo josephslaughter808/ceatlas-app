@@ -126,15 +126,23 @@ function CourseMapShell({
   const [selectedLocationType, setSelectedLocationType] = useState<"world" | "region" | "city">("world");
 
   useEffect(() => {
+    if (mapResultsLoading) {
+      return;
+    }
+
     if (!locations.length && selectedLocation) {
       onSelectLocation("");
       return;
     }
 
-    if (selectedLocation && !locations.some((entry) => entry.location === selectedLocation)) {
+    if (
+      selectedLocation
+      && selectedLocationType === "world"
+      && !locations.some((entry) => entry.location === selectedLocation)
+    ) {
       onSelectLocation("");
     }
-  }, [locations, onSelectLocation, selectedLocation]);
+  }, [locations, mapResultsLoading, onSelectLocation, selectedLocation, selectedLocationType]);
 
   const activeLocation = locations.find((entry) => entry.location === selectedLocation) || null;
   const [points, setPoints] = useState<WorldCourseMapPoint[]>([]);

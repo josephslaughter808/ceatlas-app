@@ -3,7 +3,6 @@ import {
   getCourseRatingSummaries,
   getCourseRatingSummariesForCourseIds,
   getPublicCourseCatalog,
-  getPublicCourseCatalogPage,
   getPublicCourseProviderFilterRows,
   getPublicCoursesByIds,
   getPublicSessionFormats,
@@ -99,6 +98,10 @@ const AGGREGATOR_PROVIDER_LABELS: Array<{ label: string; patterns: RegExp[] }> =
     patterns: [/dental-tribune-events/i, /dental-tribune-global/i, /dental-tribune\.com/i],
   },
 ];
+
+const UNVERIFIED_EVENT_AGGREGATOR_LABELS = new Set(
+  AGGREGATOR_PROVIDER_LABELS.map((entry) => entry.label)
+);
 
 function titleCaseWord(word: string) {
   if (!word) return word;
@@ -304,6 +307,33 @@ function normalizeCourse(row: CatalogRow) {
 }
 
 export type CourseRecord = ReturnType<typeof normalizeCourse>;
+export type EventRecord = CourseRecord;
+
+function hasExplicitCeCreditSignal(course: ReturnType<typeof normalizeCourse>) {
+  if (typeof course.credits === "number" && Number.isFinite(course.credits) && course.credits > 0) {
+    return true;
+  }
+
+  const creditsText = String(course.credits_text || "").trim();
+  if (!creditsText) return false;
+
+  return /\b(ce|ceu|cde|credit|credits|hour|hours)\b/i.test(creditsText)
+    && !/\b(not specified|n\/a|tbd|unknown)\b/i.test(creditsText);
+}
+
+function shouldIncludeCatalogCourse(course: ReturnType<typeof normalizeCourse>) {
+  const providerFilter = String(course.provider_filter_name || "").trim();
+  if (!UNVERIFIED_EVENT_AGGREGATOR_LABELS.has(providerFilter)) {
+    return true;
+  }
+
+  return hasExplicitCeCreditSignal(course);
+}
+
+function shouldIncludeNonCeEvent(course: ReturnType<typeof normalizeCourse>) {
+  const providerFilter = String(course.provider_filter_name || "").trim();
+  return UNVERIFIED_EVENT_AGGREGATOR_LABELS.has(providerFilter) && !hasExplicitCeCreditSignal(course);
+}
 
 function matchesSearch(course: ReturnType<typeof normalizeCourse>, search: string) {
   if (!search) return true;
@@ -409,7 +439,7 @@ function compareCourses(a: ReturnType<typeof normalizeCourse>, b: ReturnType<typ
   ].join('|'));
 }
 
-async function getNormalizedCatalog() {
+async function getAllNormalizedCatalog() {
   const [rows, ratingRows] = await Promise.all([
     getPublicCourseCatalog(),
     getCourseRatingSummaries(),
@@ -431,9 +461,19 @@ async function getNormalizedCatalog() {
   }));
 }
 
-async function getNormalizedCatalogLite() {
+async function getAllNormalizedCatalogLite() {
   const rows = await getPublicCourseCatalog();
   return rows.map((row: CatalogRow) => normalizeCourse(row as CatalogRow));
+}
+
+async function getNormalizedCatalog() {
+  const rows = await getAllNormalizedCatalog();
+  return rows.filter(shouldIncludeCatalogCourse);
+}
+
+async function getNormalizedCatalogLite() {
+  const rows = await getAllNormalizedCatalogLite();
+  return rows.filter(shouldIncludeCatalogCourse);
 }
 
 const getCachedNormalizedCatalogLite = unstable_cache(
@@ -441,29 +481,6 @@ const getCachedNormalizedCatalogLite = unstable_cache(
   ['course-map-catalog-lite'],
   { revalidate: 60 * 30 }
 );
-
-async function getNormalizedCatalogPage(page = 1, pageSize = 50) {
-  const { rows, total } = await getPublicCourseCatalogPage(page, pageSize);
-  const ratingRows = await getCourseRatingSummariesForCourseIds(rows.map((row: CatalogRow) => row.id));
-
-  const ratingsByCourseId = new Map(
-    ratingRows.map((row: { course_id: string; average_overall_rating: number | null; rating_count: number | null }) => [
-      row.course_id,
-      {
-        rating_average: row.average_overall_rating,
-        rating_count: row.rating_count,
-      },
-    ])
-  );
-
-  return {
-    rows: rows.map((row: CatalogRow) => normalizeCourse({
-      ...(row as CatalogRow),
-      ...(ratingsByCourseId.get(row.id) || {}),
-    })),
-    total,
-  };
-}
 
 export async function getCourses(searchParams: CourseSearchParams = {}, take?: number) {
   const rows: Array<ReturnType<typeof normalizeCourse>> = await getNormalizedCatalog();
@@ -507,27 +524,6 @@ export async function getCoursesPage(
   pageSize = 50,
 ) {
   const safePageSize = pageSize === 100 ? 100 : 50;
-  const search = typeof searchParams.search === 'string' ? searchParams.search.trim() : '';
-  const providers = toList(searchParams.provider);
-  const formats = toList(searchParams.format);
-  const topics = toList(searchParams.topic);
-  const sortBy = typeof searchParams.sort === 'string' ? searchParams.sort.trim() : 'balanced';
-  const hasFilters = Boolean(search || providers.length || formats.length || topics.length || sortBy !== 'balanced');
-
-  if (!hasFilters) {
-    const { rows, total } = await getNormalizedCatalogPage(page, safePageSize);
-    const totalPages = Math.max(1, Math.ceil(total / safePageSize));
-    const currentPage = Math.min(Math.max(page, 1), totalPages);
-
-    return {
-      courses: rows,
-      total,
-      totalPages,
-      currentPage,
-      pageSize: safePageSize,
-    };
-  }
-
   const rows = await getCourses(searchParams);
   const total = rows.length;
   const totalPages = Math.max(1, Math.ceil(total / safePageSize));
@@ -545,8 +541,41 @@ export async function getCoursesPage(
 }
 
 export async function getFeaturedCourses(take = 6) {
-  const { rows } = await getNormalizedCatalogPage(1, Math.max(take, 12));
+  const rows = await getCourses({}, Math.max(take, 24));
   return rows.slice(0, take);
+}
+
+export async function getNonCeEvents(search = "", take?: number) {
+  const rows: Array<ReturnType<typeof normalizeCourse>> = await getAllNormalizedCatalog();
+  const normalizedSearch = String(search || "").trim();
+
+  const filtered = sortCourses(
+    rows
+      .filter(shouldIncludeNonCeEvent)
+      .filter((event) => matchesSearch(event, normalizedSearch))
+      .sort(compareCourses),
+    "title"
+  );
+
+  return typeof take === "number" ? filtered.slice(0, take) : filtered;
+}
+
+export async function getNonCeEventsPage(search = "", page = 1, pageSize = 50) {
+  const safePageSize = pageSize === 100 ? 100 : 50;
+  const rows = await getNonCeEvents(search);
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / safePageSize));
+  const currentPage = Math.min(Math.max(page, 1), totalPages);
+  const start = (currentPage - 1) * safePageSize;
+  const end = start + safePageSize;
+
+  return {
+    events: rows.slice(start, end),
+    total,
+    totalPages,
+    currentPage,
+    pageSize: safePageSize,
+  };
 }
 
 export async function getCoursesByIds(ids: string[]) {
@@ -572,7 +601,11 @@ export async function getCoursesByIds(ids: string[]) {
     ])
   );
 
-  return ids.map((id) => rowsById.get(id)).filter(Boolean);
+  const orderedRows = ids
+    .map((id) => rowsById.get(id))
+    .filter((course): course is ReturnType<typeof normalizeCourse> => Boolean(course));
+
+  return orderedRows.filter(shouldIncludeCatalogCourse);
 }
 
 export async function getCatalogOverview() {
@@ -600,7 +633,8 @@ export async function getCourseFilters() {
     .sort((a, b) => String(a).localeCompare(String(b)));
   const providerNames = [...new Set(providerRows
     .map((row) => providerFilterName(row, formatProviderName(row.provider_name)))
-    .filter(Boolean))];
+    .filter(Boolean)
+    .filter((provider) => !UNVERIFIED_EVENT_AGGREGATOR_LABELS.has(String(provider))))];
 
   return {
     providers: providerNames
@@ -626,4 +660,9 @@ export function getDefaultCourseFilters() {
 export async function getCourseById(id: string) {
   const rows: Array<ReturnType<typeof normalizeCourse>> = await getNormalizedCatalog();
   return rows.find((row: ReturnType<typeof normalizeCourse>) => row.id === id) || null;
+}
+
+export async function getEventById(id: string) {
+  const rows: Array<ReturnType<typeof normalizeCourse>> = await getAllNormalizedCatalog();
+  return rows.find((row: ReturnType<typeof normalizeCourse>) => row.id === id && shouldIncludeNonCeEvent(row)) || null;
 }

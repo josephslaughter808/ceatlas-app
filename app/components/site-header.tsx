@@ -42,6 +42,7 @@ export default function SiteHeader() {
         <div className="site-links">
           <Link href="/">Home</Link>
           <Link href="/courses">Courses</Link>
+          <Link href="/events">Events</Link>
           <Link href="/saved">Saved</Link>
           <Link href="/compare">Compare</Link>
           <Link href="/travel">Travel</Link>

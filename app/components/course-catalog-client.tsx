@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { track } from "@vercel/analytics";
 import { usePathname, useRouter } from "next/navigation";
 import type { CourseRecord } from "@/lib/courses";
@@ -20,6 +20,15 @@ function toggleSelection(values: string[], nextValue: string) {
   return values.includes(nextValue)
     ? values.filter((value) => value !== nextValue)
     : [...values, nextValue];
+}
+
+function sameSelections(a: string[], b: string[]) {
+  if (a.length !== b.length) return false;
+
+  const aSorted = [...a].sort();
+  const bSorted = [...b].sort();
+
+  return aSorted.every((value, index) => value === bSorted[index]);
 }
 
 function MultiSelectFilter({
@@ -67,6 +76,97 @@ function MultiSelectFilter({
   );
 }
 
+function CourseMapPanel({ courses }: { courses: CourseRecord[] }) {
+  const locations = useMemo(() => {
+    const grouped = new Map<string, CourseRecord[]>();
+
+    for (const course of courses) {
+      const location = String(course.next_location || "").trim();
+      if (!location || /online|self-paced|self paced/i.test(location)) continue;
+      const bucket = grouped.get(location) || [];
+      bucket.push(course);
+      grouped.set(location, bucket);
+    }
+
+    return [...grouped.entries()]
+      .map(([location, locationCourses]) => ({
+        location,
+        courses: locationCourses,
+      }))
+      .sort((a, b) => b.courses.length - a.courses.length || a.location.localeCompare(b.location));
+  }, [courses]);
+
+  const [selectedLocation, setSelectedLocation] = useState("");
+
+  useEffect(() => {
+    setSelectedLocation(locations[0]?.location || "");
+  }, [locations]);
+
+  const activeLocation = locations.find((entry) => entry.location === selectedLocation) || locations[0] || null;
+
+  if (!locations.length) {
+    return (
+      <div className="course-map-panel card">
+        <div className="course-map-panel__empty">
+          <h2>Map View</h2>
+          <p>
+            This filtered result is mostly online or self-paced right now, so there is nothing useful to pin on the
+            map yet.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const mapUrl = `https://www.google.com/maps?q=${encodeURIComponent(activeLocation?.location || "")}&output=embed`;
+
+  return (
+    <div className="course-map-panel card">
+      <div className="course-map-panel__sidebar">
+        <div className="course-map-panel__heading">
+          <span className="course-map-panel__kicker">Map View</span>
+          <h2>Explore current results by location</h2>
+          <p>Select a location to preview it on the map and see the matching courses there.</p>
+        </div>
+
+        <div className="course-map-panel__locations">
+          {locations.map((entry) => (
+            <button
+              key={entry.location}
+              type="button"
+              className={`course-map-panel__location${entry.location === activeLocation?.location ? " is-active" : ""}`}
+              onClick={() => setSelectedLocation(entry.location)}
+            >
+              <span>{entry.location}</span>
+              <strong>{entry.courses.length}</strong>
+            </button>
+          ))}
+        </div>
+
+        {activeLocation ? (
+          <div className="course-map-panel__list">
+            <h3>{activeLocation.location}</h3>
+            <ul>
+              {activeLocation.courses.slice(0, 8).map((course) => (
+                <li key={course.id}>{course.title || "Untitled course"}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="course-map-panel__viewer">
+        <iframe
+          title={activeLocation?.location || "Course map"}
+          src={mapUrl}
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function CourseCatalogClient({
   courses,
   total,
@@ -100,12 +200,14 @@ export default function CourseCatalogClient({
   const pathname = usePathname();
   const { user } = useAuth();
   const { savedCourseIds } = useSavedCourses();
+  const [isPending, startTransition] = useTransition();
   const [savedOnly, setSavedOnly] = useState(defaultSavedOnly);
   const [sortBy, setSortBy] = useState(initialState.sort);
   const [search, setSearch] = useState(initialState.search);
   const [selectedTopics, setSelectedTopics] = useState<string[]>(initialState.topics);
   const [selectedProviders, setSelectedProviders] = useState<string[]>(initialState.providers);
   const [selectedFormats, setSelectedFormats] = useState<string[]>(initialState.formats);
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [practiceStateCode, setPracticeStateCode] = useState("");
   const [availableFilters, setAvailableFilters] = useState(filters);
   const [filtersLoading, setFiltersLoading] = useState(filters.providers.length === 0 || filters.formats.length === 0);
@@ -183,6 +285,11 @@ export default function CourseCatalogClient({
     () => courses.filter((course) => (savedOnly ? savedCourseIds.includes(course.id) : true)),
     [courses, savedCourseIds, savedOnly]
   );
+  const hasPendingFilterChanges = search.trim() !== initialState.search.trim()
+    || sortBy !== initialState.sort
+    || !sameSelections(selectedTopics, initialState.topics)
+    || !sameSelections(selectedProviders, initialState.providers)
+    || !sameSelections(selectedFormats, initialState.formats);
 
   const visibleTotal = savedOnly ? visibleCourses.length : total;
   const currentPageSafe = Math.min(currentPage, totalPages);
@@ -216,7 +323,9 @@ export default function CourseCatalogClient({
     if (nextPageSize !== 50) params.set("pageSize", String(nextPageSize));
 
     const query = params.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    startTransition(() => {
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    });
   }
 
   function handleFilterToggle(filterName: "topic" | "provider" | "format", value: string) {
@@ -245,7 +354,12 @@ export default function CourseCatalogClient({
                 track("course_search_start");
               }
               setSearch(value);
-              pushQuery({ search: value, page: 1 });
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                track("course_filters_apply", { source: "search" });
+                pushQuery({ search, sort: sortBy, topics: selectedTopics, providers: selectedProviders, formats: selectedFormats, page: 1 });
+              }
             }}
             placeholder="Search title, topic, description, provider, or instructor"
             aria-label="Search courses"
@@ -261,7 +375,6 @@ export default function CourseCatalogClient({
               handleFilterToggle("topic", value);
               const nextTopics = toggleSelection(selectedTopics, value);
               setSelectedTopics(nextTopics);
-              pushQuery({ topics: nextTopics, page: 1 });
             }}
           />
 
@@ -277,7 +390,6 @@ export default function CourseCatalogClient({
               handleFilterToggle("provider", value);
               const nextProviders = toggleSelection(selectedProviders, value);
               setSelectedProviders(nextProviders);
-              pushQuery({ providers: nextProviders, page: 1 });
             }}
           />
 
@@ -290,9 +402,32 @@ export default function CourseCatalogClient({
               handleFilterToggle("format", value);
               const nextFormats = toggleSelection(selectedFormats, value);
               setSelectedFormats(nextFormats);
-              pushQuery({ formats: nextFormats, page: 1 });
             }}
           />
+
+          <button
+            type="button"
+            className="button button-secondary"
+            onClick={() => {
+              track("course_filters_apply", {
+                source: "button",
+                topics: selectedTopics.length,
+                providers: selectedProviders.length,
+                formats: selectedFormats.length,
+              });
+              pushQuery({
+                search,
+                sort: sortBy,
+                topics: selectedTopics,
+                providers: selectedProviders,
+                formats: selectedFormats,
+                page: 1,
+              });
+            }}
+            disabled={!hasPendingFilterChanges || isPending}
+          >
+            {isPending ? "Applying..." : "Apply Filters"}
+          </button>
 
           <button
             type="button"
@@ -341,7 +476,6 @@ export default function CourseCatalogClient({
               onChange={(event) => {
                 track("course_sort_change", { sort: event.target.value });
                 setSortBy(event.target.value);
-                pushQuery({ sort: event.target.value, page: 1 });
               }}
             >
               <option value="balanced">Balanced providers</option>
@@ -372,9 +506,27 @@ export default function CourseCatalogClient({
         </div>
 
         <div className="catalog-toolbar__meta">
+          {isPending ? <span>Updating results...</span> : null}
           <span>{savedCourseIds.length} saved</span>
           <span>{pageStart}-{pageEnd || 0} of {visibleTotal}</span>
         </div>
+      </div>
+
+      <div className="catalog-view-toggle" role="tablist" aria-label="Course results view">
+        <button
+          type="button"
+          className={`catalog-view-toggle__button${viewMode === "list" ? " is-active" : ""}`}
+          onClick={() => setViewMode("list")}
+        >
+          List view
+        </button>
+        <button
+          type="button"
+          className={`catalog-view-toggle__button${viewMode === "map" ? " is-active" : ""}`}
+          onClick={() => setViewMode("map")}
+        >
+          Map view
+        </button>
       </div>
 
       <div className="course-count">
@@ -388,6 +540,8 @@ export default function CourseCatalogClient({
         </div>
       ) : (
         <>
+          {viewMode === "map" ? <CourseMapPanel courses={visibleCourses} /> : null}
+
           <div className="course-grid">
             {visibleCourses.map((course) => (
               <CourseCard key={course.id} course={course} />

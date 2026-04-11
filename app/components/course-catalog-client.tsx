@@ -114,6 +114,7 @@ function CourseMapShell({
     courseCountForSelection: number;
     currentPage: number;
     totalPages: number;
+    selectedLocationType: "world" | "region" | "city";
     loading: boolean;
   }) => void;
 }) {
@@ -122,6 +123,7 @@ function CourseMapShell({
   const [mapResultsLoading, setMapResultsLoading] = useState(true);
   const [selectionCount, setSelectionCount] = useState(0);
   const [totalMappableCourses, setTotalMappableCourses] = useState(0);
+  const [selectedLocationType, setSelectedLocationType] = useState<"world" | "region" | "city">("world");
 
   useEffect(() => {
     if (!locations.length && selectedLocation) {
@@ -149,6 +151,7 @@ function CourseMapShell({
         courseCountForSelection: 0,
         currentPage: 1,
         totalPages: 1,
+        selectedLocationType: "world",
         loading: true,
       });
 
@@ -177,6 +180,7 @@ function CourseMapShell({
             courseCountForSelection: 0,
             currentPage: 1,
             totalPages: 1,
+            selectedLocationType: "world",
             loading: false,
           });
         }
@@ -190,6 +194,7 @@ function CourseMapShell({
         courseCountForSelection?: number;
         currentPage?: number;
         totalPages?: number;
+        selectedLocationType?: "world" | "region" | "city";
       };
 
       if (cancelled) return;
@@ -198,6 +203,7 @@ function CourseMapShell({
       setPreviewCourses(data.courses || []);
       setSelectionCount(Number(data.courseCountForSelection || 0));
       setTotalMappableCourses(Number(data.totalMappableCourses || 0));
+      setSelectedLocationType(data.selectedLocationType || "world");
       setMapResultsLoading(false);
       onCoursesChange({
         courses: data.courses || [],
@@ -205,6 +211,7 @@ function CourseMapShell({
         courseCountForSelection: Number(data.courseCountForSelection || 0),
         currentPage: Number(data.currentPage || 1),
         totalPages: Number(data.totalPages || 1),
+        selectedLocationType: data.selectedLocationType || "world",
         loading: false,
       });
     }
@@ -327,12 +334,18 @@ function CourseMapShell({
         {activeLocation ? (
           <div className="course-map-panel__list">
             <h3>{activeLocation.location}</h3>
-            <p>{selectionCount} courses in this city</p>
-            <ul>
-              {previewCourses.slice(0, 8).map((course) => (
-                <li key={course.id}>{course.title || "Untitled course"}</li>
-              ))}
-            </ul>
+            <p>
+              {selectedLocationType === "region"
+                ? `${selectionCount} courses across cities in this area`
+                : `${selectionCount} courses in this city`}
+            </p>
+            {selectedLocationType === "city" ? (
+              <ul>
+                {previewCourses.slice(0, 8).map((course) => (
+                  <li key={course.id}>{course.title || "Untitled course"}</li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -399,6 +412,7 @@ export default function CourseCatalogClient({
   const [mapSelectionCount, setMapSelectionCount] = useState(0);
   const [mapCurrentPage, setMapCurrentPage] = useState(1);
   const [mapTotalPages, setMapTotalPages] = useState(1);
+  const [mapSelectedLocationType, setMapSelectedLocationType] = useState<"world" | "region" | "city">("world");
   const [mapLoading, setMapLoading] = useState(false);
   const [practiceStateCode, setPracticeStateCode] = useState("");
   const [availableFilters, setAvailableFilters] = useState(filters);
@@ -427,6 +441,7 @@ export default function CourseCatalogClient({
     courseCountForSelection,
     currentPage,
     totalPages,
+    selectedLocationType,
     loading,
   }: {
     courses: CourseRecord[];
@@ -434,6 +449,7 @@ export default function CourseCatalogClient({
     courseCountForSelection: number;
     currentPage: number;
     totalPages: number;
+    selectedLocationType: "world" | "region" | "city";
     loading: boolean;
   }) => {
     setMapCourses(nextCourses);
@@ -441,6 +457,7 @@ export default function CourseCatalogClient({
     setMapSelectionCount(courseCountForSelection);
     setMapCurrentPage(currentPage);
     setMapTotalPages(totalPages);
+    setMapSelectedLocationType(selectedLocationType);
     setMapLoading(loading);
   }, []);
 
@@ -766,14 +783,18 @@ export default function CourseCatalogClient({
           <>
             {mapLocation ? (
               <>
-                Showing <strong>{mapCourses.length}</strong> of <strong>{mapSelectionCount}</strong> courses in <strong>{mapLocation}</strong>
+                {mapSelectedLocationType === "region" ? (
+                  <>Exploring <strong>{mapSelectionCount}</strong> courses across cities in <strong>{mapLocation}</strong></>
+                ) : (
+                  <>Showing <strong>{mapCourses.length}</strong> of <strong>{mapSelectionCount}</strong> courses in <strong>{mapLocation}</strong></>
+                )}
               </>
             ) : (
               <>
                 Showing <strong>{mapTotalCourses}</strong> location-based courses on the map
               </>
             )}
-            {mapLocation ? (
+            {mapLocation && mapSelectedLocationType === "city" ? (
               <span className="course-count__map-note"> page <strong>{mapCurrentPage}</strong> of <strong>{mapTotalPages}</strong></span>
             ) : null}
           </>
@@ -817,7 +838,7 @@ export default function CourseCatalogClient({
             </div>
           ) : null}
 
-          {viewMode === "map" && mapLocation && mapTotalPages > 1 && !mapLoading ? (
+          {viewMode === "map" && mapLocation && mapSelectedLocationType === "city" && mapTotalPages > 1 && !mapLoading ? (
             <div className="catalog-pagination">
               <button
                 type="button"

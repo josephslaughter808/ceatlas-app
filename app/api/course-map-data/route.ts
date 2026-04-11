@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCoursesByIds, getMapCourses } from "@/lib/courses";
 import { getPublicMapSessions } from "@/lib/db";
+import { getPracticeStateName, normalizePracticeStateCode } from "@/lib/practice-states";
 
 type SearchParamsShape = {
   search?: string;
@@ -10,11 +11,36 @@ type SearchParamsShape = {
   sort?: string;
 };
 
+type MapSession = {
+  course_id?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  location?: string | null;
+  format?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+};
+
+type DrillLocation = {
+  location: string;
+  count: number;
+};
+
 const MAP_PAGE_SIZE = 10;
 
 function toList(value: string | null) {
   if (!value) return [];
   return value.split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+function normalizeCountry(value: string | null | undefined) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^(usa|u\.s\.a\.|united states|us)$/i.test(raw)) return "United States";
+  if (/^(uk|u\.k\.|united kingdom)$/i.test(raw)) return "United Kingdom";
+  if (/^uae$/i.test(raw)) return "United Arab Emirates";
+  return raw;
 }
 
 function normalizeMapLocation(value: string | null | undefined) {
@@ -34,13 +60,40 @@ function normalizeMapLocation(value: string | null | undefined) {
   return raw;
 }
 
-function isMappableCourse(course: { next_location?: string | null; next_format?: string | null }) {
-  const location = normalizeMapLocation(course.next_location);
-  const format = String(course.next_format || "").trim();
-  if (!location) return false;
-  if (/\bonline|self-paced|self paced\b/i.test(location)) return false;
-  if (/^online$/i.test(format)) return false;
-  return true;
+function formatCityLabel(city: string, stateCode: string, country: string) {
+  if (stateCode) return `${city}, ${stateCode}`;
+  if (country) return `${city}, ${country}`;
+  return city;
+}
+
+function deriveSessionLabels(session: MapSession) {
+  const rawLocation = normalizeMapLocation(session.location);
+  const city = String(session.city || "").trim();
+  const stateCode = normalizePracticeStateCode(session.state);
+  const stateName = stateCode ? getPracticeStateName(stateCode) : "";
+  const country = normalizeCountry(session.country);
+
+  const cityLabel = city ? formatCityLabel(city, stateCode, country && country !== "United States" ? country : "") : "";
+  const stateLabel = stateName || (String(session.state || "").trim() || "");
+  const countryLabel = country;
+
+  let topLevelLabel = rawLocation || cityLabel || stateLabel || countryLabel;
+
+  if (countryLabel && countryLabel !== "United States") {
+    topLevelLabel = countryLabel;
+  } else if (stateLabel) {
+    topLevelLabel = stateLabel;
+  } else if (cityLabel) {
+    topLevelLabel = cityLabel;
+  }
+
+  return {
+    rawLocation,
+    cityLabel,
+    stateLabel,
+    countryLabel,
+    topLevelLabel: topLevelLabel || "",
+  };
 }
 
 function inDateWindow(courseDate: string | null | undefined, dateStart: string, dateEnd: string) {
@@ -50,6 +103,72 @@ function inDateWindow(courseDate: string | null | undefined, dateStart: string, 
   if (dateStart && normalized < dateStart) return false;
   if (dateEnd && normalized > dateEnd) return false;
   return true;
+}
+
+function isMappableCourse(course: { next_location?: string | null; next_format?: string | null }) {
+  const location = normalizeMapLocation(course.next_location);
+  const format = String(course.next_format || "").trim();
+  if (!location) return false;
+  if (/\bonline|self-paced|self paced|virtual\b/i.test(location)) return false;
+  if (/^online$/i.test(format)) return false;
+  return true;
+}
+
+function buildDrilldownLocations(sessions: MapSession[], selectedLocation: string) {
+  const grouped = new Map<string, { count: number; courseIds: Set<string> }>();
+
+  for (const session of sessions) {
+    const labels = deriveSessionLabels(session);
+    let childLabel = "";
+
+    if (selectedLocation === labels.countryLabel && labels.cityLabel) {
+      childLabel = labels.cityLabel;
+    } else if (selectedLocation === labels.stateLabel && labels.cityLabel) {
+      childLabel = labels.cityLabel;
+    } else if (selectedLocation === labels.topLevelLabel && labels.cityLabel && labels.cityLabel !== labels.topLevelLabel) {
+      childLabel = labels.cityLabel;
+    }
+
+    if (!childLabel) continue;
+
+    const courseId = String(session.course_id || "").trim();
+    const current = grouped.get(childLabel) || { count: 0, courseIds: new Set<string>() };
+    current.count += 1;
+    if (courseId) current.courseIds.add(courseId);
+    grouped.set(childLabel, current);
+  }
+
+  return [...grouped.entries()]
+    .sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0]))
+    .map(([location, value]) => ({
+      location,
+      count: value.count,
+      courseIds: [...value.courseIds],
+    }));
+}
+
+function buildTopLevelLocations(sessions: MapSession[]) {
+  const grouped = new Map<string, { count: number; courseIds: Set<string> }>();
+
+  for (const session of sessions) {
+    const labels = deriveSessionLabels(session);
+    const topLabel = labels.topLevelLabel;
+    if (!topLabel) continue;
+    const courseId = String(session.course_id || "").trim();
+    const current = grouped.get(topLabel) || { count: 0, courseIds: new Set<string>() };
+    current.count += 1;
+    if (courseId) current.courseIds.add(courseId);
+    grouped.set(topLabel, current);
+  }
+
+  return [...grouped.entries()]
+    .sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0]))
+    .map(([location, value]) => ({
+      location,
+      count: value.count,
+      courseIds: [...value.courseIds],
+    }))
+    .slice(0, 250);
 }
 
 export async function GET(request: Request) {
@@ -77,54 +196,42 @@ export async function GET(request: Request) {
 
   if (!hasCatalogFilters) {
     const sessions = await getPublicMapSessions();
-    const filteredSessions = sessions.filter((session) => {
-      const locationName = normalizeMapLocation(session.location);
+    const filteredSessions = sessions.filter((session: MapSession) => {
+      const labels = deriveSessionLabels(session);
       const formatName = String(session.format || "").trim();
-      if (!locationName) return false;
-      if (/\bonline|self-paced|self paced|virtual\b/i.test(locationName)) return false;
+      if (!labels.topLevelLabel) return false;
+      if (/\bonline|self-paced|self paced|virtual\b/i.test(labels.rawLocation || labels.topLevelLabel)) return false;
       if (/^online$/i.test(formatName)) return false;
       return inDateWindow(session.start_date, dateStart, dateEnd);
     });
 
-    const groupedLocations = new Map<string, { count: number; courseIds: string[] }>();
+    const topLevelLocations = buildTopLevelLocations(filteredSessions);
+    const drilldownLocations = location ? buildDrilldownLocations(filteredSessions, location) : [];
+    const selectedEntry = topLevelLocations.find((entry) => entry.location === location) || null;
+    const leafEntry = drilldownLocations.find((entry) => entry.location === location) || null;
+    const hasChildCities = drilldownLocations.length > 0 && !leafEntry;
 
-    for (const session of filteredSessions) {
-      const locationName = normalizeMapLocation(session.location);
-      if (!locationName) continue;
-      const courseId = String(session.course_id || "").trim();
-      const current = groupedLocations.get(locationName) || { count: 0, courseIds: [] };
-      current.count += 1;
-      if (courseId && !current.courseIds.includes(courseId)) {
-        current.courseIds.push(courseId);
-      }
-      groupedLocations.set(locationName, current);
-    }
+    const selectedCourseIds = hasChildCities
+      ? []
+      : (leafEntry?.courseIds || selectedEntry?.courseIds || []);
 
-    const locationEntries = [...groupedLocations.entries()]
-      .sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0]))
-      .map(([locationName, value]) => ({
-        location: locationName,
-        count: value.count,
-        courseIds: value.courseIds,
-      }))
-      .slice(0, 250);
-
-    const selectedEntry = locationEntries.find((entry) => entry.location === location) || null;
-    const selectedCourseIds = selectedEntry?.courseIds || [];
-    const totalSelectedCourses = selectedCourseIds.length;
+    const totalSelectedCourses = hasChildCities
+      ? Number(selectedEntry?.count || 0)
+      : selectedCourseIds.length;
     const totalPages = Math.max(1, Math.ceil(totalSelectedCourses / MAP_PAGE_SIZE));
     const currentPage = Math.min(page, totalPages);
     const start = (currentPage - 1) * MAP_PAGE_SIZE;
-    const courses = selectedEntry
+    const courses = selectedCourseIds.length
       ? await getCoursesByIds(selectedCourseIds.slice(start, start + MAP_PAGE_SIZE))
       : [];
 
     return NextResponse.json({
-      locations: locationEntries.map(({ location: name, count }) => ({ location: name, count })),
+      locations: (hasChildCities ? drilldownLocations : topLevelLocations).map(({ location: name, count }) => ({ location: name, count })),
       totalMappableCourses: filteredSessions.length,
       courseCountForSelection: totalSelectedCourses,
       currentPage,
       totalPages,
+      selectedLocationType: hasChildCities ? "region" : (location ? "city" : "world"),
       courses,
     }, {
       headers: {
@@ -170,6 +277,7 @@ export async function GET(request: Request) {
     courseCountForSelection: totalSelectedCourses,
     currentPage,
     totalPages,
+    selectedLocationType: location ? "city" : "world",
     courses: visibleCourses.slice(start, start + MAP_PAGE_SIZE),
   }, {
     headers: {

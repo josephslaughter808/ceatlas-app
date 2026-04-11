@@ -1,4 +1,5 @@
 import { getCoursesPage, getDefaultCourseFilters } from "@/lib/courses";
+import Link from "next/link";
 import CourseCatalogClient from "../components/course-catalog-client";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +29,10 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
         <p>
           Browse the latest CE inventory synced from provider catalogs and cleaned for easy comparison.
         </p>
+        <div className="hero__actions">
+          <Link href="/courses" className="button">Verified CE Courses</Link>
+          <Link href="/events" className="button button--light">Browse Unverified Events</Link>
+        </div>
         <div className="launch-note">
           <strong>Beta catalog note:</strong>
           <span>

@@ -27,6 +27,10 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
           Browse dental seminars, conferences, and event listings that may be useful for planning, but do not yet have
           verified CE-credit information in CEAtlas.
         </p>
+        <div className="hero__actions">
+          <Link href="/courses" className="button">Back to Verified CE Courses</Link>
+          <Link href="/events" className="button button--light">Unverified Events</Link>
+        </div>
         <div className="launch-note">
           <strong>Important:</strong>
           <span>

@@ -430,6 +430,11 @@ async function getNormalizedCatalog() {
   }));
 }
 
+async function getNormalizedCatalogLite() {
+  const rows = await getPublicCourseCatalog();
+  return rows.map((row: CatalogRow) => normalizeCourse(row as CatalogRow));
+}
+
 async function getNormalizedCatalogPage(page = 1, pageSize = 50) {
   const { rows, total } = await getPublicCourseCatalogPage(page, pageSize);
   const ratingRows = await getCourseRatingSummariesForCourseIds(rows.map((row: CatalogRow) => row.id));
@@ -455,6 +460,24 @@ async function getNormalizedCatalogPage(page = 1, pageSize = 50) {
 
 export async function getCourses(searchParams: CourseSearchParams = {}, take?: number) {
   const rows: Array<ReturnType<typeof normalizeCourse>> = await getNormalizedCatalog();
+  const search = typeof searchParams.search === 'string' ? searchParams.search.trim() : '';
+  const providers = toList(searchParams.provider);
+  const formats = toList(searchParams.format);
+  const topics = toList(searchParams.topic);
+  const sortBy = typeof searchParams.sort === 'string' ? searchParams.sort.trim() : 'balanced';
+
+  const filtered = sortCourses(rows
+    .filter((course: ReturnType<typeof normalizeCourse>) => matchesSearch(course, search))
+    .filter((course: ReturnType<typeof normalizeCourse>) => (providers.length ? providers.includes(course.provider_filter_name || '') : true))
+    .filter((course: ReturnType<typeof normalizeCourse>) => (formats.length ? formats.includes(course.next_format || '') : true))
+    .filter((course: ReturnType<typeof normalizeCourse>) => (topics.length ? topics.some((topic) => course.topic_bucket === topic || course.topic_tags.includes(topic) || course.headline_topic === topic) : true))
+    .sort(compareCourses), sortBy);
+
+  return typeof take === 'number' ? filtered.slice(0, take) : filtered;
+}
+
+export async function getMapCourses(searchParams: CourseSearchParams = {}, take?: number) {
+  const rows: Array<ReturnType<typeof normalizeCourse>> = await getNormalizedCatalogLite();
   const search = typeof searchParams.search === 'string' ? searchParams.search.trim() : '';
   const providers = toList(searchParams.provider);
   const formats = toList(searchParams.format);

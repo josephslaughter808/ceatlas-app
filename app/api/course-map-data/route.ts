@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCourses } from "@/lib/courses";
+import { getMapCourses } from "@/lib/courses";
 
 type SearchParamsShape = {
   search?: string;
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
     sort: searchParams.get("sort") || "balanced",
   };
 
-  const allCourses = await getCourses(query);
+  const allCourses = await getMapCourses(query);
   const mappableCourses = allCourses
     .filter(isMappableCourse)
     .filter((course) => inDateWindow(course.next_start_date, dateStart, dateEnd));

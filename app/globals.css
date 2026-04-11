@@ -251,14 +251,114 @@ button.auth-button {
   padding-top: 1.5rem;
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
+  align-items: center;
+  gap: 1.25rem;
   flex-wrap: wrap;
 }
 
-.site-footer__links {
+.site-footer__brand {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.site-footer__copyright {
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.site-footer__tagline {
+  max-width: 34rem;
+  line-height: 1.5;
+}
+
+.site-footer__actions {
   display: flex;
   gap: 1rem;
+  align-items: center;
   flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.site-footer__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.9rem;
+  padding: 0.72rem 1.15rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: var(--color-primary);
+  color: white;
+  font-weight: 700;
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.site-footer__button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(18, 59, 74, 0.16);
+  color: white;
+}
+
+.site-footer__button--secondary {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: var(--color-border);
+  color: var(--color-primary);
+}
+
+.site-footer__button--secondary:hover {
+  background: rgba(18, 59, 74, 0.06);
+  color: var(--color-primary);
+}
+
+.site-footer__socials {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.site-footer__social-link {
+  width: 2.85rem;
+  height: 2.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.site-footer__social-link:hover {
+  transform: translateY(-1px);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.site-footer__social-link svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.site-footer__social-link .social-icon__fill {
+  fill: currentColor;
+  stroke: none;
+}
+
+@media (max-width: 720px) {
+  .site-footer__inner {
+    align-items: flex-start;
+  }
+
+  .site-footer__actions {
+    justify-content: flex-start;
+  }
 }
 
 .hero {

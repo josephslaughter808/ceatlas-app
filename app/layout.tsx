@@ -24,6 +24,38 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://ceatlas.co";
 const siteDescription =
   "Search dental CE courses, conferences, cruises, and hands-on events from providers across the U.S. and beyond. Compare topics, formats, locations, credits, and travel options in one place.";
 
+const socialLinks = [
+  {
+    label: "Instagram",
+    href: "https://www.instagram.com/ceatlas.co/",
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="5" ry="5" />
+        <circle cx="12" cy="12" r="4.25" />
+        <circle cx="17.25" cy="6.75" r="1.25" className="social-icon__fill" />
+      </svg>
+    ),
+  },
+  {
+    label: "Facebook",
+    href: "https://www.facebook.com/ceatlas.co",
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M13.5 21v-7h2.65l.4-3h-3.05V9.1c0-.87.24-1.46 1.5-1.46H16.7V4.96c-.3-.04-1.35-.12-2.57-.12-2.55 0-4.3 1.56-4.3 4.43V11H7v3h2.83v7h3.67Z" />
+      </svg>
+    ),
+  },
+  {
+    label: "TikTok",
+    href: "https://www.tiktok.com/@ceatlas.co",
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M14.8 4c.35 2.02 1.55 3.41 3.5 4.02V10.7c-1.44-.05-2.77-.45-3.96-1.2v5.43c0 3.05-2.4 5.24-5.33 5.24-1.1 0-2.13-.32-3.01-.92A5.14 5.14 0 0 1 3.7 15c0-2.92 2.32-5.27 5.31-5.27.24 0 .48.02.7.06v2.93a2.4 2.4 0 0 0-.7-.11c-1.33 0-2.39 1.06-2.39 2.39 0 .91.49 1.7 1.22 2.11.34.2.74.31 1.17.31 1.26 0 2.28-1.01 2.28-2.39V4h3.51Z" />
+      </svg>
+    ),
+  },
+];
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
@@ -116,20 +148,28 @@ export default function RootLayout({
 
                   <footer className="site-footer">
                     <div className="container site-footer__inner">
-                      <p>© {new Date().getFullYear()} CEAtlas</p>
-                      <div className="site-footer__links">
-                        <Link href="/courses">Catalog</Link>
-                        <Link href="/saved">Saved</Link>
-                        <Link href="/travel">Travel</Link>
-                        <Link href="/compare">Compare</Link>
-                        <Link href="/account">Account</Link>
-                        <Link href="/cruises">Cruises</Link>
-                        <Link href="/list-your-ce">List your CE</Link>
-                        <Link href="/contact">Contact</Link>
-                        <Link href="/privacy">Privacy</Link>
-                        <Link href="/terms">Terms</Link>
-                        <a href="https://www.ada.org/" target="_blank" rel="noreferrer">ADA</a>
-                        <a href="https://www.dentalcare.com/" target="_blank" rel="noreferrer">Dentalcare</a>
+                      <div className="site-footer__brand">
+                        <p className="site-footer__copyright">© {new Date().getFullYear()} CEAtlas</p>
+                        <p className="site-footer__tagline">Dental CE discovery, comparison, and travel planning in one place.</p>
+                      </div>
+                      <div className="site-footer__actions">
+                        <a className="site-footer__button" href="mailto:support@ceatlas.co">Support</a>
+                        <a className="site-footer__button site-footer__button--secondary" href="mailto:providers@ceatlas.co">Providers</a>
+                        <div className="site-footer__socials" aria-label="CEAtlas social media">
+                          {socialLinks.map((link) => (
+                            <a
+                              key={link.label}
+                              className="site-footer__social-link"
+                              href={link.href}
+                              target="_blank"
+                              rel="noreferrer"
+                              aria-label={link.label}
+                              title={link.label}
+                            >
+                              {link.icon}
+                            </a>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </footer>

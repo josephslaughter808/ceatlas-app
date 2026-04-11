@@ -86,7 +86,7 @@ async function geocodeLocation(location: string) {
 
 export async function POST(request: Request) {
   const body = await request.json() as RequestBody;
-  const locations = [...new Set((body.locations || []).map(cleanLocation).filter(Boolean))].slice(0, 80);
+  const locations = [...new Set((body.locations || []).map(cleanLocation).filter(Boolean))].slice(0, 250);
 
   const results = await Promise.all(locations.map((location) => geocodeLocation(location)));
 

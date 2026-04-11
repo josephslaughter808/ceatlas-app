@@ -84,40 +84,40 @@ function MultiSelectFilter({
 }
 
 function CourseMapShell({
-  courses,
+  appliedFilters,
   selectedLocation,
   onSelectLocation,
   dateStart,
   dateEnd,
   onDateStartChange,
   onDateEndChange,
+  onCoursesChange,
 }: {
-  courses: CourseRecord[];
+  appliedFilters: {
+    search: string;
+    sort: string;
+    topics: string[];
+    providers: string[];
+    formats: string[];
+  };
   selectedLocation: string;
   onSelectLocation: (location: string) => void;
   dateStart: string;
   dateEnd: string;
   onDateStartChange: (value: string) => void;
   onDateEndChange: (value: string) => void;
+  onCoursesChange: (payload: {
+    courses: CourseRecord[];
+    totalMappableCourses: number;
+    courseCountForSelection: number;
+    loading: boolean;
+  }) => void;
 }) {
-  const locations = useMemo(() => {
-    const grouped = new Map<string, CourseRecord[]>();
-
-    for (const course of courses) {
-      const location = String(course.next_location || "").trim();
-      if (!location || /online|self-paced|self paced/i.test(location)) continue;
-      const bucket = grouped.get(location) || [];
-      bucket.push(course);
-      grouped.set(location, bucket);
-    }
-
-    return [...grouped.entries()]
-      .map(([location, locationCourses]) => ({
-        location,
-        courses: locationCourses,
-      }))
-      .sort((a, b) => b.courses.length - a.courses.length || a.location.localeCompare(b.location));
-  }, [courses]);
+  const [locations, setLocations] = useState<Array<{ location: string; count: number }>>([]);
+  const [previewCourses, setPreviewCourses] = useState<CourseRecord[]>([]);
+  const [mapResultsLoading, setMapResultsLoading] = useState(true);
+  const [selectionCount, setSelectionCount] = useState(0);
+  const [totalMappableCourses, setTotalMappableCourses] = useState(0);
 
   useEffect(() => {
     if (!locations.length && selectedLocation) {
@@ -133,6 +133,75 @@ function CourseMapShell({
   const activeLocation = locations.find((entry) => entry.location === selectedLocation) || null;
   const [points, setPoints] = useState<WorldCourseMapPoint[]>([]);
   const [pointsLoading, setPointsLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMapData() {
+      setMapResultsLoading(true);
+      onCoursesChange({
+        courses: [],
+        totalMappableCourses: 0,
+        courseCountForSelection: 0,
+        loading: true,
+      });
+
+      const params = new URLSearchParams();
+      if (appliedFilters.search.trim()) params.set("search", appliedFilters.search.trim());
+      if (appliedFilters.sort && appliedFilters.sort !== "balanced") params.set("sort", appliedFilters.sort);
+      if (appliedFilters.topics.length) params.set("topic", appliedFilters.topics.join(","));
+      if (appliedFilters.providers.length) params.set("provider", appliedFilters.providers.join(","));
+      if (appliedFilters.formats.length) params.set("format", appliedFilters.formats.join(","));
+      if (selectedLocation) params.set("location", selectedLocation);
+      if (dateStart) params.set("dateStart", dateStart);
+      if (dateEnd) params.set("dateEnd", dateEnd);
+
+      const response = await fetch(`/api/course-map-data?${params.toString()}`);
+      if (!response.ok) {
+        if (!cancelled) {
+          setLocations([]);
+          setPreviewCourses([]);
+          setSelectionCount(0);
+          setTotalMappableCourses(0);
+          setMapResultsLoading(false);
+          onCoursesChange({
+            courses: [],
+            totalMappableCourses: 0,
+            courseCountForSelection: 0,
+            loading: false,
+          });
+        }
+        return;
+      }
+
+      const data = await response.json() as {
+        locations?: Array<{ location: string; count: number }>;
+        courses?: CourseRecord[];
+        totalMappableCourses?: number;
+        courseCountForSelection?: number;
+      };
+
+      if (cancelled) return;
+
+      setLocations(data.locations || []);
+      setPreviewCourses(data.courses || []);
+      setSelectionCount(Number(data.courseCountForSelection || 0));
+      setTotalMappableCourses(Number(data.totalMappableCourses || 0));
+      setMapResultsLoading(false);
+      onCoursesChange({
+        courses: data.courses || [],
+        totalMappableCourses: Number(data.totalMappableCourses || 0),
+        courseCountForSelection: Number(data.courseCountForSelection || 0),
+        loading: false,
+      });
+    }
+
+    loadMapData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [appliedFilters, dateEnd, dateStart, onCoursesChange, selectedLocation]);
 
   useEffect(() => {
     let cancelled = false;
@@ -160,7 +229,7 @@ function CourseMapShell({
 
         if (cancelled) return;
 
-        const counts = new Map(locations.map((entry) => [entry.location, entry.courses.length]));
+        const counts = new Map(locations.map((entry) => [entry.location, entry.count]));
         setPoints((data.points || []).map((point) => ({
           ...point,
           count: counts.get(point.location) || 0,
@@ -179,14 +248,14 @@ function CourseMapShell({
     };
   }, [locations]);
 
-  if (!locations.length) {
+  if (!mapResultsLoading && !locations.length) {
     return (
       <div className="course-map-panel card">
         <div className="course-map-panel__empty">
           <h2>Map View</h2>
           <p>
-            This filtered result is mostly online or self-paced right now, so there is nothing useful to pin on the
-            map yet.
+            No in-person or location-based courses match this date window yet. Try widening the date range or clearing
+            one of the filters.
           </p>
         </div>
       </div>
@@ -200,7 +269,11 @@ function CourseMapShell({
           <span className="course-map-panel__kicker">Map View</span>
           <h2>Explore current results on the map</h2>
           <p>Start with a global city view, then click a city pin to zoom in and reveal the courses there.</p>
-          <p>Most locations are city-level unless the provider publishes a venue address.</p>
+          <p>
+            {totalMappableCourses > 0
+              ? `${totalMappableCourses} location-based courses are available in this view.`
+              : "Most locations are city-level unless the provider publishes a venue address."}
+          </p>
         </div>
 
         <div className="course-map-panel__dates">
@@ -233,7 +306,7 @@ function CourseMapShell({
               onClick={() => onSelectLocation(entry.location)}
             >
               <span>{entry.location}</span>
-              <strong>{entry.courses.length}</strong>
+              <strong>{entry.count || "•"}</strong>
             </button>
           ))}
         </div>
@@ -241,8 +314,9 @@ function CourseMapShell({
         {activeLocation ? (
           <div className="course-map-panel__list">
             <h3>{activeLocation.location}</h3>
+            <p>{selectionCount} courses in this city</p>
             <ul>
-              {activeLocation.courses.slice(0, 8).map((course) => (
+              {previewCourses.slice(0, 8).map((course) => (
                 <li key={course.id}>{course.title || "Untitled course"}</li>
               ))}
             </ul>
@@ -255,7 +329,7 @@ function CourseMapShell({
         <WorldCourseMap
           points={points}
           activeLocation={activeLocation?.location || ""}
-          activeCourses={activeLocation?.courses || []}
+          activeCourses={previewCourses}
           onSelectLocation={onSelectLocation}
         />
       </div>
@@ -307,9 +381,26 @@ export default function CourseCatalogClient({
   const [mapLocation, setMapLocation] = useState("");
   const [mapDateStart, setMapDateStart] = useState("");
   const [mapDateEnd, setMapDateEnd] = useState("");
+  const [mapCourses, setMapCourses] = useState<CourseRecord[]>([]);
+  const [mapTotalCourses, setMapTotalCourses] = useState(0);
+  const [mapSelectionCount, setMapSelectionCount] = useState(0);
+  const [mapLoading, setMapLoading] = useState(false);
   const [practiceStateCode, setPracticeStateCode] = useState("");
   const [availableFilters, setAvailableFilters] = useState(filters);
   const [filtersLoading, setFiltersLoading] = useState(filters.providers.length === 0 || filters.formats.length === 0);
+  const appliedMapFilters = useMemo(() => ({
+    search: initialState.search,
+    sort: initialState.sort,
+    topics: initialState.topics,
+    providers: initialState.providers,
+    formats: initialState.formats,
+  }), [
+    initialState.formats,
+    initialState.providers,
+    initialState.search,
+    initialState.sort,
+    initialState.topics,
+  ]);
 
   useEffect(() => {
     setSortBy(initialState.sort);
@@ -384,20 +475,6 @@ export default function CourseCatalogClient({
     () => courses.filter((course) => (savedOnly ? savedCourseIds.includes(course.id) : true)),
     [courses, savedCourseIds, savedOnly]
   );
-  const dateScopedMapCourses = useMemo(() => {
-    return visibleCourses.filter((course) => {
-      if (!mapDateStart && !mapDateEnd) return true;
-      const start = String(course.next_start_date || "").trim();
-      if (!start) return false;
-      if (mapDateStart && start < mapDateStart) return false;
-      if (mapDateEnd && start > mapDateEnd) return false;
-      return true;
-    });
-  }, [mapDateEnd, mapDateStart, visibleCourses]);
-  const mapScopedCourses = useMemo(() => {
-    if (!mapLocation) return dateScopedMapCourses;
-    return dateScopedMapCourses.filter((course) => String(course.next_location || "").trim() === mapLocation);
-  }, [dateScopedMapCourses, mapLocation]);
   const hasPendingFilterChanges = search.trim() !== initialState.search.trim()
     || sortBy !== initialState.sort
     || !sameSelections(selectedTopics, initialState.topics)
@@ -643,10 +720,19 @@ export default function CourseCatalogClient({
       </div>
 
       <div className="course-count">
-        Showing <strong>{pageStart}-{pageEnd || 0}</strong> of <strong>{visibleTotal}</strong> courses
-        {viewMode === "map" && mapLocation ? (
-          <span className="course-count__map-note"> focused on <strong>{mapLocation}</strong></span>
-        ) : null}
+        {viewMode === "map" ? (
+          <>
+            Showing <strong>{mapCourses.length}</strong> of <strong>{mapLocation ? mapSelectionCount : mapTotalCourses}</strong>
+            {" "}courses on the map
+            {mapLocation ? (
+              <span className="course-count__map-note"> in <strong>{mapLocation}</strong></span>
+            ) : null}
+          </>
+        ) : (
+          <>
+            Showing <strong>{pageStart}-{pageEnd || 0}</strong> of <strong>{visibleTotal}</strong> courses
+          </>
+        )}
       </div>
 
       {visibleCourses.length === 0 ? (
@@ -658,23 +744,35 @@ export default function CourseCatalogClient({
         <>
           {viewMode === "map" ? (
             <CourseMapShell
-              courses={dateScopedMapCourses}
+              appliedFilters={appliedMapFilters}
               selectedLocation={mapLocation}
               onSelectLocation={setMapLocation}
               dateStart={mapDateStart}
               dateEnd={mapDateEnd}
               onDateStartChange={setMapDateStart}
               onDateEndChange={setMapDateEnd}
+              onCoursesChange={({ courses: nextCourses, totalMappableCourses, courseCountForSelection, loading }) => {
+                setMapCourses(nextCourses);
+                setMapTotalCourses(totalMappableCourses);
+                setMapSelectionCount(courseCountForSelection);
+                setMapLoading(loading);
+              }}
             />
           ) : null}
 
           <div className="course-grid">
-            {(viewMode === "map" ? mapScopedCourses : visibleCourses).map((course) => (
+            {(viewMode === "map" ? mapCourses : visibleCourses).map((course) => (
               <CourseCard key={course.id} course={course} />
             ))}
           </div>
 
-          {!savedOnly ? <div className="catalog-pagination">
+          {viewMode === "map" && mapLoading ? (
+            <div className="card">
+              <p>Loading map courses...</p>
+            </div>
+          ) : null}
+
+          {!savedOnly && viewMode !== "map" ? <div className="catalog-pagination">
             <button
               type="button"
               className="button button-secondary"

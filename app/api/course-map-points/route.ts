@@ -29,21 +29,17 @@ async function geocodeLocation(location: string) {
   if (!normalized) return null;
   if (geocodeCache.has(normalized)) return geocodeCache.get(normalized) || null;
 
-  const url = new URL("https://geocoding-api.open-meteo.com/v1/search");
-  url.searchParams.set("name", normalized);
-  url.searchParams.set("count", "1");
-  url.searchParams.set("language", "en");
-  url.searchParams.set("format", "json");
-
-  const countryCode = inferCountryCode(normalized);
-  if (countryCode) {
-    url.searchParams.set("countryCode", countryCode);
-  }
+  const url = new URL("https://nominatim.openstreetmap.org/search");
+  url.searchParams.set("q", normalized);
+  url.searchParams.set("format", "jsonv2");
+  url.searchParams.set("limit", "1");
+  url.searchParams.set("addressdetails", "1");
 
   try {
     const response = await fetch(url, {
       headers: {
-        "User-Agent": "CEAtlas/1.0",
+        "User-Agent": "CEAtlas/1.0 (support@ceatlas.co)",
+        "Accept-Language": "en-US,en;q=0.9",
       },
       next: { revalidate: 60 * 60 * 24 },
     });
@@ -53,27 +49,27 @@ async function geocodeLocation(location: string) {
       return null;
     }
 
-    const data = await response.json() as {
-      results?: Array<{
-        latitude?: number;
-        longitude?: number;
-        name?: string;
-        admin1?: string;
-        country?: string;
-      }>;
-    };
+    const data = await response.json() as Array<{
+      lat?: string;
+      lon?: string;
+      name?: string;
+      display_name?: string;
+    }>;
 
-    const first = data.results?.[0];
-    if (typeof first?.latitude !== "number" || typeof first?.longitude !== "number") {
+    const first = data?.[0];
+    const latitude = Number(first?.lat);
+    const longitude = Number(first?.lon);
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
       geocodeCache.set(normalized, null);
       return null;
     }
 
     const point = {
       location: normalized,
-      latitude: first.latitude,
-      longitude: first.longitude,
-      label: [first.name, first.admin1, first.country].filter(Boolean).join(", ") || normalized,
+      latitude,
+      longitude,
+      label: first.display_name || first.name || normalized,
     };
 
     geocodeCache.set(normalized, point);

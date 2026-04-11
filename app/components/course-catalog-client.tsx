@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { track } from "@vercel/analytics";
 import { usePathname, useRouter } from "next/navigation";
 import type { CourseRecord } from "@/lib/courses";
@@ -401,6 +401,22 @@ export default function CourseCatalogClient({
     initialState.sort,
     initialState.topics,
   ]);
+  const handleMapCoursesChange = useCallback(({
+    courses: nextCourses,
+    totalMappableCourses,
+    courseCountForSelection,
+    loading,
+  }: {
+    courses: CourseRecord[];
+    totalMappableCourses: number;
+    courseCountForSelection: number;
+    loading: boolean;
+  }) => {
+    setMapCourses(nextCourses);
+    setMapTotalCourses(totalMappableCourses);
+    setMapSelectionCount(courseCountForSelection);
+    setMapLoading(loading);
+  }, []);
 
   useEffect(() => {
     setSortBy(initialState.sort);
@@ -751,12 +767,7 @@ export default function CourseCatalogClient({
               dateEnd={mapDateEnd}
               onDateStartChange={setMapDateStart}
               onDateEndChange={setMapDateEnd}
-              onCoursesChange={({ courses: nextCourses, totalMappableCourses, courseCountForSelection, loading }) => {
-                setMapCourses(nextCourses);
-                setMapTotalCourses(totalMappableCourses);
-                setMapSelectionCount(courseCountForSelection);
-                setMapLoading(loading);
-              }}
+              onCoursesChange={handleMapCoursesChange}
             />
           ) : null}
 

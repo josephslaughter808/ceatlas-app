@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { track } from "@vercel/analytics";
 import { usePathname, useRouter } from "next/navigation";
@@ -10,7 +11,12 @@ import { useAuth } from "./auth-provider";
 import { supabase } from "@/lib/supabase";
 import StateRequirementsPanel from "./state-requirements-panel";
 import { getPracticeStateName, normalizePracticeStateCode } from "@/lib/practice-states";
-import WorldCourseMap, { type WorldCourseMapPoint } from "./world-course-map";
+import type { WorldCourseMapPoint } from "./world-course-map";
+
+const WorldCourseMap = dynamic(() => import("./world-course-map"), {
+  ssr: false,
+  loading: () => <div className="world-course-map world-course-map--loading" />,
+});
 
 type FilterOption = {
   label: string;

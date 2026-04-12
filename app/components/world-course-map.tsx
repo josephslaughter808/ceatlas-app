@@ -98,9 +98,10 @@ export default function WorldCourseMap({
         const courseCoordinates: [number, number][] = [];
 
         activeCourses.forEach((course, index) => {
+          const hasExactCoordinates = typeof course.next_session_latitude === "number" && typeof course.next_session_longitude === "number";
           const offset = createCourseOffsets(activeCourses.length, index);
-          const latitude = activePoint.latitude + offset.lat;
-          const longitude = activePoint.longitude + offset.lng;
+          const latitude = hasExactCoordinates ? course.next_session_latitude as number : activePoint.latitude + offset.lat;
+          const longitude = hasExactCoordinates ? course.next_session_longitude as number : activePoint.longitude + offset.lng;
           courseCoordinates.push([latitude, longitude]);
 
           const marker = L.circleMarker([latitude, longitude], {
@@ -112,7 +113,7 @@ export default function WorldCourseMap({
           });
 
           marker.bindTooltip(
-            `${course.title || "Untitled course"}${course.next_start_date ? ` • ${course.next_start_date}` : ""}`,
+            `${course.title || "Untitled course"}${course.next_session_address ? ` • ${course.next_session_address}` : ""}${course.next_start_date ? ` • ${course.next_start_date}` : ""}`,
             { direction: "top" }
           );
           marker.addTo(current.layerGroup);

@@ -33,6 +33,12 @@ type CatalogRow = {
   next_end_date: string | null;
   next_location: string | null;
   next_format: string | null;
+  next_city?: string | null;
+  next_state?: string | null;
+  next_country?: string | null;
+  next_session_address?: string | null;
+  next_session_latitude?: number | null;
+  next_session_longitude?: number | null;
   session_count: number | null;
   rating_average?: number | null;
   rating_count?: number | null;

@@ -38,6 +38,18 @@ function renderList(items: string[] | null | undefined, fallback = "Not specifie
   );
 }
 
+function venueAddress(course: Awaited<ReturnType<typeof getCourseById>>) {
+  if (!course) return "";
+  if (course.next_session_address) return course.next_session_address;
+
+  return [
+    course.next_location,
+    course.next_city,
+    course.next_state,
+    course.next_country,
+  ].filter(Boolean).join(", ");
+}
+
 export default async function CourseDetailPage({
   params,
 }: {
@@ -52,6 +64,7 @@ export default async function CourseDetailPage({
 
   const audience = course.topic_tags.filter((tag: string) => tag !== course.category);
   const providerLinks = [course.registration_url, course.source_url].filter(Boolean);
+  const address = venueAddress(course);
 
   return (
     <div className="container course-detail">
@@ -74,6 +87,7 @@ export default async function CourseDetailPage({
             <div><strong>Start</strong><span>{formatDate(course.next_start_date)}</span></div>
             <div><strong>End</strong><span>{formatDate(course.next_end_date)}</span></div>
             <div><strong>Location</strong><span>{course.next_location || "Not specified"}</span></div>
+            <div><strong>Venue Address</strong><span>{address || "Not specified"}</span></div>
             <div><strong>Provider</strong><span>{course.provider_name || "Not specified"}</span></div>
             <div><strong>Sessions</strong><span>{course.session_count || 0}</span></div>
           </div>

@@ -178,6 +178,18 @@ function textFromJsonLdEntity(entity) {
   return '';
 }
 
+function fullAddressFromJsonLdAddress(address) {
+  if (!address || typeof address !== 'object') return '';
+
+  return cleanText([
+    address.streetAddress,
+    address.addressLocality,
+    address.addressRegion,
+    address.postalCode,
+    address.addressCountry,
+  ].filter(Boolean).join(', '), 320);
+}
+
 function pickFirst(...values) {
   return values.map((value) => cleanText(value)).find(Boolean) || '';
 }
@@ -449,6 +461,7 @@ function findDateValues(jsonLdNodes, bodyLines, labels) {
 function findLocationValues(jsonLdNodes, labels, bodyLines) {
   const locationNode = jsonLdNodes.find((node) => node.location || node.eventAttendanceMode || node.address);
   const locationCandidate = locationNode?.location || locationNode?.address || null;
+  const addressCandidate = locationCandidate?.address || locationCandidate;
 
   const location = pickFirst(
     textFromJsonLdEntity(locationCandidate),
@@ -456,9 +469,14 @@ function findLocationValues(jsonLdNodes, labels, bodyLines) {
     pickLabeledValue(labels, LABEL_PATTERNS.location),
     bodyLines.find((line) => /\b(location|venue|address)\b/i.test(line)) || ''
   );
+  const venueAddress = pickFirst(
+    fullAddressFromJsonLdAddress(addressCandidate),
+    pickLabeledValue(labels, /^(venue address|address)$/i)
+  );
 
   return {
     location,
+    venue_address: venueAddress,
     city: cleanText(locationCandidate?.addressLocality, 120),
     state: cleanText(locationCandidate?.addressRegion, 120),
     country: cleanText(locationCandidate?.addressCountry, 120),
@@ -507,6 +525,7 @@ function normalizeFromJsonLd(jsonLdNodes) {
     start_date: cleanText(courseNode.startDate, 120),
     end_date: cleanText(courseNode.endDate, 120),
     location: textFromJsonLdEntity(courseNode.location),
+    venue_address: fullAddressFromJsonLdAddress(courseNode.location?.address || courseNode.address),
     format: cleanText(courseNode.courseMode, 120),
     audience: cleanText(courseNode.audience?.audienceType || courseNode.audience?.name, 250),
     accreditation: cleanText(courseNode.provider?.name || courseNode.educationalCredentialAwarded, 300),
@@ -607,6 +626,7 @@ export function extractCourseDataFromPage($, { provider, providerUrl, pageUrl })
     end_date: dateValues.end_date,
     date_text: dateValues.date_text,
     location: pickFirst(jsonLdData.location, locationValues.location),
+    venue_address: pickFirst(jsonLdData.venue_address, locationValues.venue_address),
     city: locationValues.city,
     state: locationValues.state,
     country: locationValues.country,

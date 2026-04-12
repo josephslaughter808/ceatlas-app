@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { syncProviderCatalog, getCatalogStats } from '../lib/db.js';
+import { runVenueBackfill } from './lib/run-venue-backfill.js';
 
 const dataDir = path.resolve('data');
 
@@ -40,6 +41,8 @@ async function main() {
       result,
     });
   }
+
+  await runVenueBackfill();
 
   const after = await getCatalogStats();
 

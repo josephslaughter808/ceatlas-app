@@ -1,4 +1,5 @@
 import { syncProviderCatalog, getCatalogStats } from '../lib/db.js';
+import { runVenueBackfill } from './lib/run-venue-backfill.js';
 import { writeCSV } from '../scrapers/write-csv.js';
 import { scrapeAchieveCE } from '../scrapers/providers/achievece.js';
 import { scrapeADHA } from '../scrapers/providers/adha.js';
@@ -489,6 +490,8 @@ async function main() {
       stats,
     });
   }
+
+  await runVenueBackfill();
 
   console.log(JSON.stringify(summary, null, 2));
 }

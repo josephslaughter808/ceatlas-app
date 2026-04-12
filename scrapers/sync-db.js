@@ -1,12 +1,14 @@
 import { scrapeFromList } from './universal-scraper.js';
 import { writeCSV } from './write-csv.js';
 import { syncProviderCatalog, getCatalogStats } from '../lib/db.js';
+import { runVenueBackfill } from '../scripts/lib/run-venue-backfill.js';
 
 async function main() {
   const rows = await scrapeFromList('scrapers/providers.txt');
   const review = writeCSV(rows);
 
   const result = await syncProviderCatalog(review.rows);
+  await runVenueBackfill();
   const stats = await getCatalogStats();
 
   console.log(`✅ Synced ${result.total} current/future scraped rows`);

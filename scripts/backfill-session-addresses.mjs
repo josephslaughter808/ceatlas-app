@@ -26,7 +26,25 @@ const CONCURRENCY = 4;
 const FETCH_TIMEOUT_MS = 15000;
 const GEOCODE_TIMEOUT_MS = 12000;
 const FAILURE_COOLDOWN_MS = 1000 * 60 * 60 * 24 * 7;
+const MAX_FOLLOW_UP_PAGES = 6;
 const STREET_HINT_RE = /\b(?:ave|avenue|blvd|boulevard|cir|circle|ct|court|dr|drive|hwy|highway|ln|lane|pkwy|parkway|pl|place|rd|road|st|street|suite|ste|way)\b/i;
+const RELATED_LINK_KEYWORDS = [
+  'location',
+  'locations',
+  'venue',
+  'venues',
+  'campus',
+  'training-center',
+  'training-centers',
+  'training center',
+  'training centers',
+  'meeting',
+  'conference',
+  'hotel',
+  'contact',
+  'directions',
+  'map',
+];
 
 function isInPersonFormat(format = '', location = '') {
   const text = `${format} ${location}`.toLowerCase();
@@ -37,6 +55,13 @@ function isInPersonFormat(format = '', location = '') {
 
 function cleanText(value = '', max = 500) {
   return String(value || '').replace(/\s+/g, ' ').trim().slice(0, max);
+}
+
+function slugify(value = '') {
+  return cleanText(value, 120)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 function normalizeCountry(value = '') {
@@ -151,6 +176,69 @@ function buildPageUrls(session = {}, course = {}) {
   );
 }
 
+function sameHostname(left, right) {
+  try {
+    return new URL(left).hostname === new URL(right).hostname;
+  } catch {
+    return false;
+  }
+}
+
+function scoreRelatedLink(url, text, session = {}) {
+  const haystack = `${cleanText(url, 400)} ${cleanText(text, 200)}`.toLowerCase();
+  let score = 0;
+
+  for (const keyword of RELATED_LINK_KEYWORDS) {
+    if (haystack.includes(keyword)) score += 2;
+  }
+
+  const citySlug = slugify(session.city);
+  const stateSlug = slugify(session.state);
+  const locationSlug = slugify(session.location);
+
+  if (citySlug && haystack.includes(citySlug)) score += 4;
+  if (stateSlug && haystack.includes(stateSlug)) score += 2;
+  if (locationSlug && haystack.includes(locationSlug)) score += 2;
+  if (/maps\.google|google\.com\/maps|apple\.com\/maps/.test(haystack)) score += 5;
+  if (/login|signin|register|checkout|cart|account/.test(haystack)) score -= 4;
+
+  return score;
+}
+
+function collectRelatedPageUrls($, baseUrl, session = {}) {
+  const candidates = [];
+
+  $('a[href]').each((_, element) => {
+    const href = $(element).attr('href');
+    const text = $(element).text();
+
+    let full = '';
+    try {
+      full = new URL(href, baseUrl).href;
+    } catch {
+      full = '';
+    }
+
+    if (!full || !sameHostname(full, baseUrl)) return;
+
+    const score = scoreRelatedLink(full, text, session);
+    if (score <= 0) return;
+
+    candidates.push({
+      url: full.split('#')[0],
+      score,
+    });
+  });
+
+  return [...new Map(
+    candidates
+      .sort((a, b) => b.score - a.score)
+      .map((item) => [item.url, item])
+  ).values()]
+    .slice(0, MAX_FOLLOW_UP_PAGES)
+    .map((item) => item.url);
+}
+
 async function fetchText(url) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -253,6 +341,35 @@ async function geocodeFirstMatch(queries = []) {
   return null;
 }
 
+async function extractFromPage(candidateUrl, course, session) {
+  const html = await fetchText(candidateUrl);
+  const $ = cheerio.load(html);
+  const extracted = extractCourseDataFromPage($, {
+    provider: course.provider,
+    providerUrl: course.source_url || candidateUrl,
+    pageUrl: candidateUrl,
+  });
+
+  return {
+    extracted,
+    relatedUrls: collectRelatedPageUrls($, candidateUrl, session),
+  };
+}
+
+function mergeExtractedRows(primary = {}, secondary = {}) {
+  return {
+    ...primary,
+    ...secondary,
+    venue_address: primary.venue_address || secondary.venue_address || '',
+    location: primary.location || secondary.location || '',
+    city: primary.city || secondary.city || '',
+    state: primary.state || secondary.state || '',
+    country: primary.country || secondary.country || '',
+    venue_latitude: primary.venue_latitude ?? secondary.venue_latitude ?? null,
+    venue_longitude: primary.venue_longitude ?? secondary.venue_longitude ?? null,
+  };
+}
+
 async function getSessionsNeedingAddresses(limit = 200) {
   const sessions = [];
   let start = 0;
@@ -278,9 +395,11 @@ async function getSessionsNeedingAddresses(limit = 200) {
         && metadata.venue_address_backfill_status === 'failed';
       const permanentFailure = metadata.venue_address_backfill_status === 'failed'
         && /HTTP 403|HTTP 404|missing_url/i.test(String(metadata.venue_address_backfill_reason || ''));
+      const finalizedTba = metadata.venue_address === 'TBA'
+        && metadata.venue_address_backfill_reason === 'exhaustive_search_tba';
 
       if (metadata.venue_address && typeof metadata.venue_latitude === 'number' && typeof metadata.venue_longitude === 'number') continue;
-      if (recentFailure || permanentFailure) continue;
+      if (recentFailure || permanentFailure || finalizedTba) continue;
       sessions.push(row);
       if (sessions.length >= limit) break;
     }
@@ -319,8 +438,8 @@ async function getCourseMap(courseIds) {
 }
 
 async function enrichSession(session, course) {
-  const pageUrls = buildPageUrls(session, course);
-  const pageUrl = pageUrls[0];
+  const seedUrls = buildPageUrls(session, course);
+  const pageUrl = seedUrls[0];
   if (!pageUrl) {
     return { updated: false, reason: 'missing_url' };
   }
@@ -329,20 +448,26 @@ async function enrichSession(session, course) {
     let extracted = null;
     let successfulPageUrl = pageUrl;
     let lastError = null;
+    const queue = [...seedUrls];
+    const visited = new Set();
+    let exhaustiveSearchCount = 0;
 
-    for (const candidateUrl of pageUrls) {
+    while (queue.length > 0 && exhaustiveSearchCount < (seedUrls.length + MAX_FOLLOW_UP_PAGES)) {
+      const candidateUrl = queue.shift();
+      if (!candidateUrl || visited.has(candidateUrl)) continue;
+      visited.add(candidateUrl);
+      exhaustiveSearchCount += 1;
+
       try {
-        const html = await fetchText(candidateUrl);
-        const $ = cheerio.load(html);
-        extracted = extractCourseDataFromPage($, {
-          provider: course.provider,
-          providerUrl: course.source_url || candidateUrl,
-          pageUrl: candidateUrl,
-        });
+        const result = await extractFromPage(candidateUrl, course, session);
+        extracted = mergeExtractedRows(extracted || {}, result.extracted || {});
         successfulPageUrl = candidateUrl;
         const hasUsefulLocation =
           Boolean(extracted?.venue_address)
           || (Number.isFinite(extracted?.venue_latitude) && Number.isFinite(extracted?.venue_longitude));
+        for (const relatedUrl of result.relatedUrls || []) {
+          if (!visited.has(relatedUrl)) queue.push(relatedUrl);
+        }
         if (hasUsefulLocation) break;
       } catch (error) {
         lastError = error;
@@ -370,7 +495,7 @@ async function enrichSession(session, course) {
     }
 
     if (!venueAddress) {
-      return { updated: false, reason: 'no_address_found' };
+      venueAddress = 'TBA';
     }
     const nextMetadata = {
       ...(session.metadata || {}),
@@ -380,7 +505,9 @@ async function enrichSession(session, course) {
       venue_geocode_label: geocode?.label ?? null,
       venue_geocode_query: geocode?.query || geocodeQueries[0] || venueAddress,
       venue_address_backfill_status: 'success',
-      venue_address_backfill_reason: geocode ? 'address_and_geocode_saved' : 'address_saved_no_geocode',
+      venue_address_backfill_reason: venueAddress === 'TBA'
+        ? 'exhaustive_search_tba'
+        : (geocode ? 'address_and_geocode_saved' : 'address_saved_no_geocode'),
       venue_address_backfill_attempted_at: new Date().toISOString(),
       venue_address_backfilled_at: new Date().toISOString(),
       venue_address_source_url: successfulPageUrl,

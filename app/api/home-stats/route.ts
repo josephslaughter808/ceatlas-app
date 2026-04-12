@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
-import { getCatalogStats, getPublicSessionFormats } from "@/lib/db";
+import { getCatalogOverview } from "@/lib/courses";
 
 export async function GET() {
-  const [stats, formats] = await Promise.all([
-    getCatalogStats(),
-    getPublicSessionFormats(),
-  ]);
+  const stats = await getCatalogOverview();
 
   return NextResponse.json({
-    courses: stats.courses,
-    providers: stats.providers,
-    formatCount: new Set(formats.filter(Boolean)).size,
+    courses: stats.courseCount,
+    providers: stats.providerCount,
+    formatCount: stats.formatCount,
   }, {
     headers: {
       "Cache-Control": "s-maxage=600, stale-while-revalidate=3600",

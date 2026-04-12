@@ -1,5 +1,4 @@
 import {
-  getCatalogStats,
   getCourseRatingSummaries,
   getCourseRatingSummariesForCourseIds,
   getPublicCourseCatalog,
@@ -572,15 +571,14 @@ export async function getCoursesByIds(ids: string[]) {
 }
 
 export async function getCatalogOverview() {
-  const [stats, formats] = await Promise.all([
-    getCatalogStats(),
-    getPublicSessionFormats(),
-  ]);
+  const rows: Array<ReturnType<typeof normalizeCourse>> = await getCachedNormalizedCatalogLite();
+  const providers = new Set(rows.map((row: ReturnType<typeof normalizeCourse>) => row.provider_name).filter(Boolean));
+  const formats = new Set(rows.map((row: ReturnType<typeof normalizeCourse>) => row.next_format).filter(Boolean));
 
   return {
-    courseCount: stats.courses,
-    providerCount: stats.providers,
-    formatCount: new Set(formats.filter(Boolean)).size,
+    courseCount: rows.length,
+    providerCount: providers.size,
+    formatCount: formats.size,
   };
 }
 

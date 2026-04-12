@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCoursesByIds, getMapCourses } from "@/lib/courses";
+import { getMapCourses } from "@/lib/courses";
 import { getPublicMapSessions } from "@/lib/db";
 import { getPracticeStateName, normalizePracticeStateCode } from "@/lib/practice-states";
 
@@ -115,7 +115,7 @@ function isMappableCourse(course: { next_location?: string | null; next_format?:
 }
 
 function buildDrilldownLocations(sessions: MapSession[], selectedLocation: string) {
-  const grouped = new Map<string, { count: number; courseIds: Set<string> }>();
+  const grouped = new Map<string, { courseIds: Set<string> }>();
 
   for (const session of sessions) {
     const labels = deriveSessionLabels(session);
@@ -132,40 +132,38 @@ function buildDrilldownLocations(sessions: MapSession[], selectedLocation: strin
     if (!childLabel) continue;
 
     const courseId = String(session.course_id || "").trim();
-    const current = grouped.get(childLabel) || { count: 0, courseIds: new Set<string>() };
-    current.count += 1;
+    const current = grouped.get(childLabel) || { courseIds: new Set<string>() };
     if (courseId) current.courseIds.add(courseId);
     grouped.set(childLabel, current);
   }
 
   return [...grouped.entries()]
-    .sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0]))
+    .sort((a, b) => b[1].courseIds.size - a[1].courseIds.size || a[0].localeCompare(b[0]))
     .map(([location, value]) => ({
       location,
-      count: value.count,
+      count: value.courseIds.size,
       courseIds: [...value.courseIds],
     }));
 }
 
 function buildTopLevelLocations(sessions: MapSession[]) {
-  const grouped = new Map<string, { count: number; courseIds: Set<string> }>();
+  const grouped = new Map<string, { courseIds: Set<string> }>();
 
   for (const session of sessions) {
     const labels = deriveSessionLabels(session);
     const topLabel = labels.topLevelLabel;
     if (!topLabel) continue;
     const courseId = String(session.course_id || "").trim();
-    const current = grouped.get(topLabel) || { count: 0, courseIds: new Set<string>() };
-    current.count += 1;
+    const current = grouped.get(topLabel) || { courseIds: new Set<string>() };
     if (courseId) current.courseIds.add(courseId);
     grouped.set(topLabel, current);
   }
 
   return [...grouped.entries()]
-    .sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0]))
+    .sort((a, b) => b[1].courseIds.size - a[1].courseIds.size || a[0].localeCompare(b[0]))
     .map(([location, value]) => ({
       location,
-      count: value.count,
+      count: value.courseIds.size,
       courseIds: [...value.courseIds],
     }))
     .slice(0, 250);
@@ -213,11 +211,17 @@ export async function GET(request: Request) {
   );
 
   if (!hasCatalogFilters) {
-    const sessions = await getPublicMapSessions();
+    const [sessions, visibleCourses] = await Promise.all([
+      getPublicMapSessions(),
+      getMapCourses({}),
+    ]);
+    const visibleCourseIds = new Set(visibleCourses.map((course) => course.id));
     const filteredSessions = sessions.filter((session: MapSession) => {
       const labels = deriveSessionLabels(session);
       const formatName = String(session.format || "").trim();
+      const courseId = String(session.course_id || "").trim();
       if (!labels.topLevelLabel) return false;
+      if (!courseId || !visibleCourseIds.has(courseId)) return false;
       if (/\bonline|self-paced|self paced|virtual\b/i.test(labels.rawLocation || labels.topLevelLabel)) return false;
       if (/^online$/i.test(formatName)) return false;
       return inDateWindow(session.start_date, dateStart, dateEnd);
@@ -239,9 +243,10 @@ export async function GET(request: Request) {
     const selectedCourseIds = hasChildCities
       ? []
       : (citySelection?.selectedEntry?.courseIds || topLevelSelection?.courseIds || []);
-    const selectedCourses = selectedCourseIds.length
-      ? await getCoursesByIds(selectedCourseIds)
-      : [];
+    const visibleCoursesById = new Map(visibleCourses.map((course) => [course.id, course]));
+    const selectedCourses = selectedCourseIds
+      .map((courseId) => visibleCoursesById.get(courseId))
+      .filter((course): course is Awaited<ReturnType<typeof getMapCourses>>[number] => Boolean(course));
     const totalSelectedCourses = hasChildCities
       ? Number(topLevelSelection?.count || 0)
       : selectedCourses.length;

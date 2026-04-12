@@ -111,6 +111,15 @@ function formatFlightTime(value: string | null | undefined) {
   }).format(date);
 }
 
+function formatFlightLine(
+  fromCode: string | null | undefined,
+  toCode: string | null | undefined,
+  departAt: string | null | undefined,
+  arriveAt: string | null | undefined,
+) {
+  return `${fromCode || "Origin"} to ${toCode || "Destination"} • ${formatFlightDay(departAt)} • ${formatFlightTime(departAt)} to ${formatFlightTime(arriveAt)}`;
+}
+
 function toRecord(item: TravelFlightOption | TravelHotelOption | TravelCarOption) {
   if ("carriers" in item) {
     return {
@@ -779,6 +788,99 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
             </div>
           </>
         )}
+
+        <div className="travel-selected-itinerary">
+          <div className="section-heading">
+            <h2>Selected Itinerary</h2>
+            <p>Your trip stays visible here while you choose flights, hotels, and rental cars. Any card you have not picked yet will stay in place until you do.</p>
+          </div>
+
+          <div className="travel-selected-itinerary__grid">
+            <article className="card travel-selected-card">
+              <p className="packages-builder__eyebrow">Course</p>
+              {selectedCourse ? (
+                <div className="travel-selected-card__content">
+                  <h3>{selectedCourse.title}</h3>
+                  <p>{destination}</p>
+                  <p>{formatPlanDates(tripStartDate, tripEndDate)}</p>
+                  <span>{summarizeFormat(selectedCourse)}</span>
+                </div>
+              ) : (
+                <div className="travel-selected-card__placeholder">
+                  <h3>Not selected yet</h3>
+                  <p>Choose a course from your cart to anchor the itinerary.</p>
+                </div>
+              )}
+            </article>
+
+            <article className="card travel-selected-card">
+              <p className="packages-builder__eyebrow">Flight</p>
+              {selectedFlight ? (
+                <div className="travel-selected-card__content">
+                  <h3>{selectedFlight.title}</h3>
+                  <div className="travel-selected-card__group">
+                    <strong>Outbound</strong>
+                    <p>{formatFlightLine(
+                      selectedFlight.originCode || form.departureAirport,
+                      selectedFlight.destinationCode || form.destinationCode,
+                      selectedFlight.departureAt,
+                      selectedFlight.arrivalAt,
+                    )}</p>
+                  </div>
+                  <div className="travel-selected-card__group">
+                    <strong>Inbound</strong>
+                    <p>{selectedFlight.returnDepartureAt || selectedFlight.returnArrivalAt ? formatFlightLine(
+                      selectedFlight.returnOriginCode || selectedFlight.destinationCode || form.destinationCode,
+                      selectedFlight.returnDestinationCode || selectedFlight.originCode || form.departureAirport,
+                      selectedFlight.returnDepartureAt,
+                      selectedFlight.returnArrivalAt,
+                    ) : "Not selected yet"}</p>
+                  </div>
+                  <span>{formatMoney(selectedFlight.totalAmount, selectedFlight.currency || "USD")} • {selectedFlight.stops === 0 ? "Nonstop" : `${selectedFlight.stops || 0} stops`}</span>
+                </div>
+              ) : (
+                <div className="travel-selected-card__placeholder">
+                  <h3>Not selected yet</h3>
+                  <p>Pick a flight from the live options above and it will appear here.</p>
+                </div>
+              )}
+            </article>
+
+            <article className="card travel-selected-card">
+              <p className="packages-builder__eyebrow">Hotel</p>
+              {selectedHotel ? (
+                <div className="travel-selected-card__content">
+                  <h3>{selectedHotel.name}</h3>
+                  <p>{selectedHotel.cityCode || destination}</p>
+                  <p>{selectedHotel.rating ? `${selectedHotel.rating.toFixed(1)} star rating` : "Hotel option selected"}</p>
+                  <span>{formatMoney(selectedHotel.totalAmount, selectedHotel.currency || "USD")}</span>
+                </div>
+              ) : (
+                <div className="travel-selected-card__placeholder">
+                  <h3>Not selected yet</h3>
+                  <p>Pick a hotel above and CEAtlas will add it to this itinerary.</p>
+                </div>
+              )}
+            </article>
+
+            <article className="card travel-selected-card">
+              <p className="packages-builder__eyebrow">Rental Car</p>
+              {selectedCar ? (
+                <div className="travel-selected-card__content">
+                  <h3>{selectedCar.name}</h3>
+                  <p>{selectedCar.vehicleType || "Vehicle details pending"}</p>
+                  <p>Pickup {selectedCar.pickupCode || form.destinationCode || "Destination airport"}</p>
+                  <span>{formatMoney(selectedCar.totalAmount, selectedCar.currency || "USD")}</span>
+                </div>
+              ) : (
+                <div className="travel-selected-card__placeholder">
+                  <h3>Not selected yet</h3>
+                  <p>{form.needsCar ? "Pick a rental car above and it will appear here." : "Rental car planning is turned off for this itinerary right now."}</p>
+                </div>
+              )}
+            </article>
+          </div>
+        </div>
 
         {liveResults?.warnings?.length ? (
           <div className="travel-warnings">

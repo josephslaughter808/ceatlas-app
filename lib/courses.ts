@@ -488,13 +488,20 @@ const getCachedNormalizedCatalogLite = unstable_cache(
   ['course-map-catalog-lite'],
   { revalidate: 60 * 30 }
 );
+
+const getCachedNormalizedCatalog = unstable_cache(
+  async () => getNormalizedCatalog(),
+  ['course-catalog-full'],
+  { revalidate: 60 * 30 }
+);
+
 async function getCatalogRows(
   searchParams: CourseSearchParams = {},
   useLite = false,
 ) {
   const rows: Array<ReturnType<typeof normalizeCourse>> = useLite
     ? await getCachedNormalizedCatalogLite()
-    : await getNormalizedCatalog();
+    : await getCachedNormalizedCatalog();
   const search = typeof searchParams.search === 'string' ? searchParams.search.trim() : '';
   const providers = toList(searchParams.provider);
   const formats = toList(searchParams.format);

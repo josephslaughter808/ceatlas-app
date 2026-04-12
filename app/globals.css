@@ -1180,6 +1180,12 @@ button.auth-button {
   gap: 1rem;
 }
 
+.course-card__quick-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
 .save-button {
   display: inline-flex;
   align-items: center;
@@ -1211,26 +1217,54 @@ button.auth-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(18, 59, 74, 0.14);
-  border-radius: 999px;
-  padding: 0.65rem 1rem;
-  background: rgba(255, 255, 255, 0.9);
-  color: var(--color-primary);
-  font: inherit;
-  font-weight: 700;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: rgba(18, 59, 74, 0.52);
   cursor: pointer;
-  transition: transform var(--transition), background var(--transition), color var(--transition), border-color var(--transition);
+  line-height: 0;
+  transition: transform var(--transition), color var(--transition), opacity var(--transition);
 }
 
 .trip-cart-button:hover {
   transform: translateY(-1px);
-  background: rgba(18, 59, 74, 0.06);
   color: var(--color-primary);
 }
 
 .trip-cart-button--active {
-  background: rgba(18, 59, 74, 0.12);
-  border-color: rgba(18, 59, 74, 0.22);
+  color: var(--color-primary);
+}
+
+.trip-cart-button__icon {
+  width: 1.52rem;
+  height: 1.52rem;
+}
+
+.trip-cart-button__icon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trip-cart-button__check {
+  position: absolute;
+  right: -0.25rem;
+  bottom: -0.18rem;
+  width: 0.95rem;
+  height: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: white;
+  box-shadow: 0 3px 10px rgba(18, 59, 74, 0.18);
+}
+
+.trip-cart-button__check svg {
+  width: 0.68rem;
+  height: 0.68rem;
 }
 
 .compare-button {
@@ -2132,6 +2166,36 @@ button.auth-button {
 
 .travel-live-item span {
   color: var(--color-muted);
+}
+
+.flight-leg {
+  display: grid;
+  gap: 0.08rem;
+  margin-top: 0.15rem;
+}
+
+.flight-leg__label {
+  color: var(--color-primary) !important;
+  font-size: 0.79rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.flight-leg__summary,
+.flight-leg__route {
+  color: var(--color-muted);
+  line-height: 1.45;
+}
+
+.flight-leg__summary strong {
+  color: var(--color-primary);
+  font-weight: 800;
+}
+
+.flight-leg__time {
+  color: #1d5f8f;
+  font-weight: 800;
 }
 
 .travel-live-actions {

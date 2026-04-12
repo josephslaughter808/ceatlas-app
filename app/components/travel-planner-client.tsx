@@ -90,6 +90,27 @@ function formatFlightDateTime(value: string | null | undefined) {
   }).format(date);
 }
 
+function formatFlightDay(value: string | null | undefined) {
+  if (!value) return "Day pending";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
+
+function formatFlightTime(value: string | null | undefined) {
+  if (!value) return "Time pending";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
 function toRecord(item: TravelFlightOption | TravelHotelOption | TravelCarOption) {
   if ("carriers" in item) {
     return {
@@ -665,17 +686,29 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
                       <div key={flight.id} className={`travel-live-item ${selectedFlightId === flight.id ? "travel-live-item--selected" : ""}`}>
                         <strong>{formatMoney(flight.totalAmount, flight.currency || "USD")}</strong>
                         <span>{flight.title}</span>
-                        <span>
-                          Outbound: {flight.originCode || form.departureAirport || "Origin"} {formatFlightDateTime(flight.departureAt)} →
-                          {" "}
-                          {flight.destinationCode || form.destinationCode || "Destination"} {formatFlightDateTime(flight.arrivalAt)}
-                        </span>
-                        {flight.returnDepartureAt || flight.returnArrivalAt ? (
-                          <span>
-                            Return: {flight.returnOriginCode || flight.destinationCode || form.destinationCode || "Destination"} {formatFlightDateTime(flight.returnDepartureAt)} →
-                            {" "}
-                            {flight.returnDestinationCode || flight.originCode || form.departureAirport || "Origin"} {formatFlightDateTime(flight.returnArrivalAt)}
+                        <div className="flight-leg">
+                          <span className="flight-leg__label">Outbound</span>
+                          <span className="flight-leg__summary">
+                            Leave <strong>{formatFlightDay(flight.departureAt)}</strong> at <strong className="flight-leg__time">{formatFlightTime(flight.departureAt)}</strong>
                           </span>
+                          <span className="flight-leg__route">
+                            {flight.originCode || form.departureAirport || "Origin"} to {flight.destinationCode || form.destinationCode || "Destination"}
+                            {" "}
+                            arriving at <strong className="flight-leg__time">{formatFlightTime(flight.arrivalAt)}</strong>
+                          </span>
+                        </div>
+                        {flight.returnDepartureAt || flight.returnArrivalAt ? (
+                          <div className="flight-leg">
+                            <span className="flight-leg__label">Return</span>
+                            <span className="flight-leg__summary">
+                              Leave <strong>{formatFlightDay(flight.returnDepartureAt)}</strong> at <strong className="flight-leg__time">{formatFlightTime(flight.returnDepartureAt)}</strong>
+                            </span>
+                            <span className="flight-leg__route">
+                              {flight.returnOriginCode || flight.destinationCode || form.destinationCode || "Destination"} to {flight.returnDestinationCode || flight.originCode || form.departureAirport || "Origin"}
+                              {" "}
+                              arriving at <strong className="flight-leg__time">{formatFlightTime(flight.returnArrivalAt)}</strong>
+                            </span>
+                          </div>
                         ) : (
                           <span>Return: one-way or not returned by supplier yet</span>
                         )}

@@ -74,8 +74,10 @@ export default function CourseCard({ course }: { course: Course }) {
       </div>
 
       <div className="course-card__actions">
-        <SaveCourseButton courseId={course.id} />
-        <TripCartButton courseId={course.id} />
+        <div className="course-card__quick-actions">
+          <SaveCourseButton courseId={course.id} />
+          <TripCartButton courseId={course.id} />
+        </div>
         <CompareButton
           item={{
             id: course.id,

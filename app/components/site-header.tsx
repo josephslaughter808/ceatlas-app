@@ -26,6 +26,17 @@ export default function SiteHeader() {
 
       <div className="site-nav__right">
         <div className="auth-actions">
+          <Link href="/travel" className="auth-button auth-button--icon" aria-label="Open cart" title="Open cart">
+            <span className="auth-button__icon-wrap" aria-hidden="true">
+              <svg viewBox="0 0 24 24" className="auth-button__icon">
+                <path d="M3.5 5.5h2.1l1.6 8.1a1 1 0 0 0 .98.8h8.95a1 1 0 0 0 .97-.76l1.58-6.14H7.2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="9.25" cy="18.3" r="1.3" fill="currentColor" />
+                <circle cx="16.75" cy="18.3" r="1.3" fill="currentColor" />
+              </svg>
+              {tripCourseIds.length > 0 ? <span className="auth-button__badge">{tripCourseIds.length}</span> : null}
+            </span>
+          </Link>
+
           {loading ? null : user ? (
             <>
               <Link href="/account" className="auth-button auth-button--primary">Account</Link>
@@ -47,7 +58,6 @@ export default function SiteHeader() {
           <Link href="/saved">Saved</Link>
           <Link href="/compare">Compare</Link>
           <Link href="/travel">Travel</Link>
-          <Link href="/travel">Trip Cart ({tripCourseIds.length})</Link>
           <Link href="/packages">Packages</Link>
           <Link href="/cruises">Cruises</Link>
           <Link href="/list-your-ce">List your CE</Link>

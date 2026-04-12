@@ -24,8 +24,14 @@ export type TravelFlightOption = {
   currency: string | null;
   stops: number | null;
   carriers: string[];
+  originCode?: string | null;
+  destinationCode?: string | null;
   departureAt: string | null;
   arrivalAt: string | null;
+  returnDepartureAt?: string | null;
+  returnArrivalAt?: string | null;
+  returnOriginCode?: string | null;
+  returnDestinationCode?: string | null;
   refundable?: boolean | null;
   metadata: Record<string, unknown>;
 };

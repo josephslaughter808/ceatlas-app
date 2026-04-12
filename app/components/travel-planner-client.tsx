@@ -76,6 +76,18 @@ function formatMoney(amount: number | null | undefined, currency = "USD") {
   }).format(amount);
 }
 
+function formatFlightDateTime(value: string | null | undefined) {
+  if (!value) return "Time pending";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
 function toRecord(item: TravelFlightOption | TravelHotelOption | TravelCarOption) {
   if ("carriers" in item) {
     return {
@@ -626,6 +638,11 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
               <span>{liveResults.providers.hotels.provider}: {liveResults.providers.hotels.mode}</span>
               <span>{liveResults.providers.cars.provider}: {liveResults.providers.cars.mode}</span>
             </div>
+            {liveResults.providers.flights.message ? (
+              <div className="travel-warnings">
+                <p>{liveResults.providers.flights.message}</p>
+              </div>
+            ) : null}
 
             <div className="travel-live-grid">
               <div className="card travel-live-card">
@@ -641,7 +658,20 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
                       <div key={flight.id} className={`travel-live-item ${selectedFlightId === flight.id ? "travel-live-item--selected" : ""}`}>
                         <strong>{formatMoney(flight.totalAmount, flight.currency || "USD")}</strong>
                         <span>{flight.title}</span>
-                        <span>{flight.departureAt || "Departure pending"} → {flight.arrivalAt || "Arrival pending"}</span>
+                        <span>
+                          Outbound: {flight.originCode || form.departureAirport || "Origin"} {formatFlightDateTime(flight.departureAt)} →
+                          {" "}
+                          {flight.destinationCode || form.destinationCode || "Destination"} {formatFlightDateTime(flight.arrivalAt)}
+                        </span>
+                        {flight.returnDepartureAt || flight.returnArrivalAt ? (
+                          <span>
+                            Return: {flight.returnOriginCode || flight.destinationCode || form.destinationCode || "Destination"} {formatFlightDateTime(flight.returnDepartureAt)} →
+                            {" "}
+                            {flight.returnDestinationCode || flight.originCode || form.departureAirport || "Origin"} {formatFlightDateTime(flight.returnArrivalAt)}
+                          </span>
+                        ) : (
+                          <span>Return: one-way or not returned by supplier yet</span>
+                        )}
                         <span>{flight.stops === 0 ? "Nonstop" : `${flight.stops || 0} stop${flight.stops === 1 ? "" : "s"}`}</span>
                         <div className="travel-live-actions">
                           <button type="button" className="travel-secondary" onClick={() => setSelectedFlightId(flight.id)}>

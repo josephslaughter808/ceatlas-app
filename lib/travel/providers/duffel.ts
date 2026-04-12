@@ -34,11 +34,16 @@ function duffelHeaders() {
 }
 
 export function getDuffelStatus(): TravelProviderStatus {
+  const isTestMode = String(DUFFEL_ACCESS_TOKEN || "").startsWith("duffel_test_");
   return {
     provider: "Duffel",
     configured: Boolean(DUFFEL_ACCESS_TOKEN),
     mode: DUFFEL_ACCESS_TOKEN ? "live" : "disabled",
-    message: DUFFEL_ACCESS_TOKEN ? null : "Duffel access token is not configured yet.",
+    message: !DUFFEL_ACCESS_TOKEN
+      ? "Duffel access token is not configured yet."
+      : isTestMode
+        ? "Duffel is connected in test mode, so these flight prices and schedules are sandbox results rather than live bookable inventory."
+        : null,
   };
 }
 
@@ -92,10 +97,55 @@ export async function searchDuffelFlightOffers(input: DuffelOfferRequest): Promi
   return offers.map((offer) => {
     const owner = typeof offer.owner === "object" && offer.owner ? offer.owner as Record<string, unknown> : null;
     const slicesPayload = Array.isArray(offer.slices) ? offer.slices as Array<Record<string, unknown>> : [];
-    const firstSlice = slicesPayload[0];
-    const lastSlice = slicesPayload.at(-1);
-    const segments = Array.isArray(firstSlice?.segments) ? firstSlice.segments as Array<Record<string, unknown>> : [];
-    const stops = Math.max(0, segments.length - 1);
+    const outboundSlice = slicesPayload[0];
+    const returnSlice = slicesPayload[1];
+    const outboundSegments = Array.isArray(outboundSlice?.segments) ? outboundSlice.segments as Array<Record<string, unknown>> : [];
+    const returnSegments = Array.isArray(returnSlice?.segments) ? returnSlice.segments as Array<Record<string, unknown>> : [];
+    const firstOutboundSegment = outboundSegments[0];
+    const lastOutboundSegment = outboundSegments.at(-1);
+    const firstReturnSegment = returnSegments[0];
+    const lastReturnSegment = returnSegments.at(-1);
+    const stops = Math.max(0, outboundSegments.length - 1);
+
+    const outboundDeparture = typeof firstOutboundSegment?.departing_at === "string"
+      ? firstOutboundSegment.departing_at
+      : typeof outboundSlice?.departure_date === "string"
+        ? outboundSlice.departure_date
+        : null;
+
+    const outboundArrival = typeof lastOutboundSegment?.arriving_at === "string"
+      ? lastOutboundSegment.arriving_at
+      : typeof outboundSlice?.arrival_date === "string"
+        ? outboundSlice.arrival_date
+        : null;
+
+    const outboundOrigin = typeof firstOutboundSegment?.origin === "object" && firstOutboundSegment.origin
+      ? String((firstOutboundSegment.origin as Record<string, unknown>).iata_code || "")
+      : null;
+
+    const outboundDestination = typeof lastOutboundSegment?.destination === "object" && lastOutboundSegment.destination
+      ? String((lastOutboundSegment.destination as Record<string, unknown>).iata_code || "")
+      : null;
+
+    const inboundDeparture = typeof firstReturnSegment?.departing_at === "string"
+      ? firstReturnSegment.departing_at
+      : typeof returnSlice?.departure_date === "string"
+        ? returnSlice.departure_date
+        : null;
+
+    const inboundArrival = typeof lastReturnSegment?.arriving_at === "string"
+      ? lastReturnSegment.arriving_at
+      : typeof returnSlice?.arrival_date === "string"
+        ? returnSlice.arrival_date
+        : null;
+
+    const inboundOrigin = typeof firstReturnSegment?.origin === "object" && firstReturnSegment.origin
+      ? String((firstReturnSegment.origin as Record<string, unknown>).iata_code || "")
+      : null;
+
+    const inboundDestination = typeof lastReturnSegment?.destination === "object" && lastReturnSegment.destination
+      ? String((lastReturnSegment.destination as Record<string, unknown>).iata_code || "")
+      : null;
 
     return {
       id: String(offer.id || crypto.randomUUID?.() || Math.random()),
@@ -107,8 +157,14 @@ export async function searchDuffelFlightOffers(input: DuffelOfferRequest): Promi
       currency: typeof offer.total_currency === "string" ? offer.total_currency : "USD",
       stops,
       carriers: owner?.name ? [String(owner.name)] : [],
-      departureAt: typeof firstSlice?.departure_date === "string" ? firstSlice.departure_date : null,
-      arrivalAt: typeof lastSlice?.arrival_date === "string" ? lastSlice.arrival_date : null,
+      originCode: outboundOrigin,
+      destinationCode: outboundDestination,
+      departureAt: outboundDeparture,
+      arrivalAt: outboundArrival,
+      returnDepartureAt: inboundDeparture,
+      returnArrivalAt: inboundArrival,
+      returnOriginCode: inboundOrigin,
+      returnDestinationCode: inboundDestination,
       refundable: typeof offer.conditions === "object" && offer.conditions
         ? Boolean((offer.conditions as Record<string, unknown>).change_before_departure)
         : null,

@@ -28,8 +28,14 @@ type AmadeusFlightResult = {
   currency: string | null;
   stops: number | null;
   carriers: string[];
+  originCode?: string | null;
+  destinationCode?: string | null;
   departureAt: string | null;
   arrivalAt: string | null;
+  returnDepartureAt?: string | null;
+  returnArrivalAt?: string | null;
+  returnOriginCode?: string | null;
+  returnDestinationCode?: string | null;
 };
 
 type AmadeusHotelResult = {
@@ -160,17 +166,27 @@ export async function searchFlightOffers(input: FlightSearchInput): Promise<Amad
   });
 
   return Array.isArray(data.data) ? (data.data as AmadeusFlightOffer[]).map((offer) => {
-    const firstSegment = offer.itineraries?.[0]?.segments?.[0];
-    const lastSegment = offer.itineraries?.[0]?.segments?.slice(-1)?.[0];
+    const outboundSegments = offer.itineraries?.[0]?.segments || [];
+    const returnSegments = offer.itineraries?.[1]?.segments || [];
+    const firstSegment = outboundSegments[0];
+    const lastSegment = outboundSegments.slice(-1)?.[0];
+    const firstReturnSegment = returnSegments[0];
+    const lastReturnSegment = returnSegments.slice(-1)?.[0];
 
     return {
       id: String(offer.id || crypto.randomUUID?.() || Math.random()),
       total: offer.price?.grandTotal || offer.price?.total || null,
       currency: offer.price?.currency || null,
-      stops: Math.max(0, Number((offer.itineraries?.[0]?.segments?.length || 1) - 1)),
+      stops: Math.max(0, Number((outboundSegments.length || 1) - 1)),
       carriers: Array.isArray(offer.validatingAirlineCodes) ? offer.validatingAirlineCodes : [],
+      originCode: input.originCode,
+      destinationCode: input.destinationCode,
       departureAt: firstSegment?.departure?.at || null,
       arrivalAt: lastSegment?.arrival?.at || null,
+      returnDepartureAt: firstReturnSegment?.departure?.at || null,
+      returnArrivalAt: lastReturnSegment?.arrival?.at || null,
+      returnOriginCode: input.destinationCode,
+      returnDestinationCode: input.originCode,
     };
   }) : [];
 }

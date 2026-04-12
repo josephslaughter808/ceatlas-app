@@ -26,6 +26,7 @@ const CONCURRENCY = 4;
 const FETCH_TIMEOUT_MS = 15000;
 const GEOCODE_TIMEOUT_MS = 12000;
 const FAILURE_COOLDOWN_MS = 1000 * 60 * 60 * 24 * 7;
+const STREET_HINT_RE = /\b(?:ave|avenue|blvd|boulevard|cir|circle|ct|court|dr|drive|hwy|highway|ln|lane|pkwy|parkway|pl|place|rd|road|st|street|suite|ste|way)\b/i;
 
 function isInPersonFormat(format = '', location = '') {
   const text = `${format} ${location}`.toLowerCase();
@@ -38,16 +39,92 @@ function cleanText(value = '', max = 500) {
   return String(value || '').replace(/\s+/g, ' ').trim().slice(0, max);
 }
 
-function bestVenueAddress(extracted = {}, session = {}) {
-  const direct = cleanText(extracted.venue_address || session.metadata?.venue_address || '');
-  if (direct) return direct;
+function normalizeCountry(value = '') {
+  const text = cleanText(value, 80);
+  if (!text) return '';
+  if (/^united states$/i.test(text)) return 'USA';
+  return text;
+}
 
-  return cleanText([
+function sanitizeVenueAddress(value = '') {
+  const text = cleanText(value, 320);
+  if (!text) return '';
+  if (/^see (?:course|event|registration) page$/i.test(text)) return '';
+  if (/^(?:location|venue|address)\s*[,:\-]*\s*$/i.test(text)) return '';
+  if (/^(?:location|venue)\b/i.test(text)) return '';
+  if (/^address\b/i.test(text) && !/\d/.test(text) && !STREET_HINT_RE.test(text)) return '';
+  return text;
+}
+
+function composeLocationText(parts = []) {
+  return cleanText(parts.filter(Boolean).join(', '), 320);
+}
+
+function uniqueCandidates(values = []) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function comparableText(value = '') {
+  return cleanText(value, 320).toLowerCase();
+}
+
+function isSpecificVenueAddress(value = '', genericPlaces = []) {
+  const text = sanitizeVenueAddress(value);
+  if (!text) return false;
+
+  const comparable = comparableText(text);
+  if (genericPlaces.some((candidate) => comparable && comparable === comparableText(candidate))) {
+    return false;
+  }
+
+  if (!/\d/.test(text) && !STREET_HINT_RE.test(text) && text.split(',').length <= 2) {
+    return false;
+  }
+
+  return true;
+}
+
+function buildVenueCandidates(extracted = {}, session = {}) {
+  const normalizedCountry = normalizeCountry(extracted.country || session.country);
+  const sessionPlace = composeLocationText([
+    session.city,
+    session.state,
+    normalizedCountry,
+  ]);
+  const extractedPlace = composeLocationText([
+    extracted.city,
+    extracted.state,
+    normalizeCountry(extracted.country),
+  ]);
+  const locationOnly = composeLocationText([
     extracted.location || session.location,
     extracted.city || session.city,
     extracted.state || session.state,
-    extracted.country || session.country,
-  ].filter(Boolean).join(', '), 320);
+    normalizedCountry,
+  ]);
+  const directSource = extracted.venue_address || session.metadata?.venue_address || '';
+  const direct = isSpecificVenueAddress(directSource, [
+    session.location,
+    sessionPlace,
+    extractedPlace,
+    locationOnly,
+  ])
+    ? sanitizeVenueAddress(directSource)
+    : '';
+
+  const geocodeQueries = uniqueCandidates([
+    direct,
+    direct && sessionPlace ? composeLocationText([direct, sessionPlace]) : '',
+    direct && extractedPlace ? composeLocationText([direct, extractedPlace]) : '',
+    locationOnly,
+    sessionPlace,
+    extractedPlace,
+  ]);
+
+  return {
+    venueAddress: direct,
+    geocodeQueries,
+  };
 }
 
 async function fetchText(url) {
@@ -105,6 +182,17 @@ async function geocodeAddress(query) {
     longitude,
     label: cleanText(first?.display_name || normalized, 320),
   };
+}
+
+async function geocodeFirstMatch(queries = []) {
+  for (const query of queries) {
+    const result = await geocodeAddress(query);
+    if (result) {
+      return { ...result, query };
+    }
+  }
+
+  return null;
 }
 
 async function getSessionsNeedingAddresses(limit = 200) {
@@ -187,19 +275,19 @@ async function enrichSession(session, course) {
       pageUrl,
     });
 
-    const venueAddress = bestVenueAddress(extracted, session);
-    if (!venueAddress || /^see course page$/i.test(venueAddress)) {
+    const { venueAddress, geocodeQueries } = buildVenueCandidates(extracted, session);
+    if (!venueAddress) {
       return { updated: false, reason: 'no_address_found' };
     }
 
-    const geocode = await geocodeAddress(venueAddress);
+    const geocode = await geocodeFirstMatch(geocodeQueries);
     const nextMetadata = {
       ...(session.metadata || {}),
       venue_address: venueAddress,
       venue_latitude: geocode?.latitude ?? null,
       venue_longitude: geocode?.longitude ?? null,
       venue_geocode_label: geocode?.label ?? null,
-      venue_geocode_query: venueAddress,
+      venue_geocode_query: geocode?.query || geocodeQueries[0] || venueAddress,
       venue_address_backfill_status: 'success',
       venue_address_backfill_reason: geocode ? 'address_and_geocode_saved' : 'address_saved_no_geocode',
       venue_address_backfill_attempted_at: new Date().toISOString(),

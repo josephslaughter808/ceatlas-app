@@ -190,6 +190,20 @@ function fullAddressFromJsonLdAddress(address) {
   ].filter(Boolean).join(', '), 320);
 }
 
+const PLACEHOLDER_ADDRESS_RE = /^(?:location|venue|address)\s*[,:\-]*\s*$/i;
+const NON_ADDRESS_PAGE_RE = /^see (?:course|event|registration) page$/i;
+const STREET_HINT_RE = /\b(?:ave|avenue|blvd|boulevard|cir|circle|ct|court|dr|drive|hwy|highway|ln|lane|pkwy|parkway|pl|place|rd|road|st|street|suite|ste|way)\b/i;
+
+function sanitizeVenueAddress(value) {
+  const text = cleanText(value, 320);
+  if (!text) return '';
+  if (NON_ADDRESS_PAGE_RE.test(text)) return '';
+  if (PLACEHOLDER_ADDRESS_RE.test(text)) return '';
+  if (/^(?:location|venue)\b/i.test(text)) return '';
+  if (/^address\b/i.test(text) && !/\d/.test(text) && !STREET_HINT_RE.test(text)) return '';
+  return text;
+}
+
 function pickFirst(...values) {
   return values.map((value) => cleanText(value)).find(Boolean) || '';
 }
@@ -470,8 +484,8 @@ function findLocationValues(jsonLdNodes, labels, bodyLines) {
     bodyLines.find((line) => /\b(location|venue|address)\b/i.test(line)) || ''
   );
   const venueAddress = pickFirst(
-    fullAddressFromJsonLdAddress(addressCandidate),
-    pickLabeledValue(labels, /^(venue address|address)$/i)
+    sanitizeVenueAddress(fullAddressFromJsonLdAddress(addressCandidate)),
+    sanitizeVenueAddress(pickLabeledValue(labels, /^(venue address|address)$/i))
   );
 
   return {
@@ -525,7 +539,7 @@ function normalizeFromJsonLd(jsonLdNodes) {
     start_date: cleanText(courseNode.startDate, 120),
     end_date: cleanText(courseNode.endDate, 120),
     location: textFromJsonLdEntity(courseNode.location),
-    venue_address: fullAddressFromJsonLdAddress(courseNode.location?.address || courseNode.address),
+    venue_address: sanitizeVenueAddress(fullAddressFromJsonLdAddress(courseNode.location?.address || courseNode.address)),
     format: cleanText(courseNode.courseMode, 120),
     audience: cleanText(courseNode.audience?.audienceType || courseNode.audience?.name, 250),
     accreditation: cleanText(courseNode.provider?.name || courseNode.educationalCredentialAwarded, 300),

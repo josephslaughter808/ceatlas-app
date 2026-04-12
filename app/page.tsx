@@ -1,8 +1,16 @@
 import Link from "next/link";
 import HomeStatsClient from "./components/home-stats-client";
 import HomeFeaturedCoursesClient from "./components/home-featured-courses-client";
+import { getCatalogOverview, getFeaturedCourses } from "@/lib/courses";
 
-export default function HomePage() {
+export const revalidate = 600;
+
+export default async function HomePage() {
+  const [stats, featuredCourses] = await Promise.all([
+    getCatalogOverview(),
+    getFeaturedCourses(6),
+  ]);
+
   return (
     <div className="container home-page">
       <section className="hero">
@@ -19,7 +27,13 @@ export default function HomePage() {
           </div>
         </div>
 
-        <HomeStatsClient />
+        <HomeStatsClient
+          stats={{
+            courses: stats.courseCount,
+            providers: stats.providerCount,
+            formatCount: stats.formatCount,
+          }}
+        />
       </section>
 
       <section className="home-section home-section--centered">
@@ -61,7 +75,7 @@ export default function HomePage() {
           <Link href="/courses">See all courses</Link>
         </div>
 
-        <HomeFeaturedCoursesClient />
+        <HomeFeaturedCoursesClient courses={featuredCourses} />
       </section>
     </div>
   );

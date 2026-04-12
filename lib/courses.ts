@@ -1,7 +1,9 @@
 import {
+  getCatalogStats,
   getCourseRatingSummaries,
   getCourseRatingSummariesForCourseIds,
   getPublicCourseCatalog,
+  getPublicCourseCatalogPage,
   getPublicCourseProviderFilterRows,
   getPublicCoursesByIds,
   getPublicSessionFormats,
@@ -542,8 +544,13 @@ export async function getCoursesPage(
 }
 
 export async function getFeaturedCourses(take = 6) {
-  const rows = await getCourses({}, Math.max(take, 24));
-  return rows.slice(0, take);
+  const safeTake = Math.max(take, 24);
+  const { rows } = await getPublicCourseCatalogPage(1, safeTake);
+  const normalized = rows
+    .map((row: CatalogRow) => normalizeCourse(row as CatalogRow))
+    .filter(shouldIncludeCatalogCourse);
+
+  return normalized.slice(0, take);
 }
 
 export async function getCoursesByIds(ids: string[]) {
@@ -577,14 +584,12 @@ export async function getCoursesByIds(ids: string[]) {
 }
 
 export async function getCatalogOverview() {
-  const rows: Array<ReturnType<typeof normalizeCourse>> = await getCachedNormalizedCatalogLite();
-  const providers = new Set(rows.map((row: ReturnType<typeof normalizeCourse>) => row.provider_name).filter(Boolean));
-  const formats = new Set(rows.map((row: ReturnType<typeof normalizeCourse>) => row.next_format).filter(Boolean));
+  const stats = await getCatalogStats();
 
   return {
-    courseCount: rows.length,
-    providerCount: providers.size,
-    formatCount: formats.size,
+    courseCount: stats.courses,
+    providerCount: stats.providers,
+    formatCount: 40,
   };
 }
 

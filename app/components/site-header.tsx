@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "./auth-provider";
 import { useTripCart } from "./trip-cart-provider";
@@ -11,8 +11,7 @@ export default function SiteHeader() {
   const { user, loading } = useAuth();
   const { tripCourseIds } = useTripCart();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const returnTo = `${pathname}${searchParams?.toString() ? `?${searchParams.toString()}` : ""}`;
+  const returnTo = pathname || "/";
 
   async function handleSignOut() {
     await supabase.auth.signOut();

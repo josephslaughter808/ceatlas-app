@@ -1,45 +1,14 @@
-"use client";
-
-import { useEffect, useState } from "react";
-
 type HomeStats = {
   courses: number;
   providers: number;
   formatCount: number;
 };
 
-const fallbackStats: HomeStats = {
-  courses: 0,
-  providers: 0,
-  formatCount: 0,
-};
-
 function formatStat(value: number) {
   return value > 0 ? value.toLocaleString() : "...";
 }
 
-export default function HomeStatsClient() {
-  const [stats, setStats] = useState<HomeStats>(fallbackStats);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadStats() {
-      const response = await fetch("/api/home-stats");
-      if (!response.ok) return;
-      const nextStats = await response.json();
-      if (!cancelled) {
-        setStats(nextStats);
-      }
-    }
-
-    loadStats();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
+export default function HomeStatsClient({ stats }: { stats: HomeStats }) {
   return (
     <div className="hero__stats">
       <div className="card hero-stat-card">

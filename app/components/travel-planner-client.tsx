@@ -23,6 +23,11 @@ import { useTripCart } from "./trip-cart-provider";
 const HOME_AIRPORT_STORAGE_KEY = "ceatlas:home-airport";
 const SECONDARY_AIRPORT_STORAGE_KEY = "ceatlas:secondary-airport";
 
+function getInitialAirportValue(storageKey: string) {
+  if (typeof window === "undefined") return "";
+  return String(window.localStorage.getItem(storageKey) || "").trim().toUpperCase();
+}
+
 type TravelPlannerClientProps = {
   courses?: CourseRecord[];
 };
@@ -175,7 +180,11 @@ function toRecord(item: TravelFlightOption | TravelHotelOption | TravelCarOption
 export default function TravelPlannerClient({ courses: initialCourses = [] }: TravelPlannerClientProps) {
   const { user, session } = useAuth();
   const { tripCourseIds } = useTripCart();
-  const [form, setForm] = useState<PlannerFormState>(defaultFormState);
+  const [form, setForm] = useState<PlannerFormState>(() => ({
+    ...defaultFormState,
+    departureAirport: getInitialAirportValue(HOME_AIRPORT_STORAGE_KEY),
+    secondaryDepartureAirport: getInitialAirportValue(SECONDARY_AIRPORT_STORAGE_KEY),
+  }));
   const [isSearching, setIsSearching] = useState(false);
   const [savingItinerary, setSavingItinerary] = useState(false);
   const [preparingCheckout, setPreparingCheckout] = useState(false);
@@ -597,6 +606,11 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
               </label>
 
               <label>
+                <span>Destination code</span>
+                <input value={form.destinationCode} onChange={(event) => updateField("destinationCode", event.target.value)} placeholder="LAS" />
+              </label>
+
+              <label>
                 <span>Home airport</span>
                 <AirportCombobox
                   value={form.departureAirport}
@@ -612,11 +626,6 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
                   onChange={(value) => updateField("secondaryDepartureAirport", value)}
                   placeholder="LGA - New York City - LaGuardia"
                 />
-              </label>
-
-              <label>
-                <span>Destination code</span>
-                <input value={form.destinationCode} onChange={(event) => updateField("destinationCode", event.target.value)} placeholder="LAS" />
               </label>
 
               <label>

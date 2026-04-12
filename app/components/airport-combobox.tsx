@@ -46,7 +46,7 @@ export default function AirportCombobox({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onChange, query]);
 
-  const options = useMemo(() => searchAirportOptions(query, 10), [query]);
+  const options = useMemo(() => searchAirportOptions(query, 50), [query]);
 
   return (
     <div className={`airport-combobox${open ? " is-open" : ""}`} ref={rootRef}>

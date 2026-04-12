@@ -1,3 +1,5 @@
+import generatedAirports from "./airports.generated.json";
+
 export type AirportOption = {
   code: string;
   city: string;
@@ -6,7 +8,7 @@ export type AirportOption = {
   priority?: number;
 };
 
-const AIRPORTS: AirportOption[] = [
+const POPULAR_AIRPORTS: AirportOption[] = [
   { code: "ATL", city: "Atlanta", name: "Hartsfield-Jackson Atlanta", priority: 100 },
   { code: "AUS", city: "Austin", name: "Austin-Bergstrom", priority: 92 },
   { code: "BNA", city: "Nashville", name: "Nashville International", priority: 88 },
@@ -97,9 +99,16 @@ const AIRPORTS: AirportOption[] = [
   { code: "SCL", city: "Santiago", name: "Arturo Merino Benítez International", country: "Chile", priority: 52 },
 ];
 
-export const AIRPORT_OPTIONS = [...AIRPORTS].sort(
-  (a, b) => (b.priority || 0) - (a.priority || 0) || a.city.localeCompare(b.city) || a.code.localeCompare(b.code),
-);
+const priorityByCode = new Map(POPULAR_AIRPORTS.map((airport) => [airport.code, airport.priority || 0]));
+const preferredByCode = new Map(POPULAR_AIRPORTS.map((airport) => [airport.code, airport]));
+
+export const AIRPORT_OPTIONS = [...generatedAirports]
+  .map((airport) => ({
+    ...airport,
+    ...(preferredByCode.get(airport.code) || {}),
+    priority: priorityByCode.get(airport.code) || 0,
+  }))
+  .sort((a, b) => (b.priority || 0) - (a.priority || 0) || a.city.localeCompare(b.city) || a.code.localeCompare(b.code));
 
 export function formatAirportLabel(option: AirportOption) {
   return `${option.code} - ${option.city} - ${option.name}`;
@@ -122,7 +131,7 @@ export function resolveAirportOption(query: string | null | undefined) {
   ) || null;
 }
 
-export function searchAirportOptions(query: string | null | undefined, limit = 12) {
+export function searchAirportOptions(query: string | null | undefined, limit = 50) {
   const normalized = String(query || "").trim().toLowerCase();
   if (!normalized) {
     return AIRPORT_OPTIONS.slice(0, limit);
@@ -132,6 +141,6 @@ export function searchAirportOptions(query: string | null | undefined, limit = 1
     .filter((option) => {
       const haystack = `${option.code} ${option.city} ${option.name} ${option.country || ""}`.toLowerCase();
       return haystack.includes(normalized);
-    })
+    }).sort((a, b) => (b.priority || 0) - (a.priority || 0) || a.city.localeCompare(b.city) || a.code.localeCompare(b.code))
     .slice(0, limit);
 }

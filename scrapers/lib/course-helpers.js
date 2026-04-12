@@ -212,6 +212,47 @@ function findMetaContent($, selector) {
   return cleanText($(selector).attr('content') || '', 400);
 }
 
+function parseCoordinateValue(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function extractAddressFromMapUrl(href, baseUrl) {
+  const full = safeUrl(href, baseUrl);
+  if (!full) return '';
+
+  try {
+    const url = new URL(full);
+    const query = cleanText(
+      url.searchParams.get('q')
+      || url.searchParams.get('query')
+      || url.searchParams.get('destination')
+      || '',
+      320
+    );
+    if (!query) return '';
+    if (/^[-\d.,\s]+$/.test(query)) return '';
+    return query;
+  } catch {
+    return '';
+  }
+}
+
+function extractGeoFromJsonLdLocation(location) {
+  const geo = location?.geo || location?.GeoCoordinates || null;
+  const latitude = parseCoordinateValue(geo?.latitude || geo?.lat);
+  const longitude = parseCoordinateValue(geo?.longitude || geo?.lng || geo?.lon);
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return { venue_latitude: null, venue_longitude: null };
+  }
+
+  return {
+    venue_latitude: latitude,
+    venue_longitude: longitude,
+  };
+}
+
 function findFirstText($, selectors, max = 400) {
   for (const selector of selectors) {
     const text = cleanText($(selector).first().text(), max);
@@ -472,10 +513,21 @@ function findDateValues(jsonLdNodes, bodyLines, labels) {
   };
 }
 
-function findLocationValues(jsonLdNodes, labels, bodyLines) {
+function findLocationValues($, jsonLdNodes, labels, bodyLines, pageUrl) {
   const locationNode = jsonLdNodes.find((node) => node.location || node.eventAttendanceMode || node.address);
   const locationCandidate = locationNode?.location || locationNode?.address || null;
   const addressCandidate = locationCandidate?.address || locationCandidate;
+  const mapLinkAddress = unique(
+    $('a[href*="maps.google"], a[href*="google.com/maps"], a[href*="maps.apple"], a[href*="mapquest"], a[href*="bing.com/maps"]')
+      .map((_, element) => extractAddressFromMapUrl($(element).attr('href'), pageUrl))
+      .get()
+  )[0] || '';
+  const mapHrefAddress = unique(
+    jsonLdNodes
+      .map((node) => typeof node.url === 'string' ? extractAddressFromMapUrl(node.url) : '')
+      .filter(Boolean)
+  )[0] || '';
+  const geoValues = extractGeoFromJsonLdLocation(locationCandidate);
 
   const location = pickFirst(
     textFromJsonLdEntity(locationCandidate),
@@ -485,7 +537,9 @@ function findLocationValues(jsonLdNodes, labels, bodyLines) {
   );
   const venueAddress = pickFirst(
     sanitizeVenueAddress(fullAddressFromJsonLdAddress(addressCandidate)),
-    sanitizeVenueAddress(pickLabeledValue(labels, /^(venue address|address)$/i))
+    sanitizeVenueAddress(pickLabeledValue(labels, /^(venue address|address)$/i)),
+    sanitizeVenueAddress(mapLinkAddress),
+    sanitizeVenueAddress(mapHrefAddress)
   );
 
   return {
@@ -494,6 +548,8 @@ function findLocationValues(jsonLdNodes, labels, bodyLines) {
     city: cleanText(locationCandidate?.addressLocality, 120),
     state: cleanText(locationCandidate?.addressRegion, 120),
     country: cleanText(locationCandidate?.addressCountry, 120),
+    venue_latitude: geoValues.venue_latitude,
+    venue_longitude: geoValues.venue_longitude,
   };
 }
 
@@ -540,6 +596,7 @@ function normalizeFromJsonLd(jsonLdNodes) {
     end_date: cleanText(courseNode.endDate, 120),
     location: textFromJsonLdEntity(courseNode.location),
     venue_address: sanitizeVenueAddress(fullAddressFromJsonLdAddress(courseNode.location?.address || courseNode.address)),
+    ...extractGeoFromJsonLdLocation(courseNode.location),
     format: cleanText(courseNode.courseMode, 120),
     audience: cleanText(courseNode.audience?.audienceType || courseNode.audience?.name, 250),
     accreditation: cleanText(courseNode.provider?.name || courseNode.educationalCredentialAwarded, 300),
@@ -569,7 +626,7 @@ export function extractCourseDataFromPage($, { provider, providerUrl, pageUrl })
 
   const tags = findTags($, title);
   const dateValues = findDateValues(jsonLdNodes, bodyLines, labels);
-  const locationValues = findLocationValues(jsonLdNodes, labels, bodyLines);
+  const locationValues = findLocationValues($, jsonLdNodes, labels, bodyLines, pageUrl);
 
   const creditsText = pickFirst(
     jsonLdData.credits_text,
@@ -641,6 +698,8 @@ export function extractCourseDataFromPage($, { provider, providerUrl, pageUrl })
     date_text: dateValues.date_text,
     location: pickFirst(jsonLdData.location, locationValues.location),
     venue_address: pickFirst(jsonLdData.venue_address, locationValues.venue_address),
+    venue_latitude: jsonLdData.venue_latitude ?? locationValues.venue_latitude,
+    venue_longitude: jsonLdData.venue_longitude ?? locationValues.venue_longitude,
     city: locationValues.city,
     state: locationValues.state,
     country: locationValues.country,

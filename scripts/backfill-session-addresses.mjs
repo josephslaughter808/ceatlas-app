@@ -127,6 +127,30 @@ function buildVenueCandidates(extracted = {}, session = {}) {
   };
 }
 
+function buildPageUrls(session = {}, course = {}) {
+  const originalMetadata = typeof session.metadata?.original_metadata === 'object'
+    ? session.metadata.original_metadata
+    : {};
+  const urls = [
+    session.provider_session_url,
+    course.registration_url,
+    course.source_url,
+    originalMetadata.detail_url,
+    originalMetadata.registration_url,
+    originalMetadata.register_url,
+    originalMetadata.event_url,
+  ].filter(Boolean);
+
+  return uniqueCandidates(
+    urls.flatMap((value) => {
+      const text = cleanText(value, 1000);
+      if (!text) return [];
+      const withoutHash = text.split('#')[0];
+      return uniqueCandidates([text, withoutHash]);
+    })
+  );
+}
+
 async function fetchText(url) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -181,6 +205,40 @@ async function geocodeAddress(query) {
     latitude,
     longitude,
     label: cleanText(first?.display_name || normalized, 320),
+  };
+}
+
+async function reverseGeocode(latitude, longitude) {
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+
+  const url = new URL('https://nominatim.openstreetmap.org/reverse');
+  url.searchParams.set('lat', String(latitude));
+  url.searchParams.set('lon', String(longitude));
+  url.searchParams.set('format', 'jsonv2');
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), GEOCODE_TIMEOUT_MS);
+
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'CEAtlas/1.0 (support@ceatlas.co)',
+      'Accept-Language': 'en-US,en;q=0.9',
+    },
+    signal: controller.signal,
+  });
+  clearTimeout(timeout);
+
+  if (!response.ok) return null;
+
+  const data = await response.json();
+  const displayName = cleanText(data?.display_name || '', 320);
+  if (!displayName) return null;
+
+  return {
+    address: displayName,
+    latitude,
+    longitude,
+    label: displayName,
   };
 }
 
@@ -261,38 +319,71 @@ async function getCourseMap(courseIds) {
 }
 
 async function enrichSession(session, course) {
-  const pageUrl = session.provider_session_url || course.registration_url || course.source_url;
+  const pageUrls = buildPageUrls(session, course);
+  const pageUrl = pageUrls[0];
   if (!pageUrl) {
     return { updated: false, reason: 'missing_url' };
   }
 
   try {
-    const html = await fetchText(pageUrl);
-    const $ = cheerio.load(html);
-    const extracted = extractCourseDataFromPage($, {
-      provider: course.provider,
-      providerUrl: course.source_url || pageUrl,
-      pageUrl,
-    });
+    let extracted = null;
+    let successfulPageUrl = pageUrl;
+    let lastError = null;
 
-    const { venueAddress, geocodeQueries } = buildVenueCandidates(extracted, session);
+    for (const candidateUrl of pageUrls) {
+      try {
+        const html = await fetchText(candidateUrl);
+        const $ = cheerio.load(html);
+        extracted = extractCourseDataFromPage($, {
+          provider: course.provider,
+          providerUrl: course.source_url || candidateUrl,
+          pageUrl: candidateUrl,
+        });
+        successfulPageUrl = candidateUrl;
+        const hasUsefulLocation =
+          Boolean(extracted?.venue_address)
+          || (Number.isFinite(extracted?.venue_latitude) && Number.isFinite(extracted?.venue_longitude));
+        if (hasUsefulLocation) break;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (!extracted) {
+      throw lastError || new Error('no_extractable_page');
+    }
+
+    let { venueAddress, geocodeQueries } = buildVenueCandidates(extracted, session);
+    let geocode = await geocodeFirstMatch(geocodeQueries);
+
+    if (!venueAddress && Number.isFinite(extracted.venue_latitude) && Number.isFinite(extracted.venue_longitude)) {
+      const reversed = await reverseGeocode(extracted.venue_latitude, extracted.venue_longitude);
+      venueAddress = sanitizeVenueAddress(reversed?.address || '');
+      geocode = reversed
+        ? {
+            latitude: reversed.latitude,
+            longitude: reversed.longitude,
+            label: reversed.label,
+            query: `reverse:${extracted.venue_latitude},${extracted.venue_longitude}`,
+          }
+        : geocode;
+    }
+
     if (!venueAddress) {
       return { updated: false, reason: 'no_address_found' };
     }
-
-    const geocode = await geocodeFirstMatch(geocodeQueries);
     const nextMetadata = {
       ...(session.metadata || {}),
       venue_address: venueAddress,
-      venue_latitude: geocode?.latitude ?? null,
-      venue_longitude: geocode?.longitude ?? null,
+      venue_latitude: geocode?.latitude ?? extracted.venue_latitude ?? null,
+      venue_longitude: geocode?.longitude ?? extracted.venue_longitude ?? null,
       venue_geocode_label: geocode?.label ?? null,
       venue_geocode_query: geocode?.query || geocodeQueries[0] || venueAddress,
       venue_address_backfill_status: 'success',
       venue_address_backfill_reason: geocode ? 'address_and_geocode_saved' : 'address_saved_no_geocode',
       venue_address_backfill_attempted_at: new Date().toISOString(),
       venue_address_backfilled_at: new Date().toISOString(),
-      venue_address_source_url: pageUrl,
+      venue_address_source_url: successfulPageUrl,
     };
 
     const { error } = await supabaseAdmin

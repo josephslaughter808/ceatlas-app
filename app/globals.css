@@ -1977,6 +1977,38 @@ button.auth-button {
   padding-top: 0.15rem;
 }
 
+.travel-checkout-summary {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.travel-checkout-summary div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 14px;
+  background: rgba(18, 59, 74, 0.05);
+}
+
+.travel-provider-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.travel-provider-status span {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(18, 59, 74, 0.12);
+  color: var(--color-primary);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
 .travel-board {
   display: grid;
   gap: 1rem;
@@ -1990,7 +2022,7 @@ button.auth-button {
 
 .travel-live-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1rem;
 }
 
@@ -2024,8 +2056,21 @@ button.auth-button {
   background: rgba(18, 59, 74, 0.05);
 }
 
+.travel-live-item--selected {
+  background: rgba(29, 95, 143, 0.12);
+  border: 1px solid rgba(29, 95, 143, 0.22);
+}
+
 .travel-live-item span {
   color: var(--color-muted);
+}
+
+.travel-live-actions {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 0.4rem;
 }
 
 .travel-warnings {

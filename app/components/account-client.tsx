@@ -30,6 +30,7 @@ type TravelOrderRecord = {
   total_amount: number | null;
   service_fee_amount: number | null;
   currency: string | null;
+  metadata: Record<string, unknown> | null;
   created_at: string;
 };
 
@@ -118,7 +119,7 @@ export default function AccountClient() {
           .order("created_at", { ascending: false }),
         supabase
           .from("travel_orders")
-          .select("id, status, destination, starts_on, ends_on, total_amount, service_fee_amount, currency, created_at")
+          .select("id, status, destination, starts_on, ends_on, total_amount, service_fee_amount, currency, metadata, created_at")
           .order("created_at", { ascending: false }),
         supabase
           .from("profiles")
@@ -646,6 +647,12 @@ export default function AccountClient() {
                       {order.service_fee_amount ? ` • fee ${order.service_fee_amount.toFixed(2)}` : ""}
                     </span>
                     <span>{order.status || "pending"}</span>
+                    {Array.isArray(order.metadata?.booking_notes) ? (
+                      <span>{String((order.metadata?.booking_notes as string[])[0] || "")}</span>
+                    ) : null}
+                    {Array.isArray(order.metadata?.provider_references) && (order.metadata?.provider_references as unknown[]).length > 0 ? (
+                      <span>Refs: {(order.metadata?.provider_references as string[]).join(" • ")}</span>
+                    ) : null}
                   </div>
                 ))}
               </div>

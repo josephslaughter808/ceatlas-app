@@ -14,6 +14,9 @@ type StripeCheckoutSession = {
   customer?: string | null;
   payment_status?: string | null;
   status?: string | null;
+  metadata?: Record<string, string>;
+  amount_total?: number | null;
+  payment_intent?: string | null;
   setup_intent?: string | {
     id?: string;
     payment_method?: string | {
@@ -103,6 +106,40 @@ export async function createSetupCheckoutSession({
       customer: stripeCustomerId,
       success_url: `${SITE_URL}/account/payments/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${SITE_URL}/account`,
+    }),
+  });
+}
+
+export async function createPaymentCheckoutSession({
+  stripeCustomerId,
+  orderId,
+  description,
+  currency,
+  amount,
+}: {
+  stripeCustomerId: string;
+  orderId: string;
+  description: string;
+  currency: string;
+  amount: number;
+}) {
+  const normalizedAmount = Math.max(1, Math.round(amount * 100));
+
+  return stripeRequest<StripeCheckoutSession>("/checkout/sessions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: toFormBody({
+      mode: "payment",
+      customer: stripeCustomerId,
+      "metadata[travel_order_id]": orderId,
+      "line_items[0][price_data][currency]": currency.toLowerCase(),
+      "line_items[0][price_data][product_data][name]": description,
+      "line_items[0][price_data][unit_amount]": String(normalizedAmount),
+      "line_items[0][quantity]": "1",
+      success_url: `${SITE_URL}/travel/checkout/success?session_id={CHECKOUT_SESSION_ID}&order_id=${orderId}`,
+      cancel_url: `${SITE_URL}/travel`,
     }),
   });
 }

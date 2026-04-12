@@ -4,8 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { track } from "@vercel/analytics";
 import type { CourseRecord } from "@/lib/courses";
+import type {
+  TravelBookingRecord,
+  TravelCarOption,
+  TravelCheckoutDraft,
+  TravelFlightOption,
+  TravelHotelOption,
+  TravelItineraryDraft,
+  TravelSearchResponse,
+} from "@/lib/travel/providers/types";
+import { buildItineraryPriceBreakdown } from "@/lib/travel/itinerary";
 import { useSavedCourses } from "./saved-courses-provider";
-import { useTravelPlanner } from "./travel-planner-provider";
 import { useAuth } from "./auth-provider";
 import CompareButton from "./compare-button";
 
@@ -35,69 +44,12 @@ const defaultFormState: PlannerFormState = {
   notes: "",
 };
 
-type TravelSearchResponse = {
-  configured: boolean;
-  flights: Array<{
-    id: string;
-    total: string | null;
-    currency: string | null;
-    stops: number | null;
-    carriers: string[];
-    departureAt: string | null;
-    arrivalAt: string | null;
-  }>;
-  hotels: Array<{
-    id: string;
-    name: string;
-    cityCode: string | null;
-    total: string | null;
-    currency: string | null;
-  }>;
-  warnings?: string[];
-  error?: string;
-};
-
 function addDays(dateText: string | null, days: number) {
   if (!dateText) return "";
   const date = new Date(dateText);
   if (Number.isNaN(date.getTime())) return "";
   date.setDate(date.getDate() + days);
   return date.toISOString().slice(0, 10);
-}
-
-function buildBookingUrl(plan: { destination: string; startDate: string | null; endDate: string | null }) {
-  const url = new URL("https://www.booking.com/searchresults.html");
-  const affiliateId = process.env.NEXT_PUBLIC_BOOKING_AFFILIATE_ID;
-  if (affiliateId) {
-    url.searchParams.set("aid", affiliateId);
-  }
-  url.searchParams.set("ss", plan.destination);
-  if (plan.startDate) url.searchParams.set("checkin", plan.startDate);
-  if (plan.endDate) url.searchParams.set("checkout", plan.endDate);
-  return url.toString();
-}
-
-function buildFlightSearchUrl(plan: { departureAirport: string; destination: string; startDate: string | null; endDate: string | null }) {
-  const query = [
-    "Flights",
-    plan.departureAirport ? `from ${plan.departureAirport}` : "",
-    plan.destination ? `to ${plan.destination}` : "",
-    plan.startDate ? `on ${plan.startDate}` : "",
-    plan.endDate ? `returning ${plan.endDate}` : "",
-  ].filter(Boolean).join(" ");
-
-  return `https://www.google.com/travel/flights?q=${encodeURIComponent(query)}`;
-}
-
-function buildCarSearchUrl(plan: { destination: string; startDate: string | null; endDate: string | null }) {
-  const query = [
-    "Rental cars",
-    plan.destination,
-    plan.startDate ? `from ${plan.startDate}` : "",
-    plan.endDate ? `to ${plan.endDate}` : "",
-  ].filter(Boolean).join(" ");
-
-  return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 }
 
 function summarizeFormat(course: CourseRecord) {
@@ -114,16 +66,66 @@ function formatPlanDates(startDate: string | null, endDate: string | null) {
   return startDate || endDate || "Dates flexible";
 }
 
+function formatMoney(amount: number | null | undefined, currency = "USD") {
+  if (amount == null || !Number.isFinite(amount)) return "Price pending";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+function toRecord(item: TravelFlightOption | TravelHotelOption | TravelCarOption) {
+  if ("carriers" in item) {
+    return {
+      kind: "flight" as const,
+      title: item.title,
+      location: `${item.departureAt || "Departure pending"} → ${item.arrivalAt || "Arrival pending"}`,
+      priceText: formatMoney(item.totalAmount, item.currency || "USD"),
+      dateText: item.carriers.join(", ") || "Flight option",
+      details: [item.stops === 0 ? "Nonstop" : `${item.stops || 0} stops`],
+    };
+  }
+
+  if ("vehicleType" in item) {
+    return {
+      kind: "car" as const,
+      title: item.name,
+      location: item.pickupCode || "Pickup pending",
+      priceText: formatMoney(item.totalAmount, item.currency || "USD"),
+      dateText: item.vehicleType || "Rental car",
+      details: [],
+    };
+  }
+
+  return {
+    kind: "hotel" as const,
+    title: item.name,
+    location: item.cityCode || "Destination pending",
+    priceText: formatMoney(item.totalAmount, item.currency || "USD"),
+    dateText: item.rating ? `${item.rating.toFixed(1)} rating` : "Hotel option",
+    details: [],
+  };
+}
+
 export default function TravelPlannerClient({ courses: initialCourses = [] }: TravelPlannerClientProps) {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { savedCourseIds } = useSavedCourses();
-  const { plans, addPlan, removePlan } = useTravelPlanner();
   const [form, setForm] = useState<PlannerFormState>(defaultFormState);
   const [isSearching, setIsSearching] = useState(false);
+  const [savingItinerary, setSavingItinerary] = useState(false);
+  const [preparingCheckout, setPreparingCheckout] = useState(false);
+  const [travelMessage, setTravelMessage] = useState<string | null>(null);
   const [liveResults, setLiveResults] = useState<TravelSearchResponse | null>(null);
   const [catalogCourses, setCatalogCourses] = useState<CourseRecord[]>(initialCourses);
   const [savedCourseRecords, setSavedCourseRecords] = useState<CourseRecord[]>([]);
   const [coursesLoading, setCoursesLoading] = useState(initialCourses.length === 0);
+  const [selectedFlightId, setSelectedFlightId] = useState("");
+  const [selectedHotelId, setSelectedHotelId] = useState("");
+  const [selectedCarId, setSelectedCarId] = useState("");
+  const [activeDraft, setActiveDraft] = useState<TravelItineraryDraft | null>(null);
+  const [checkoutDraft, setCheckoutDraft] = useState<TravelCheckoutDraft | null>(null);
+  const [savedItineraries, setSavedItineraries] = useState<TravelBookingRecord[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -181,6 +183,30 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
     };
   }, [savedCourseIds]);
 
+  useEffect(() => {
+    let cancelled = false;
+    async function loadItineraries() {
+      if (!session?.access_token) {
+        setSavedItineraries([]);
+        return;
+      }
+
+      const response = await fetch("/api/travel/itinerary", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || cancelled) return;
+      setSavedItineraries(payload?.itineraries || []);
+    }
+
+    loadItineraries();
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.access_token]);
+
   const savedCourses = useMemo(() => {
     return [...savedCourseRecords].sort((a, b) => (a.title || "").localeCompare(b.title || ""));
   }, [savedCourseRecords]);
@@ -192,12 +218,14 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
   const tripEndDate = selectedCourse?.next_end_date || addDays(selectedCourse?.next_start_date || null, 2) || null;
   const destination = selectedCourse?.next_location || selectedCourse?.provider_name || "CE destination";
 
-  const previewPlan = selectedCourse ? {
-    destination,
-    startDate: tripStartDate,
-    endDate: tripEndDate,
-    departureAirport: form.departureAirport.trim().toUpperCase(),
-  } : null;
+  const selectedFlight = liveResults?.flights.find((item) => item.id === selectedFlightId) || null;
+  const selectedHotel = liveResults?.hotels.find((item) => item.id === selectedHotelId) || null;
+  const selectedCar = liveResults?.cars.find((item) => item.id === selectedCarId) || null;
+  const currentPriceBreakdown = useMemo(() => buildItineraryPriceBreakdown({
+    selectedFlight,
+    selectedHotel,
+    selectedCar: form.needsCar ? selectedCar : null,
+  }), [form.needsCar, selectedCar, selectedFlight, selectedHotel]);
 
   function updateField<Key extends keyof PlannerFormState>(key: Key, value: PlannerFormState[Key]) {
     setForm((current) => ({
@@ -206,42 +234,8 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
     }));
   }
 
-  function handleCreatePlan() {
-    if (!selectedCourse) return;
-
-    track("travel_itinerary_save", {
-      course_id: selectedCourse.id,
-      has_departure_airport: Boolean(form.departureAirport.trim()),
-      has_destination_code: Boolean(form.destinationCode.trim()),
-      needs_car: form.needsCar,
-    });
-
-    addPlan({
-      title: `${selectedCourse.title} Trip`,
-      courseId: selectedCourse.id,
-      courseTitle: selectedCourse.title || "Untitled course",
-      destination,
-      destinationCode: form.destinationCode.trim().toUpperCase(),
-      startDate: tripStartDate,
-      endDate: tripEndDate,
-      departureAirport: form.departureAirport.trim().toUpperCase(),
-      travelers: Number(form.travelers) || 1,
-      budget: form.budget.trim(),
-      hotelStyle: form.hotelStyle,
-      needsCar: form.needsCar,
-      notes: form.notes.trim(),
-    });
-
-    setForm((current) => ({
-      ...defaultFormState,
-      courseId: current.courseId,
-      destinationCode: current.destinationCode,
-    }));
-  }
-
   async function handleLiveSearch() {
-    if (!user) return;
-    if (!selectedCourse || !tripStartDate) return;
+    if (!user || !selectedCourse || !tripStartDate) return;
 
     track("travel_live_search", {
       course_id: selectedCourse.id,
@@ -251,7 +245,8 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
     });
 
     setIsSearching(true);
-    setLiveResults(null);
+    setTravelMessage(null);
+    setCheckoutDraft(null);
 
     try {
       const response = await fetch("/api/travel/search", {
@@ -270,15 +265,127 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
 
       const data = await response.json() as TravelSearchResponse;
       setLiveResults(data);
+      setSelectedFlightId(data.flights[0]?.id || "");
+      setSelectedHotelId(data.hotels[0]?.id || "");
+      setSelectedCarId(data.cars[0]?.id || "");
+      if (data.error) {
+        setTravelMessage(data.error);
+      } else if (data.warnings.length > 0) {
+        setTravelMessage(data.warnings[0]);
+      }
     } catch {
-      setLiveResults({
-        configured: false,
-        flights: [],
-        hotels: [],
-        error: "Live travel search is unavailable right now. The outbound search links below still work.",
-      });
+      setLiveResults(null);
+      setTravelMessage("Live travel search is unavailable right now.");
     } finally {
       setIsSearching(false);
+    }
+  }
+
+  async function handleCreatePlan() {
+    if (!session?.access_token || !selectedCourse) return null;
+
+    setSavingItinerary(true);
+    setTravelMessage(null);
+
+    try {
+      const response = await fetch("/api/travel/itinerary", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          itineraryId: activeDraft?.id || null,
+          title: `${selectedCourse.title} Trip`,
+          courseId: selectedCourse.id,
+          courseTitle: selectedCourse.title,
+          destination,
+          destinationCode: form.destinationCode.trim().toUpperCase(),
+          departureAirport: form.departureAirport.trim().toUpperCase(),
+          startDate: tripStartDate,
+          endDate: tripEndDate,
+          travelers: Number(form.travelers) || 1,
+          budget: form.budget,
+          hotelStyle: form.hotelStyle,
+          needsCar: form.needsCar,
+          notes: form.notes,
+          selectedFlight,
+          selectedHotel,
+          selectedCar: form.needsCar ? selectedCar : null,
+          providers: liveResults?.providers,
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to save itinerary.");
+      }
+
+      setActiveDraft(payload.itinerary);
+      setCheckoutDraft(null);
+      setTravelMessage("Itinerary saved to your CEAtlas account.");
+
+      const refresh = await fetch("/api/travel/itinerary", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      const refreshPayload = await refresh.json().catch(() => null);
+      if (refresh.ok) {
+        setSavedItineraries(refreshPayload?.itineraries || []);
+      }
+      return payload.itinerary as TravelItineraryDraft;
+    } catch (error) {
+      setTravelMessage(error instanceof Error ? error.message : "Unable to save itinerary.");
+      return null;
+    } finally {
+      setSavingItinerary(false);
+    }
+  }
+
+  async function handlePrepareCheckout() {
+    if (!session?.access_token) return;
+
+    let itinerary = activeDraft;
+    if (!itinerary) {
+      itinerary = await handleCreatePlan();
+    }
+    if (!itinerary) {
+      setTravelMessage("Save the itinerary before preparing checkout.");
+      return;
+    }
+
+    setPreparingCheckout(true);
+    setTravelMessage(null);
+
+    try {
+      const response = await fetch("/api/travel/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          itinerary,
+          providers: liveResults?.providers,
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to prepare checkout.");
+      }
+
+      setCheckoutDraft(payload.checkout);
+      if (payload.checkout?.stripeCheckoutUrl) {
+        setTravelMessage("Checkout is ready. Use the button below to pay on CEAtlas.");
+      } else {
+        setTravelMessage("Checkout draft prepared. Add Stripe keys to activate live payment collection.");
+      }
+    } catch (error) {
+      setTravelMessage(error instanceof Error ? error.message : "Unable to prepare checkout.");
+    } finally {
+      setPreparingCheckout(false);
     }
   }
 
@@ -289,9 +396,7 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
           <div>
             <p className="packages-builder__eyebrow">Travel Planner</p>
             <h1>Build CE travel plans once you sign in.</h1>
-            <p>
-              The catalog stays public, but itinerary building, live travel search, and saved planning boards are account-only tools.
-            </p>
+            <p>The catalog stays public, but itinerary building, live travel search, and saved planning boards are account-only tools.</p>
           </div>
           <div className="travel-hero__stats">
             <div>
@@ -308,9 +413,7 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
         <section className="card travel-gate">
           <p className="packages-builder__eyebrow">Members Only</p>
           <h2>Sign in to start building your CE trip.</h2>
-          <p>
-            Once you create an account, you can save courses, run live travel searches, keep itineraries, and move toward checkout on CEAtlas.
-          </p>
+          <p>Once you create an account, you can save courses, run live travel searches, keep itineraries, and move toward checkout on CEAtlas.</p>
           <div className="account-actions">
             <Link href="/account" className="travel-primary">Sign up</Link>
             <Link href="/account" className="travel-secondary">Log in</Link>
@@ -325,11 +428,8 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
       <section className="travel-hero card">
         <div>
           <p className="packages-builder__eyebrow">Travel Planner</p>
-          <h1>Turn a CE course into a real trip plan.</h1>
-          <p>
-            Build an itinerary around a saved course, then jump into live hotel, flight, and rental car searches
-            while we prepare the deeper booking integrations.
-          </p>
+          <h1>Build and price a CE trip on CEAtlas.</h1>
+          <p>Choose a course, search live supplier inventory, select flights, hotels, and cars, then prepare a CEAtlas checkout with your service-fee breakdown.</p>
         </div>
         <div className="travel-hero__stats">
           <div>
@@ -337,8 +437,8 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
             <span>Saved courses ready to turn into trips</span>
           </div>
           <div>
-            <strong>{plans.length}</strong>
-            <span>Saved itineraries in your planner</span>
+            <strong>{savedItineraries.length}</strong>
+            <span>Itineraries recorded in your CEAtlas account</span>
           </div>
         </div>
       </section>
@@ -350,62 +450,32 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
               <p className="packages-builder__eyebrow">Build a Trip</p>
               <h2>Choose a course and shape the logistics.</h2>
             </div>
-            {savedCourses.length === 0 ? (
-              <p>
-                No saved courses yet. You can still prototype a trip below, but the best workflow is to save a course
-                first from the <Link href="/courses">catalog</Link>.
-              </p>
-            ) : (
-              <p>Saved courses appear first so the planning flow starts with the CE you actually care about.</p>
-            )}
+            <p>Saved courses appear first, then CEAtlas searches travel around that course anchor and date window.</p>
           </div>
 
           <div className="travel-form">
             <label>
               <span>Course</span>
-              <select
-                value={form.courseId || selectedCourse?.id || ""}
-                onChange={(event) => updateField("courseId", event.target.value)}
-                disabled={coursesLoading || availableCourses.length === 0}
-              >
-                {coursesLoading ? (
-                  <option>Loading courses...</option>
-                ) : availableCourses.length === 0 ? (
-                  <option>No courses available yet</option>
-                ) : (
-                  availableCourses.map((course) => (
-                    <option key={course.id} value={course.id}>
-                      {course.title} — {course.next_location || course.provider_name}
-                    </option>
-                  ))
-                )}
+              <select value={form.courseId || selectedCourse?.id || ""} onChange={(event) => updateField("courseId", event.target.value)} disabled={coursesLoading || availableCourses.length === 0}>
+                {coursesLoading ? <option>Loading courses...</option> : availableCourses.map((course) => (
+                  <option key={course.id} value={course.id}>{course.title} — {course.next_location || course.provider_name}</option>
+                ))}
               </select>
             </label>
 
             <label>
               <span>Departure airport</span>
-              <input
-                value={form.departureAirport}
-                onChange={(event) => updateField("departureAirport", event.target.value)}
-                placeholder="DEN"
-              />
+              <input value={form.departureAirport} onChange={(event) => updateField("departureAirport", event.target.value)} placeholder="DEN" />
             </label>
 
             <label>
               <span>Destination code</span>
-              <input
-                value={form.destinationCode}
-                onChange={(event) => updateField("destinationCode", event.target.value)}
-                placeholder="LAS"
-              />
+              <input value={form.destinationCode} onChange={(event) => updateField("destinationCode", event.target.value)} placeholder="LAS" />
             </label>
 
             <label>
               <span>Travelers</span>
-              <select
-                value={form.travelers}
-                onChange={(event) => updateField("travelers", event.target.value)}
-              >
+              <select value={form.travelers} onChange={(event) => updateField("travelers", event.target.value)}>
                 <option value="1">1 traveler</option>
                 <option value="2">2 travelers</option>
                 <option value="3">3 travelers</option>
@@ -415,19 +485,12 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
 
             <label>
               <span>Budget</span>
-              <input
-                value={form.budget}
-                onChange={(event) => updateField("budget", event.target.value)}
-                placeholder="$2,500 total"
-              />
+              <input value={form.budget} onChange={(event) => updateField("budget", event.target.value)} placeholder="$2,500 total" />
             </label>
 
             <label>
               <span>Hotel style</span>
-              <select
-                value={form.hotelStyle}
-                onChange={(event) => updateField("hotelStyle", event.target.value)}
-              >
+              <select value={form.hotelStyle} onChange={(event) => updateField("hotelStyle", event.target.value)}>
                 <option value="Comfort">Comfort</option>
                 <option value="Upscale">Upscale</option>
                 <option value="Luxury">Luxury</option>
@@ -436,21 +499,13 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
             </label>
 
             <label className="travel-form__checkbox">
-              <input
-                type="checkbox"
-                checked={form.needsCar}
-                onChange={(event) => updateField("needsCar", event.target.checked)}
-              />
-              <span>Plan for a rental car</span>
+              <input type="checkbox" checked={form.needsCar} onChange={(event) => updateField("needsCar", event.target.checked)} />
+              <span>Include rental car planning</span>
             </label>
 
             <label className="travel-form__notes">
               <span>Notes</span>
-              <textarea
-                value={form.notes}
-                onChange={(event) => updateField("notes", event.target.value)}
-                placeholder="Spa resort, direct flight only, extend trip for family weekend..."
-              />
+              <textarea value={form.notes} onChange={(event) => updateField("notes", event.target.value)} placeholder="Direct flight only, walkable hotel, family extension..." />
             </label>
           </div>
 
@@ -465,59 +520,46 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
           ) : null}
 
           <div className="travel-actions">
-            <button type="button" className="travel-primary" onClick={handleCreatePlan} disabled={!selectedCourse}>
-              Save itinerary
-            </button>
-            <button
-              type="button"
-              className="travel-secondary"
-              onClick={handleLiveSearch}
-              disabled={!selectedCourse || !tripStartDate || !form.departureAirport.trim() || !form.destinationCode.trim() || isSearching}
-            >
+            <button type="button" className="travel-secondary" onClick={handleLiveSearch} disabled={!selectedCourse || !tripStartDate || !form.departureAirport.trim() || !form.destinationCode.trim() || isSearching}>
               {isSearching ? "Searching..." : "Search live travel"}
+            </button>
+            <button type="button" className="travel-primary" onClick={handleCreatePlan} disabled={!selectedCourse || savingItinerary}>
+              {savingItinerary ? "Saving..." : "Save itinerary to account"}
             </button>
           </div>
         </div>
 
         <div className="travel-links card">
-          <p className="packages-builder__eyebrow">Live Search-Out</p>
-          <h2>Use real travel sites now while we prepare direct booking integrations.</h2>
-          <p>
-            This gets dentists planning today: choose the CE course, then jump straight into live travel inventory.
-            CEAtlas is not completing travel checkout yet.
-          </p>
-
-          {previewPlan ? (
-            <div className="travel-link-list">
-              <a href={buildFlightSearchUrl(previewPlan)} target="_blank" rel="noreferrer">
-                Search flights
-              </a>
-              <a href={buildBookingUrl(previewPlan)} target="_blank" rel="noreferrer">
-                Search hotels
-              </a>
-              {form.needsCar ? (
-                <a href={buildCarSearchUrl(previewPlan)} target="_blank" rel="noreferrer">
-                  Search rental cars
-                </a>
-              ) : null}
-            </div>
-          ) : (
-            <p>Pick a course first and the travel search links will populate automatically.</p>
-          )}
-
-          <div className="travel-links__note">
-            <strong>Next step:</strong>
-            <span>
-              These are planning/search links during beta. Confirm all travel prices and booking terms on the travel provider site.
-            </span>
+          <p className="packages-builder__eyebrow">Checkout Summary</p>
+          <h2>CEAtlas fee and booking draft</h2>
+          <p>CEAtlas applies a 7% service fee to the selected travel subtotal. The checkout summary below is what we will send into Stripe.</p>
+          <div className="travel-checkout-summary">
+            <div><strong>Subtotal</strong><span>{formatMoney(currentPriceBreakdown.subtotal, currentPriceBreakdown.currency)}</span></div>
+            <div><strong>CEAtlas fee</strong><span>{formatMoney(currentPriceBreakdown.serviceFee, currentPriceBreakdown.currency)}</span></div>
+            <div><strong>Total</strong><span>{formatMoney(currentPriceBreakdown.total, currentPriceBreakdown.currency)}</span></div>
           </div>
+          <div className="travel-actions">
+            <button type="button" className="travel-primary" onClick={handlePrepareCheckout} disabled={!activeDraft && !selectedCourse || preparingCheckout}>
+              {preparingCheckout ? "Preparing..." : "Prepare checkout"}
+            </button>
+            {checkoutDraft?.stripeCheckoutUrl ? (
+              <a className="travel-secondary" href={checkoutDraft.stripeCheckoutUrl}>Open CEAtlas checkout</a>
+            ) : null}
+          </div>
+          {checkoutDraft ? (
+            <div className="travel-links__note">
+              <strong>Checkout state:</strong>
+              <span>{checkoutDraft.stripeCheckoutUrl ? "Stripe checkout ready." : "Draft ready; Stripe keys still needed for live payment."}</span>
+            </div>
+          ) : null}
+          {travelMessage ? <p className="account-message">{travelMessage}</p> : null}
         </div>
       </section>
 
       <section className="travel-results">
         <div className="section-heading">
           <h2>Live Travel Results</h2>
-          <p>Powered by API search when keys are configured, with search-out links still available underneath.</p>
+          <p>Flights come from Duffel when configured, hotels and cars come from Booking.com when configured, and Amadeus remains the temporary fallback.</p>
         </div>
 
         {!liveResults ? (
@@ -526,69 +568,94 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
             <p>Enter an origin airport and destination code like `LAS`, then run a live search.</p>
           </div>
         ) : (
-          <div className="travel-live-grid">
-            <div className="card travel-live-card">
-              <div className="travel-live-card__head">
-                <h3>Flights</h3>
-                <span>{liveResults.flights.length} found</span>
-              </div>
-              {liveResults.flights.length === 0 ? (
-                <p>{liveResults.error || "No live flight results yet."}</p>
-              ) : (
-                <div className="travel-live-list">
-                  {liveResults.flights.map((flight) => (
-                    <div key={flight.id} className="travel-live-item">
-                      <strong>{flight.total ? `${flight.currency || "USD"} ${flight.total}` : "Price pending"}</strong>
-                      <span>{flight.carriers.join(", ") || "Carrier pending"}</span>
-                      <span>{flight.departureAt || "Departure pending"} → {flight.arrivalAt || "Arrival pending"}</span>
-                      <span>{flight.stops === 0 ? "Nonstop" : `${flight.stops || 0} stop${flight.stops === 1 ? "" : "s"}`}</span>
-                      <CompareButton
-                        item={{
-                          id: `flight-${flight.id}`,
-                          kind: "flight",
-                          title: `${flight.carriers.join(", ") || "Flight option"} flight`,
-                          priceText: flight.total ? `${flight.currency || "USD"} ${flight.total}` : "Price pending",
-                          location: `${form.departureAirport.trim().toUpperCase()} to ${form.destinationCode.trim().toUpperCase()}`,
-                          dateText: `${flight.departureAt || "Departure pending"} → ${flight.arrivalAt || "Arrival pending"}`,
-                          details: [flight.stops === 0 ? "Nonstop" : `${flight.stops || 0} stops`],
-                        }}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
+          <>
+            <div className="travel-provider-status">
+              <span>{liveResults.providers.flights.provider}: {liveResults.providers.flights.mode}</span>
+              <span>{liveResults.providers.hotels.provider}: {liveResults.providers.hotels.mode}</span>
+              <span>{liveResults.providers.cars.provider}: {liveResults.providers.cars.mode}</span>
             </div>
 
-            <div className="card travel-live-card">
-              <div className="travel-live-card__head">
-                <h3>Hotels</h3>
-                <span>{liveResults.hotels.length} found</span>
-              </div>
-              {liveResults.hotels.length === 0 ? (
-                <p>Hotel API results may need a city-style code such as `LAS`, `NYC`, or `CHI`.</p>
-              ) : (
-                <div className="travel-live-list">
-                  {liveResults.hotels.map((hotel) => (
-                    <div key={hotel.id} className="travel-live-item">
-                      <strong>{hotel.name}</strong>
-                      <span>{hotel.cityCode || "City pending"}</span>
-                      <span>{hotel.total ? `${hotel.currency || "USD"} ${hotel.total}` : "Rate pending"}</span>
-                      <CompareButton
-                        item={{
-                          id: `hotel-${hotel.id}`,
-                          kind: "hotel",
-                          title: hotel.name,
-                          location: hotel.cityCode || destination,
-                          priceText: hotel.total ? `${hotel.currency || "USD"} ${hotel.total}` : "Rate pending",
-                          dateText: formatPlanDates(tripStartDate, tripEndDate),
-                        }}
-                      />
-                    </div>
-                  ))}
+            <div className="travel-live-grid">
+              <div className="card travel-live-card">
+                <div className="travel-live-card__head">
+                  <h3>Flights</h3>
+                  <span>{liveResults.flights.length} found</span>
                 </div>
-              )}
+                {liveResults.flights.length === 0 ? (
+                  <p>No flight results yet.</p>
+                ) : (
+                  <div className="travel-live-list">
+                    {liveResults.flights.map((flight) => (
+                      <div key={flight.id} className={`travel-live-item ${selectedFlightId === flight.id ? "travel-live-item--selected" : ""}`}>
+                        <strong>{formatMoney(flight.totalAmount, flight.currency || "USD")}</strong>
+                        <span>{flight.title}</span>
+                        <span>{flight.departureAt || "Departure pending"} → {flight.arrivalAt || "Arrival pending"}</span>
+                        <span>{flight.stops === 0 ? "Nonstop" : `${flight.stops || 0} stop${flight.stops === 1 ? "" : "s"}`}</span>
+                        <div className="travel-live-actions">
+                          <button type="button" className="travel-secondary" onClick={() => setSelectedFlightId(flight.id)}>
+                            {selectedFlightId === flight.id ? "Selected" : "Select"}
+                          </button>
+                          <CompareButton item={{ id: `flight-${flight.id}`, ...toRecord(flight) }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="card travel-live-card">
+                <div className="travel-live-card__head">
+                  <h3>Hotels</h3>
+                  <span>{liveResults.hotels.length} found</span>
+                </div>
+                {liveResults.hotels.length === 0 ? (
+                  <p>No hotel results yet.</p>
+                ) : (
+                  <div className="travel-live-list">
+                    {liveResults.hotels.map((hotel) => (
+                      <div key={hotel.id} className={`travel-live-item ${selectedHotelId === hotel.id ? "travel-live-item--selected" : ""}`}>
+                        <strong>{hotel.name}</strong>
+                        <span>{hotel.cityCode || destination}</span>
+                        <span>{formatMoney(hotel.totalAmount, hotel.currency || "USD")}</span>
+                        <div className="travel-live-actions">
+                          <button type="button" className="travel-secondary" onClick={() => setSelectedHotelId(hotel.id)}>
+                            {selectedHotelId === hotel.id ? "Selected" : "Select"}
+                          </button>
+                          <CompareButton item={{ id: `hotel-${hotel.id}`, ...toRecord(hotel) }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="card travel-live-card">
+                <div className="travel-live-card__head">
+                  <h3>Rental cars</h3>
+                  <span>{liveResults.cars.length} found</span>
+                </div>
+                {liveResults.cars.length === 0 ? (
+                  <p>Rental car results will appear here when Booking.com car access is configured.</p>
+                ) : (
+                  <div className="travel-live-list">
+                    {liveResults.cars.map((car) => (
+                      <div key={car.id} className={`travel-live-item ${selectedCarId === car.id ? "travel-live-item--selected" : ""}`}>
+                        <strong>{car.name}</strong>
+                        <span>{car.vehicleType || "Vehicle type pending"}</span>
+                        <span>{formatMoney(car.totalAmount, car.currency || "USD")}</span>
+                        <div className="travel-live-actions">
+                          <button type="button" className="travel-secondary" onClick={() => setSelectedCarId(car.id)}>
+                            {selectedCarId === car.id ? "Selected" : "Select"}
+                          </button>
+                          <CompareButton item={{ id: `car-${car.id}`, ...toRecord(car) }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          </>
         )}
 
         {liveResults?.warnings?.length ? (
@@ -603,73 +670,36 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
       <section className="travel-board">
         <div className="section-heading">
           <h2>Saved Itineraries</h2>
-          <p>Keep course ideas, departure plans, and hotel style in one place while you shape the trip.</p>
+          <p>These itineraries are stored with your CEAtlas account so they can become real orders and purchase records.</p>
         </div>
 
-        {plans.length === 0 ? (
+        {savedItineraries.length === 0 ? (
           <div className="card travel-empty">
             <h3>No saved itineraries yet</h3>
-            <p>Build one above and it will stay here in your browser as your planning board.</p>
+            <p>Search travel, select options, and save the itinerary above.</p>
           </div>
         ) : (
           <div className="travel-plan-grid">
-            {plans.map((plan) => (
-              <article key={plan.id} className="card travel-plan-card">
+            {savedItineraries.map((plan) => (
+              <article key={plan.orderId} className="card travel-plan-card">
                 <div className="travel-plan-card__top">
                   <div>
                     <p className="packages-builder__eyebrow">Itinerary</p>
-                    <h3>{plan.title}</h3>
+                    <h3>{plan.destination || "Travel order"}</h3>
                   </div>
-                  <button type="button" onClick={() => removePlan(plan.id)}>
-                    Remove
-                  </button>
+                  <span>{plan.status}</span>
                 </div>
-                <p>{plan.courseTitle}</p>
-                <p>{plan.destination}</p>
-                {plan.destinationCode ? <p>Code: {plan.destinationCode}</p> : null}
-                <p>{formatPlanDates(plan.startDate, plan.endDate)}</p>
-                <p>{plan.departureAirport ? `From ${plan.departureAirport}` : "Departure airport flexible"}</p>
-                <p>{plan.travelers} traveler{plan.travelers === 1 ? "" : "s"} • {plan.hotelStyle}</p>
-                {plan.budget ? <p>Budget: {plan.budget}</p> : null}
-                {plan.notes ? <p>{plan.notes}</p> : null}
-                <div className="travel-link-list">
-                  <a
-                    href={buildFlightSearchUrl({
-                      destination: plan.destination,
-                      startDate: plan.startDate,
-                      endDate: plan.endDate,
-                      departureAirport: plan.departureAirport,
-                    })}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Flights
-                  </a>
-                  <a
-                    href={buildBookingUrl({
-                      destination: plan.destination,
-                      startDate: plan.startDate,
-                      endDate: plan.endDate,
-                    })}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Hotels
-                  </a>
-                  {plan.needsCar ? (
-                    <a
-                      href={buildCarSearchUrl({
-                        destination: plan.destination,
-                        startDate: plan.startDate,
-                        endDate: plan.endDate,
-                      })}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Cars
-                    </a>
-                  ) : null}
-                </div>
+                <p>{formatPlanDates(plan.startsOn, plan.endsOn)}</p>
+                <p>{formatMoney(plan.totalAmount, plan.currency || "USD")}{plan.serviceFeeAmount ? ` • fee ${formatMoney(plan.serviceFeeAmount, plan.currency || "USD")}` : ""}</p>
+                {plan.providerReferences.length > 0 ? (
+                  <div className="account-list">
+                    {plan.providerReferences.map((reference) => (
+                      <span key={reference}>{reference}</span>
+                    ))}
+                  </div>
+                ) : (
+                  <p>Provider references will appear here after live booking confirmation.</p>
+                )}
               </article>
             ))}
           </div>

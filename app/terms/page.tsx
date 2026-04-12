@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export const metadata = {
   title: "Terms of Use | CEAtlas",
-  description: "CEAtlas beta terms of use and CE catalog disclaimer.",
+  description: "CEAtlas terms of use covering course discovery, travel planning, and checkout-related tools.",
 };
 
 export default function TermsPage() {
@@ -11,7 +11,7 @@ export default function TermsPage() {
       <section className="legal-hero card">
         <p className="hero__eyebrow">Terms of Use</p>
         <h1>Terms of Use</h1>
-        <p>Last updated April 7, 2026. These beta terms are written for early use and should be reviewed before paid launch.</p>
+        <p>Last updated April 12, 2026. These terms explain how CEAtlas discovery, planning, and checkout tools are intended to be used.</p>
       </section>
 
       <section className="legal-stack">
@@ -32,8 +32,9 @@ export default function TermsPage() {
         <article className="card legal-card">
           <h2>Travel planning</h2>
           <p>
-            Travel tools are for planning and search during beta. Travel inventory, fares, hotel rates, taxes, fees,
-            policies, and availability must be confirmed on the travel provider site before booking.
+            Travel pricing, taxes, fees, availability, refund rules, and supplier policies can change. CEAtlas may
+            display supplier-powered search and checkout tools, but final inventory and booking terms are governed by
+            the travel provider and payment processor involved in the order.
           </p>
         </article>
         <article className="card legal-card">
@@ -47,7 +48,7 @@ export default function TermsPage() {
           <h2>Contact</h2>
           <p>
             Data corrections, takedown requests, and support requests can be sent through the{" "}
-            <Link href="/contact">contact page</Link>.
+            <Link href="/contact">contact page</Link> or to <a href="mailto:support@ceatlas.co">support@ceatlas.co</a>.
           </p>
         </article>
       </section>

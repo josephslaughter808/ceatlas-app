@@ -14,7 +14,7 @@ import type {
   TravelSearchResponse,
 } from "@/lib/travel/providers/types";
 import { buildItineraryPriceBreakdown } from "@/lib/travel/itinerary";
-import { inferAirportCodeFromLocation } from "@/lib/travel/airport-lookup";
+import { inferAirportCodeFromLocation, inferCityCodeFromLocation, inferCityNameFromLocation } from "@/lib/travel/airport-lookup";
 import { useAuth } from "./auth-provider";
 import CompareButton from "./compare-button";
 import { useTripCart } from "./trip-cart-provider";
@@ -256,6 +256,8 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
   const tripEndDate = selectedCourse?.next_end_date || addDays(selectedCourse?.next_start_date || null, 2) || null;
   const destination = selectedCourse?.next_location || selectedCourse?.provider_name || "CE destination";
   const inferredDestinationCode = inferAirportCodeFromLocation(selectedCourse?.next_location);
+  const inferredHotelCityCode = inferCityCodeFromLocation(selectedCourse?.next_location, inferredDestinationCode);
+  const inferredHotelCityName = inferCityNameFromLocation(selectedCourse?.next_location) || destination;
 
   useEffect(() => {
     if (!availableCourses.length) {
@@ -363,6 +365,8 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
         body: JSON.stringify({
           originCode: form.departureAirport.trim().toUpperCase(),
           destinationCode: form.destinationCode.trim().toUpperCase(),
+          hotelCityCode: inferredHotelCityCode || form.destinationCode.trim().toUpperCase(),
+          hotelCityName: inferredHotelCityName,
           departureDate: tripStartDate,
           returnDate: tripEndDate || "",
           adults: Number(form.travelers) || 1,
@@ -521,8 +525,8 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
           <h2>Sign in to start building your CE trip.</h2>
           <p>Once you create an account, you can save courses, run live travel searches, keep itineraries, and move toward checkout on CEAtlas.</p>
           <div className="account-actions">
-            <Link href="/account?mode=signup" className="travel-primary">Sign up</Link>
-            <Link href="/account?mode=signin" className="travel-secondary">Log in</Link>
+            <Link href="/account?mode=signup&returnTo=%2Ftravel" className="travel-primary">Sign up</Link>
+            <Link href="/account?mode=signin&returnTo=%2Ftravel" className="travel-secondary">Log in</Link>
           </div>
         </section>
       </div>
@@ -761,7 +765,9 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
                     {liveResults.hotels.map((hotel) => (
                       <div key={hotel.id} className={`travel-live-item ${selectedHotelId === hotel.id ? "travel-live-item--selected" : ""}`}>
                         <strong>{hotel.name}</strong>
-                        <span>{hotel.cityCode || destination}</span>
+                        <span>{hotel.cityName || hotel.cityCode || destination}</span>
+                        {hotel.address ? <span>{hotel.address}</span> : null}
+                        {hotel.rating ? <span>{hotel.rating.toFixed(1)} guest rating</span> : null}
                         <span>{formatMoney(hotel.totalAmount, hotel.currency || "USD")}</span>
                         <div className="travel-live-actions">
                           <button type="button" className="travel-secondary" onClick={() => setSelectedHotelId(hotel.id)}>
@@ -897,7 +903,8 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
                 {selectedHotel ? (
                   <>
                     <h3>{selectedHotel.name}</h3>
-                    <p>{selectedHotel.cityCode || destination}</p>
+                    <p>{selectedHotel.cityName || selectedHotel.cityCode || destination}</p>
+                    {selectedHotel.address ? <p>{selectedHotel.address}</p> : null}
                     <p>{selectedHotel.rating ? `${selectedHotel.rating.toFixed(1)} star rating` : "Hotel option selected"}</p>
                     <p>{formatMoney(selectedHotel.totalAmount, selectedHotel.currency || "USD")}</p>
                   </>

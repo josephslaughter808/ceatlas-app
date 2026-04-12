@@ -42,7 +42,7 @@ function TravelCheckoutSuccessContent() {
         return;
       }
 
-      setMessage("Payment captured. Your CEAtlas travel order is recorded and supplier booking is queued.");
+      setMessage("Payment captured. Your CEAtlas travel order is recorded. Supplier confirmation is the next step, and your account history will reflect that status clearly.");
     }
 
     finalizeOrder();
@@ -55,6 +55,9 @@ function TravelCheckoutSuccessContent() {
           <p className="packages-builder__eyebrow">Travel Checkout</p>
           <h1>Travel order update</h1>
           <p>{message}</p>
+          <p className="account-message">
+            If a supplier still needs final confirmation, CEAtlas will show that order as pending rather than pretending it is fully booked.
+          </p>
           <div className="account-actions">
             <Link href="/travel" className="travel-primary">Back to travel</Link>
             <Link href="/account" className="travel-secondary">View account</Link>

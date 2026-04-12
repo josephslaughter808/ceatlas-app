@@ -13,6 +13,8 @@ import { toAmount } from "@/lib/travel/service-fees";
 type TravelSearchRequest = {
   originCode?: string;
   destinationCode?: string;
+  hotelCityCode?: string;
+  hotelCityName?: string;
   departureDate?: string;
   returnDate?: string;
   adults?: number;
@@ -55,6 +57,8 @@ export async function POST(request: Request) {
   const body = await request.json() as TravelSearchRequest;
   const originCode = String(body.originCode || "").trim().toUpperCase();
   const destinationCode = String(body.destinationCode || "").trim().toUpperCase();
+  const hotelCityCode = String(body.hotelCityCode || "").trim().toUpperCase();
+  const hotelCityName = String(body.hotelCityName || "").trim();
   const departureDate = String(body.departureDate || "").trim();
   const returnDate = String(body.returnDate || "").trim();
   const adults = Math.max(1, Number(body.adults || 1));
@@ -125,7 +129,8 @@ export async function POST(request: Request) {
   if (bookingHotelStatus.configured) {
     try {
       hotels = await searchBookingHotels({
-        destinationCode,
+        cityCode: hotelCityCode || destinationCode,
+        cityName: hotelCityName || null,
         checkInDate: departureDate,
         checkOutDate: returnDate || null,
         adults,
@@ -138,7 +143,7 @@ export async function POST(request: Request) {
   if (hotels.length === 0 && isAmadeusConfigured()) {
     try {
       hotels = toFallbackHotels(await searchHotelOffers({
-        cityCode: destinationCode,
+        cityCode: hotelCityCode || destinationCode,
         checkInDate: departureDate,
         checkOutDate: returnDate || null,
         adults,

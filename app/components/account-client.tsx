@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "./auth-provider";
 import StateRequirementsPanel from "./state-requirements-panel";
@@ -66,6 +66,7 @@ type ProfileRecord = {
 
 export default function AccountClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, session, loading } = useAuth();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -81,6 +82,9 @@ export default function AccountClient() {
   const [profile, setProfile] = useState<ProfileRecord | null>(null);
   const [stateOfPractice, setStateOfPractice] = useState("");
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
+  const [travelerLegalName, setTravelerLegalName] = useState("");
+  const [travelerPhone, setTravelerPhone] = useState("");
+  const [travelerBirthDate, setTravelerBirthDate] = useState("");
   const [providerLinks, setProviderLinks] = useState<ProviderLinkRecord[]>([]);
   const [supportedProviders, setSupportedProviders] = useState<SupportedProviderRecord[]>([]);
   const [providerKey, setProviderKey] = useState("adha");
@@ -92,20 +96,23 @@ export default function AccountClient() {
   const siteUrl = useMemo(() => (
     (process.env.NEXT_PUBLIC_SITE_URL || "https://ceatlas.co").replace(/\/$/, "")
   ), []);
+  const returnTo = useMemo(() => {
+    const candidate = searchParams.get("returnTo");
+    return candidate && candidate.startsWith("/") ? candidate : null;
+  }, [searchParams]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const requestedMode = params.get("mode");
+    const requestedMode = searchParams.get("mode");
     if (requestedMode === "signup" || requestedMode === "signin") {
       setMode(requestedMode);
     }
 
-    if (params.get("verified") === "1") {
+    if (searchParams.get("verified") === "1") {
       setMode("signin");
       setAuthMessage("Email verified. You can sign in and keep testing CEAtlas.");
     }
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -159,6 +166,9 @@ export default function AccountClient() {
       setFullName(profileRow?.full_name || user?.user_metadata?.full_name || "");
       setStateOfPractice(normalizePracticeStateCode(profileRow?.state_of_practice || user?.user_metadata?.state_of_practice));
       setHomeAirport(String(user?.user_metadata?.home_airport || window.localStorage.getItem(HOME_AIRPORT_STORAGE_KEY) || ""));
+      setTravelerLegalName(String(user?.user_metadata?.traveler_legal_name || profileRow?.full_name || user?.user_metadata?.full_name || ""));
+      setTravelerPhone(String(user?.user_metadata?.traveler_phone || ""));
+      setTravelerBirthDate(String(user?.user_metadata?.traveler_birth_date || ""));
       setProviderLinks(providerData?.links || []);
       setSupportedProviders(providerData?.supportedProviders || []);
     }
@@ -183,6 +193,7 @@ export default function AccountClient() {
               full_name: fullName,
               state_of_practice: normalizePracticeStateCode(stateOfPractice) || null,
               home_airport: homeAirport.trim().toUpperCase() || null,
+              traveler_legal_name: fullName.trim() || null,
             },
           },
         });
@@ -193,7 +204,7 @@ export default function AccountClient() {
         } else {
           setAuthMessage("Account created. Check your email when you are ready to verify before checkout.");
         }
-        router.push("/courses?account=created");
+        router.push(returnTo || "/courses?account=created");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -202,6 +213,7 @@ export default function AccountClient() {
 
         if (error) throw error;
         setAuthMessage("Signed in.");
+        router.push(returnTo || "/account");
       }
     } catch (error) {
       setAuthMessage(error instanceof Error ? error.message : "Unable to complete authentication.");
@@ -273,6 +285,9 @@ export default function AccountClient() {
           full_name: nextName,
           state_of_practice: nextState,
           home_airport: nextHomeAirport,
+          traveler_legal_name: travelerLegalName.trim() || null,
+          traveler_phone: travelerPhone.trim() || null,
+          traveler_birth_date: travelerBirthDate || null,
         },
       });
 
@@ -412,7 +427,7 @@ export default function AccountClient() {
                 onClick={() => {
                   const nextMode = mode === "signup" ? "signin" : "signup";
                   setMode(nextMode);
-                  router.replace(`/account?mode=${nextMode}`);
+                  router.replace(`/account?mode=${nextMode}${returnTo ? `&returnTo=${encodeURIComponent(returnTo)}` : ""}`);
                 }}
               >
                 {mode === "signup" ? "I already have an account" : "I need an account"}
@@ -460,6 +475,9 @@ export default function AccountClient() {
             </form>
 
             {authMessage ? <p className="account-message">{authMessage}</p> : null}
+            <p className="account-helper">
+              You will stay signed in on this device so you can come back to your courses, cart, travel planner, and checkout without restarting every time.
+            </p>
           </div>
 
           <div className="card account-card account-card--highlight">
@@ -559,6 +577,48 @@ export default function AccountClient() {
               signedIn
               compact
             />
+          </div>
+
+          <div className="card account-card">
+            <div className="account-card__head">
+              <div>
+                <p className="packages-builder__eyebrow">Booking Readiness</p>
+                <h2>Traveler details</h2>
+              </div>
+            </div>
+
+            <form className="account-form" onSubmit={handleProfileSave}>
+              <label>
+                <span>Legal traveler name</span>
+                <input value={travelerLegalName} onChange={(event) => setTravelerLegalName(event.target.value)} placeholder="As it appears on ID" />
+              </label>
+
+              <label>
+                <span>Phone number</span>
+                <input value={travelerPhone} onChange={(event) => setTravelerPhone(event.target.value)} placeholder="(555) 555-5555" />
+              </label>
+
+              <label>
+                <span>Date of birth</span>
+                <input type="date" value={travelerBirthDate} onChange={(event) => setTravelerBirthDate(event.target.value)} />
+              </label>
+
+              <div className="account-chip-row">
+                <span className="account-chip">{user.email_confirmed_at ? "Email verified" : "Email not verified"}</span>
+                <span className="account-chip">{paymentMethods.length > 0 ? "Card saved" : "No saved card"}</span>
+                <span className="account-chip">{travelerLegalName && travelerBirthDate ? "Traveler profile ready" : "Traveler profile incomplete"}</span>
+              </div>
+
+              <div className="account-actions">
+                <button type="submit" className="travel-primary" disabled={profileBusy}>
+                  {profileBusy ? "Saving..." : "Save traveler details"}
+                </button>
+              </div>
+            </form>
+
+            <p className="account-helper">
+              These details prepare CEAtlas for real supplier booking once live hotel, car, and flight approvals are active.
+            </p>
           </div>
 
           <div className="card account-card">

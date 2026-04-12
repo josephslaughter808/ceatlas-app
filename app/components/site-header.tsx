@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "./auth-provider";
 import { useTripCart } from "./trip-cart-provider";
@@ -9,6 +10,9 @@ import { useTripCart } from "./trip-cart-provider";
 export default function SiteHeader() {
   const { user, loading } = useAuth();
   const { tripCourseIds } = useTripCart();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const returnTo = `${pathname}${searchParams?.toString() ? `?${searchParams.toString()}` : ""}`;
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -46,8 +50,8 @@ export default function SiteHeader() {
             </>
           ) : (
             <>
-              <Link href="/account?mode=signin" className="auth-button auth-button--ghost">Log in</Link>
-              <Link href="/account?mode=signup" className="auth-button auth-button--primary">Sign up</Link>
+              <Link href={`/account?mode=signin&returnTo=${encodeURIComponent(returnTo)}`} className="auth-button auth-button--ghost">Log in</Link>
+              <Link href={`/account?mode=signup&returnTo=${encodeURIComponent(returnTo)}`} className="auth-button auth-button--primary">Sign up</Link>
             </>
           )}
         </div>

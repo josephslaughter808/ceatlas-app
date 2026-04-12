@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export const metadata = {
   title: "Privacy Policy | CEAtlas",
-  description: "CEAtlas privacy policy for beta users.",
+  description: "CEAtlas privacy policy covering accounts, saved planning data, and checkout-related information.",
 };
 
 export default function PrivacyPage() {
@@ -11,7 +11,7 @@ export default function PrivacyPage() {
       <section className="legal-hero card">
         <p className="hero__eyebrow">Privacy Policy</p>
         <h1>Privacy Policy</h1>
-        <p>Last updated April 7, 2026. This beta policy explains what CEAtlas collects and how we use it.</p>
+        <p>Last updated April 12, 2026. This policy explains what CEAtlas collects and how we use it to support course discovery, travel planning, and account features.</p>
       </section>
 
       <section className="legal-stack">
@@ -19,8 +19,8 @@ export default function PrivacyPage() {
           <h2>Information we collect</h2>
           <p>
             CEAtlas may collect account information such as your email address, saved courses, selected practice
-            state, saved planning preferences, provider connections you choose to add, and basic usage events that
-            help us improve the product.
+            state, saved planning preferences, home airport, provider connections you choose to add, payment-method
+            references supplied by Stripe, and basic usage events that help us improve the product.
           </p>
         </article>
         <article className="card legal-card">
@@ -42,15 +42,15 @@ export default function PrivacyPage() {
         <article className="card legal-card">
           <h2>Payments and travel</h2>
           <p>
-            CEAtlas is not processing live travel checkout in beta. If payment features are enabled later, card
-            information should be handled by a payment processor rather than stored directly by CEAtlas.
+            CEAtlas may route payment setup and checkout through third-party payment providers such as Stripe. Card
+            details are intended to stay with the payment processor rather than being stored directly by CEAtlas.
           </p>
         </article>
         <article className="card legal-card">
           <h2>Contact</h2>
           <p>
-            Questions or deletion requests can be sent through the <Link href="/contact">contact page</Link>.
-            This policy should be reviewed with counsel before a full commercial launch.
+            Questions, deletion requests, or privacy concerns can be sent through the <Link href="/contact">contact page</Link>
+            or directly to <a href="mailto:support@ceatlas.co">support@ceatlas.co</a>.
           </p>
         </article>
       </section>

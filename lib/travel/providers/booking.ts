@@ -5,7 +5,8 @@ const BOOKING_API_BASE = process.env.BOOKING_API_BASE || "https://demandapi.book
 const BOOKING_DEMAND_API_KEY = process.env.BOOKING_DEMAND_API_KEY;
 
 type BookingHotelSearchInput = {
-  destinationCode: string;
+  cityCode: string;
+  cityName?: string | null;
   checkInDate: string;
   checkOutDate?: string | null;
   adults: number;
@@ -73,7 +74,7 @@ export async function searchBookingHotels(input: BookingHotelSearchInput): Promi
     guests: {
       number_of_adults: Math.max(1, input.adults),
     },
-    city: input.destinationCode,
+    city: input.cityCode,
   });
 
   const rows = Array.isArray(payload.data) ? payload.data : [];
@@ -81,19 +82,32 @@ export async function searchBookingHotels(input: BookingHotelSearchInput): Promi
     const property = typeof row.property === "object" && row.property ? row.property as Record<string, unknown> : row;
     const price = typeof row.price === "object" && row.price ? row.price as Record<string, unknown> : {};
     const coordinates = typeof property.coordinates === "object" && property.coordinates ? property.coordinates as Record<string, unknown> : {};
+    const address = typeof property.address === "object" && property.address ? property.address as Record<string, unknown> : {};
+    const addressLine = [
+      typeof address.street === "string" ? address.street : null,
+      typeof address.city === "string" ? address.city : null,
+      typeof address.region === "string" ? address.region : null,
+    ].filter(Boolean).join(", ");
+    const derivedCityName =
+      (typeof address.city === "string" && address.city) ||
+      (typeof property.city === "string" && property.city) ||
+      input.cityName ||
+      input.cityCode;
 
     return {
       id: String(row.id || property.id || Math.random()),
       provider: "Booking.com",
       offerToken: String(row.id || property.id || ""),
       name: String(property.name || "Hotel option"),
-      cityCode: input.destinationCode,
+      cityCode: input.cityCode,
+      cityName: derivedCityName,
       latitude: typeof coordinates.latitude === "number" ? coordinates.latitude : null,
       longitude: typeof coordinates.longitude === "number" ? coordinates.longitude : null,
       total: typeof price.total === "string" ? price.total : null,
       totalAmount: toAmount(typeof price.total === "string" || typeof price.total === "number" ? price.total : null),
       currency: typeof price.currency === "string" ? price.currency : "USD",
       rating: typeof property.review_score === "number" ? property.review_score : null,
+      address: addressLine || null,
       metadata: row,
     };
   });

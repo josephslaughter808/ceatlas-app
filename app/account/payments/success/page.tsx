@@ -42,7 +42,7 @@ function PaymentSetupSuccessContent() {
         return;
       }
 
-      setMessage("Card saved. Your CEAtlas account is ready for checkout.");
+      setMessage("Card saved. Your CEAtlas account is ready for checkout and future travel purchases.");
     }
 
     syncPaymentMethod();

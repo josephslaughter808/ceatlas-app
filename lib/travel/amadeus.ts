@@ -208,10 +208,12 @@ export async function searchHotelOffers(input: HotelSearchInput): Promise<Amadeu
       id: String(hotel.hotel?.hotelId || hotel.hotel?.name || Math.random()),
       name: hotel.hotel?.name || "Hotel option",
       cityCode: hotel.hotel?.cityCode || null,
+      cityName: hotel.hotel?.cityCode || null,
       latitude: typeof hotel.hotel?.latitude === "number" ? hotel.hotel.latitude : null,
       longitude: typeof hotel.hotel?.longitude === "number" ? hotel.hotel.longitude : null,
       total: firstOffer?.price?.total || null,
       currency: firstOffer?.price?.currency || null,
+      address: null,
     };
   }) : [];
 }

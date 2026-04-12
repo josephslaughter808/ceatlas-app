@@ -42,12 +42,14 @@ export type TravelHotelOption = {
   offerToken?: string | null;
   name: string;
   cityCode: string | null;
+  cityName?: string | null;
   latitude: number | null;
   longitude: number | null;
   total: string | null;
   totalAmount: number | null;
   currency: string | null;
   rating?: number | null;
+  address?: string | null;
   metadata: Record<string, unknown>;
 };
 

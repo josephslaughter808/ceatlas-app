@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export const metadata = {
   title: "Contact CEAtlas",
-  description: "Contact CEAtlas about course data, provider updates, partnerships, and launch feedback.",
+  description: "Contact CEAtlas for support, provider updates, partnerships, and launch questions.",
 };
 
 export default function ContactPage() {
@@ -10,14 +10,14 @@ export default function ContactPage() {
     <main className="container legal-page">
       <section className="legal-hero card">
         <p className="hero__eyebrow">Contact</p>
-        <h1>Help us make CEAtlas more useful before launch.</h1>
+        <h1>Contact CEAtlas.</h1>
         <p>
-          Send provider corrections, missing course catalogs, partnership ideas, and beta feedback here.
-          We are prioritizing data quality, discoverability, and launch readiness first.
+          Reach out for support, provider corrections, missing course catalogs, partnership questions, and launch-related help.
+          We route dentist support and provider requests separately so nothing gets lost.
         </p>
         <div className="legal-actions">
-          <a className="button" href="mailto:support@ceatlas.co?subject=CEAtlas%20feedback">
-            Email CEAtlas
+          <a className="button" href="mailto:support@ceatlas.co?subject=CEAtlas%20support">
+            Email support
           </a>
           <Link className="auth-button auth-button--ghost" href="/courses">
             Back to catalog
@@ -30,7 +30,7 @@ export default function ContactPage() {
           <h2>Provider updates</h2>
           <p>
             If a course is missing, stale, duplicated, or listed under the wrong provider, send the course URL and
-            a short note. Provider-confirmed corrections get prioritized.
+            a short note. Provider-confirmed corrections and listing changes get prioritized.
           </p>
           <a href="mailto:providers@ceatlas.co?subject=CEAtlas%20provider%20update">providers@ceatlas.co</a>
         </article>
@@ -45,8 +45,8 @@ export default function ContactPage() {
         <article className="card legal-card">
           <h2>Support</h2>
           <p>
-            For now, CEAtlas is discovery and planning software. Registration, CE credit issuance, refunds, and
-            attendance records remain with the original course provider.
+            CEAtlas helps with discovery, trip planning, account support, and checkout questions. Course registration,
+            CE credit issuance, refunds, attendance records, and provider-specific policies still remain with the original provider.
           </p>
           <a href="mailto:support@ceatlas.co?subject=CEAtlas%20support">support@ceatlas.co</a>
         </article>

@@ -8,7 +8,7 @@ export default function TravelPage() {
         <div className="card">
           <h2>Ready for real checkout?</h2>
           <p>Create your account now so card setup, purchase history, and future trip checkout all live in one place.</p>
-          <a className="button" href="/account?mode=signin">Open account</a>
+          <a className="button" href="/account?mode=signin&returnTo=%2Ftravel">Open account</a>
         </div>
       </section>
     </div>

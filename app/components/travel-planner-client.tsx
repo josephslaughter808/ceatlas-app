@@ -16,10 +16,12 @@ import type {
 import { buildItineraryPriceBreakdown } from "@/lib/travel/itinerary";
 import { inferAirportCodeFromLocation, inferCityCodeFromLocation, inferCityNameFromLocation } from "@/lib/travel/airport-lookup";
 import { useAuth } from "./auth-provider";
+import AirportCombobox from "./airport-combobox";
 import CompareButton from "./compare-button";
 import { useTripCart } from "./trip-cart-provider";
 
 const HOME_AIRPORT_STORAGE_KEY = "ceatlas:home-airport";
+const SECONDARY_AIRPORT_STORAGE_KEY = "ceatlas:secondary-airport";
 
 type TravelPlannerClientProps = {
   courses?: CourseRecord[];
@@ -28,6 +30,7 @@ type TravelPlannerClientProps = {
 type PlannerFormState = {
   courseId: string;
   departureAirport: string;
+  secondaryDepartureAirport: string;
   destinationCode: string;
   travelers: string;
   budget: string;
@@ -39,6 +42,7 @@ type PlannerFormState = {
 const defaultFormState: PlannerFormState = {
   courseId: "",
   departureAirport: "",
+  secondaryDepartureAirport: "",
   destinationCode: "",
   travelers: "1",
   budget: "",
@@ -279,15 +283,19 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
     if (typeof window === "undefined") return;
 
     const metadataAirport = String(user?.user_metadata?.home_airport || "").trim().toUpperCase();
+    const metadataSecondaryAirport = String(user?.user_metadata?.secondary_home_airport || "").trim().toUpperCase();
     const storedAirport = String(window.localStorage.getItem(HOME_AIRPORT_STORAGE_KEY) || "").trim().toUpperCase();
+    const storedSecondaryAirport = String(window.localStorage.getItem(SECONDARY_AIRPORT_STORAGE_KEY) || "").trim().toUpperCase();
     const nextAirport = metadataAirport || storedAirport;
-    if (!nextAirport) return;
+    const nextSecondaryAirport = metadataSecondaryAirport || storedSecondaryAirport;
+    if (!nextAirport && !nextSecondaryAirport) return;
 
     setForm((current) => ({
       ...current,
       departureAirport: current.departureAirport || nextAirport,
+      secondaryDepartureAirport: current.secondaryDepartureAirport || nextSecondaryAirport,
     }));
-  }, [user?.user_metadata?.home_airport]);
+  }, [user?.user_metadata?.home_airport, user?.user_metadata?.secondary_home_airport]);
 
   useEffect(() => {
     if (!selectedCourse) return;
@@ -324,7 +332,7 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
 
   useEffect(() => {
     if (!user || !selectedCourse || !tripStartDate) return;
-    if (!form.departureAirport.trim() || !form.destinationCode.trim()) return;
+    if (!(form.departureAirport.trim() || form.secondaryDepartureAirport.trim()) || !form.destinationCode.trim()) return;
 
     const timeout = window.setTimeout(() => {
       void handleLiveSearch();
@@ -337,6 +345,7 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
     tripStartDate,
     tripEndDate,
     form.departureAirport,
+    form.secondaryDepartureAirport,
     form.destinationCode,
     form.travelers,
     form.needsCar,
@@ -347,7 +356,7 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
 
     track("travel_live_search", {
       course_id: selectedCourse.id,
-      has_departure_airport: Boolean(form.departureAirport.trim()),
+      has_departure_airport: Boolean(form.departureAirport.trim() || form.secondaryDepartureAirport.trim()),
       has_destination_code: Boolean(form.destinationCode.trim()),
       travelers: Number(form.travelers) || 1,
     });
@@ -357,13 +366,18 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
     setCheckoutDraft(null);
 
     try {
+      const originCodes = [form.departureAirport, form.secondaryDepartureAirport]
+        .map((value) => value.trim().toUpperCase())
+        .filter(Boolean);
+
       const response = await fetch("/api/travel/search", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          originCode: form.departureAirport.trim().toUpperCase(),
+          originCode: originCodes[0] || "",
+          originCodes,
           destinationCode: form.destinationCode.trim().toUpperCase(),
           hotelCityCode: inferredHotelCityCode || form.destinationCode.trim().toUpperCase(),
           hotelCityName: inferredHotelCityName,
@@ -411,7 +425,7 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
           courseTitle: selectedCourse.title,
           destination,
           destinationCode: form.destinationCode.trim().toUpperCase(),
-          departureAirport: form.departureAirport.trim().toUpperCase(),
+          departureAirport: selectedFlight?.searchOriginCode || selectedFlight?.originCode || form.departureAirport.trim().toUpperCase(),
           startDate: tripStartDate,
           endDate: tripEndDate,
           travelers: Number(form.travelers) || 1,
@@ -584,7 +598,20 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
 
               <label>
                 <span>Home airport</span>
-                <input value={form.departureAirport} onChange={(event) => updateField("departureAirport", event.target.value)} placeholder="DEN" />
+                <AirportCombobox
+                  value={form.departureAirport}
+                  onChange={(value) => updateField("departureAirport", value)}
+                  placeholder="JFK - New York City - John F Kennedy"
+                />
+              </label>
+
+              <label>
+                <span>Secondary airport</span>
+                <AirportCombobox
+                  value={form.secondaryDepartureAirport}
+                  onChange={(value) => updateField("secondaryDepartureAirport", value)}
+                  placeholder="LGA - New York City - LaGuardia"
+                />
               </label>
 
               <label>
@@ -640,7 +667,7 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
           ) : null}
 
           <div className="travel-actions">
-            <button type="button" className="travel-secondary" onClick={handleLiveSearch} disabled={!selectedCourse || !tripStartDate || !form.departureAirport.trim() || !form.destinationCode.trim() || isSearching || availableCourses.length === 0}>
+            <button type="button" className="travel-secondary" onClick={handleLiveSearch} disabled={!selectedCourse || !tripStartDate || !(form.departureAirport.trim() || form.secondaryDepartureAirport.trim()) || !form.destinationCode.trim() || isSearching || availableCourses.length === 0}>
               {isSearching ? "Searching..." : "Refresh live options"}
             </button>
             <button type="button" className="travel-primary" onClick={handleCreatePlan} disabled={!selectedCourse || savingItinerary || availableCourses.length === 0}>
@@ -685,7 +712,7 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
         {!liveResults ? (
           <div className="card travel-empty">
             <h3>No live search yet</h3>
-            <p>Select a trip-cart course and make sure your home airport and destination code are filled in. CEAtlas will update live options automatically from there.</p>
+            <p>Select a trip-cart course and make sure at least one airport and the destination code are filled in. CEAtlas will update live options automatically from there.</p>
           </div>
         ) : (
           <>
@@ -714,6 +741,7 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
                       <div key={flight.id} className={`travel-live-item ${selectedFlightId === flight.id ? "travel-live-item--selected" : ""}`}>
                         <strong>{formatMoney(flight.totalAmount, flight.currency || "USD")}</strong>
                         <span>{flight.title}</span>
+                        <span>From <strong>{flight.searchOriginCode || flight.originCode || form.departureAirport || "Origin"}</strong></span>
                         <div className="flight-leg">
                           <span className="flight-leg__label">Outbound</span>
                           <span className="flight-leg__summary">

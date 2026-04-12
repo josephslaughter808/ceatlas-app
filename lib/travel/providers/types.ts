@@ -24,6 +24,7 @@ export type TravelFlightOption = {
   currency: string | null;
   stops: number | null;
   carriers: string[];
+  searchOriginCode?: string | null;
   originCode?: string | null;
   destinationCode?: string | null;
   departureAt: string | null;

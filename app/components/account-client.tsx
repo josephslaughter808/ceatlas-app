@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "./auth-provider";
+import AirportCombobox from "./airport-combobox";
 import StateRequirementsPanel from "./state-requirements-panel";
 import {
   PRACTICE_STATES,
@@ -13,6 +14,7 @@ import {
 } from "@/lib/practice-states";
 
 const HOME_AIRPORT_STORAGE_KEY = "ceatlas:home-airport";
+const SECONDARY_AIRPORT_STORAGE_KEY = "ceatlas:secondary-airport";
 
 type PaymentMethodRecord = {
   id: string;
@@ -73,6 +75,7 @@ export default function AccountClient() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [homeAirport, setHomeAirport] = useState("");
+  const [secondaryAirport, setSecondaryAirport] = useState("");
   const [authMessage, setAuthMessage] = useState<string | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
   const [cardsBusy, setCardsBusy] = useState(false);
@@ -120,7 +123,11 @@ export default function AccountClient() {
     if (stored && !homeAirport) {
       setHomeAirport(stored);
     }
-  }, [homeAirport]);
+    const storedSecondary = window.localStorage.getItem(SECONDARY_AIRPORT_STORAGE_KEY);
+    if (storedSecondary && !secondaryAirport) {
+      setSecondaryAirport(storedSecondary);
+    }
+  }, [homeAirport, secondaryAirport]);
 
   useEffect(() => {
     if (!session) {
@@ -166,6 +173,7 @@ export default function AccountClient() {
       setFullName(profileRow?.full_name || user?.user_metadata?.full_name || "");
       setStateOfPractice(normalizePracticeStateCode(profileRow?.state_of_practice || user?.user_metadata?.state_of_practice));
       setHomeAirport(String(user?.user_metadata?.home_airport || window.localStorage.getItem(HOME_AIRPORT_STORAGE_KEY) || ""));
+      setSecondaryAirport(String(user?.user_metadata?.secondary_home_airport || window.localStorage.getItem(SECONDARY_AIRPORT_STORAGE_KEY) || ""));
       setTravelerLegalName(String(user?.user_metadata?.traveler_legal_name || profileRow?.full_name || user?.user_metadata?.full_name || ""));
       setTravelerPhone(String(user?.user_metadata?.traveler_phone || ""));
       setTravelerBirthDate(String(user?.user_metadata?.traveler_birth_date || ""));
@@ -174,7 +182,7 @@ export default function AccountClient() {
     }
 
     loadAccountData();
-  }, [session, user?.user_metadata?.full_name, user?.user_metadata?.state_of_practice, user?.user_metadata?.home_airport]);
+  }, [session, user?.user_metadata?.full_name, user?.user_metadata?.state_of_practice, user?.user_metadata?.home_airport, user?.user_metadata?.secondary_home_airport]);
 
   async function handleAuthSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -193,6 +201,7 @@ export default function AccountClient() {
               full_name: fullName,
               state_of_practice: normalizePracticeStateCode(stateOfPractice) || null,
               home_airport: homeAirport.trim().toUpperCase() || null,
+              secondary_home_airport: secondaryAirport.trim().toUpperCase() || null,
               traveler_legal_name: fullName.trim() || null,
             },
           },
@@ -269,6 +278,7 @@ export default function AccountClient() {
       const nextState = normalizePracticeStateCode(stateOfPractice) || null;
       const nextName = fullName.trim() || null;
       const nextHomeAirport = homeAirport.trim().toUpperCase() || null;
+      const nextSecondaryAirport = secondaryAirport.trim().toUpperCase() || null;
 
       const { error } = await supabase
         .from("profiles")
@@ -285,6 +295,7 @@ export default function AccountClient() {
           full_name: nextName,
           state_of_practice: nextState,
           home_airport: nextHomeAirport,
+          secondary_home_airport: nextSecondaryAirport,
           traveler_legal_name: travelerLegalName.trim() || null,
           traveler_phone: travelerPhone.trim() || null,
           traveler_birth_date: travelerBirthDate || null,
@@ -296,6 +307,11 @@ export default function AccountClient() {
           window.localStorage.setItem(HOME_AIRPORT_STORAGE_KEY, nextHomeAirport);
         } else {
           window.localStorage.removeItem(HOME_AIRPORT_STORAGE_KEY);
+        }
+        if (nextSecondaryAirport) {
+          window.localStorage.setItem(SECONDARY_AIRPORT_STORAGE_KEY, nextSecondaryAirport);
+        } else {
+          window.localStorage.removeItem(SECONDARY_AIRPORT_STORAGE_KEY);
         }
       }
 
@@ -454,7 +470,12 @@ export default function AccountClient() {
 
                   <label>
                     <span>Home airport</span>
-                    <input value={homeAirport} onChange={(event) => setHomeAirport(event.target.value.toUpperCase())} placeholder="DFW" maxLength={5} />
+                    <AirportCombobox value={homeAirport} onChange={setHomeAirport} placeholder="JFK - New York City - John F Kennedy" />
+                  </label>
+
+                  <label>
+                    <span>Secondary airport</span>
+                    <AirportCombobox value={secondaryAirport} onChange={setSecondaryAirport} placeholder="LGA - New York City - LaGuardia" />
                   </label>
                 </>
               ) : null}
@@ -560,7 +581,12 @@ export default function AccountClient() {
 
               <label>
                 <span>Home airport</span>
-                <input value={homeAirport} onChange={(event) => setHomeAirport(event.target.value.toUpperCase())} placeholder="DFW" maxLength={5} />
+                <AirportCombobox value={homeAirport} onChange={setHomeAirport} placeholder="DFW - Dallas-Fort Worth - Dallas Fort Worth International" />
+              </label>
+
+              <label>
+                <span>Secondary airport</span>
+                <AirportCombobox value={secondaryAirport} onChange={setSecondaryAirport} placeholder="DAL - Dallas - Dallas Love Field" />
               </label>
 
               <div className="account-actions">

@@ -12,6 +12,7 @@ import { toAmount } from "@/lib/travel/service-fees";
 
 type TravelSearchRequest = {
   originCode?: string;
+  originCodes?: string[];
   destinationCode?: string;
   hotelCityCode?: string;
   hotelCityName?: string;
@@ -20,7 +21,7 @@ type TravelSearchRequest = {
   adults?: number;
 };
 
-function toFallbackFlights(rows: Awaited<ReturnType<typeof searchFlightOffers>>): TravelFlightOption[] {
+function toFallbackFlights(rows: Awaited<ReturnType<typeof searchFlightOffers>>, searchOriginCode: string): TravelFlightOption[] {
   return rows.map((flight) => ({
     id: flight.id,
     provider: "Amadeus",
@@ -31,6 +32,7 @@ function toFallbackFlights(rows: Awaited<ReturnType<typeof searchFlightOffers>>)
     currency: flight.currency,
     stops: flight.stops,
     carriers: flight.carriers,
+    searchOriginCode,
     departureAt: flight.departureAt,
     arrivalAt: flight.arrivalAt,
     metadata: flight as unknown as Record<string, unknown>,
@@ -56,6 +58,11 @@ function toFallbackHotels(rows: Awaited<ReturnType<typeof searchHotelOffers>>): 
 export async function POST(request: Request) {
   const body = await request.json() as TravelSearchRequest;
   const originCode = String(body.originCode || "").trim().toUpperCase();
+  const originCodes = [...new Set(
+    (Array.isArray(body.originCodes) ? body.originCodes : [])
+      .map((value) => String(value || "").trim().toUpperCase())
+      .filter(Boolean)
+  )];
   const destinationCode = String(body.destinationCode || "").trim().toUpperCase();
   const hotelCityCode = String(body.hotelCityCode || "").trim().toUpperCase();
   const hotelCityName = String(body.hotelCityName || "").trim();
@@ -63,7 +70,9 @@ export async function POST(request: Request) {
   const returnDate = String(body.returnDate || "").trim();
   const adults = Math.max(1, Number(body.adults || 1));
 
-  if (!originCode || !destinationCode || !departureDate) {
+  const requestedOrigins = [...new Set([originCode, ...originCodes].filter(Boolean))];
+
+  if (requestedOrigins.length === 0 || !destinationCode || !departureDate) {
     return NextResponse.json({
       configured: false,
       flights: [],
@@ -94,37 +103,48 @@ export async function POST(request: Request) {
   let hotels: TravelHotelOption[] = [];
   let cars: TravelSearchResponse["cars"] = [];
 
-  if (duffelStatus.configured) {
-    try {
-      flights = await searchDuffelFlightOffers({
-        originCode,
-        destinationCode,
-        departureDate,
-        returnDate: returnDate || null,
-        adults,
-      });
-    } catch (error) {
-      warnings.push(`Duffel flights unavailable: ${error instanceof Error ? error.message : "Unknown error"}`);
-    }
-  }
+  const flightGroups = await Promise.all(requestedOrigins.map(async (currentOriginCode) => {
+    let originFlights: TravelFlightOption[] = [];
 
-  if (flights.length === 0 && isAmadeusConfigured()) {
-    try {
-      flights = toFallbackFlights(await searchFlightOffers({
-        originCode,
-        destinationCode,
-        departureDate,
-        returnDate: returnDate || null,
-        adults,
-      }));
-      if (flights.length > 0) {
-        duffelStatus.mode = "fallback";
-        duffelStatus.message = "Showing Amadeus fallback flights while Duffel is unavailable.";
+    if (duffelStatus.configured) {
+      try {
+        originFlights = (await searchDuffelFlightOffers({
+          originCode: currentOriginCode,
+          destinationCode,
+          departureDate,
+          returnDate: returnDate || null,
+          adults,
+        })).map((flight) => ({
+          ...flight,
+          searchOriginCode: currentOriginCode,
+        }));
+      } catch (error) {
+        warnings.push(`Duffel flights unavailable for ${currentOriginCode}: ${error instanceof Error ? error.message : "Unknown error"}`);
       }
-    } catch (error) {
-      warnings.push(`Flight fallback unavailable: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
-  }
+
+    if (originFlights.length === 0 && isAmadeusConfigured()) {
+      try {
+        originFlights = toFallbackFlights(await searchFlightOffers({
+          originCode: currentOriginCode,
+          destinationCode,
+          departureDate,
+          returnDate: returnDate || null,
+          adults,
+        }), currentOriginCode);
+        if (originFlights.length > 0) {
+          duffelStatus.mode = "fallback";
+          duffelStatus.message = "Showing Amadeus fallback flights while Duffel is unavailable.";
+        }
+      } catch (error) {
+        warnings.push(`Flight fallback unavailable for ${currentOriginCode}: ${error instanceof Error ? error.message : "Unknown error"}`);
+      }
+    }
+
+    return originFlights.slice(0, 5);
+  }));
+
+  flights = flightGroups.flat();
 
   if (bookingHotelStatus.configured) {
     try {

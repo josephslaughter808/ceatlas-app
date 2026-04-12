@@ -4,9 +4,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "./auth-provider";
+import { useTripCart } from "./trip-cart-provider";
 
 export default function SiteHeader() {
   const { user, loading } = useAuth();
+  const { tripCourseIds } = useTripCart();
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -33,8 +35,8 @@ export default function SiteHeader() {
             </>
           ) : (
             <>
-              <Link href="/account" className="auth-button auth-button--ghost">Log in</Link>
-              <Link href="/account" className="auth-button auth-button--primary">Sign up</Link>
+              <Link href="/account?mode=signin" className="auth-button auth-button--ghost">Log in</Link>
+              <Link href="/account?mode=signup" className="auth-button auth-button--primary">Sign up</Link>
             </>
           )}
         </div>
@@ -45,6 +47,7 @@ export default function SiteHeader() {
           <Link href="/saved">Saved</Link>
           <Link href="/compare">Compare</Link>
           <Link href="/travel">Travel</Link>
+          <Link href="/travel">Trip Cart ({tripCourseIds.length})</Link>
           <Link href="/packages">Packages</Link>
           <Link href="/cruises">Cruises</Link>
           <Link href="/list-your-ce">List your CE</Link>

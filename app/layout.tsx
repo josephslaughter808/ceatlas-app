@@ -7,6 +7,7 @@ import { SavedCoursesProvider } from "./components/saved-courses-provider";
 import Analytics from "./components/analytics";
 import SiteHeader from "./components/site-header";
 import { TravelPlannerProvider } from "./components/travel-planner-provider";
+import { TripCartProvider } from "./components/trip-cart-provider";
 import "leaflet/dist/leaflet.css";
 import "./globals.css";
 
@@ -130,51 +131,53 @@ export default function RootLayout({
         <AuthProvider>
           <CompareProvider>
             <SavedCoursesProvider>
-              <TravelPlannerProvider>
-                <div className="site-shell">
-                  <div className="beta-banner">
-                    <div className="container beta-banner__inner">
-                      <strong>CEAtlas beta</strong>
-                      <span>Verify CE eligibility, registration status, price, and state-board fit with the provider before enrolling.</span>
-                      <Link href="/contact">Send feedback</Link>
-                    </div>
-                  </div>
-
-                  <div className="container">
-                    <SiteHeader />
-                  </div>
-
-                  {children}
-
-                  <footer className="site-footer">
-                    <div className="container site-footer__inner">
-                      <div className="site-footer__brand">
-                        <p className="site-footer__copyright">© {new Date().getFullYear()} CEAtlas</p>
-                        <p className="site-footer__tagline">Dental CE discovery, comparison, and travel planning in one place.</p>
+              <TripCartProvider>
+                <TravelPlannerProvider>
+                  <div className="site-shell">
+                    <div className="beta-banner">
+                      <div className="container beta-banner__inner">
+                        <strong>CEAtlas beta</strong>
+                        <span>Verify CE eligibility, registration status, price, and state-board fit with the provider before enrolling.</span>
+                        <Link href="/contact">Send feedback</Link>
                       </div>
-                      <div className="site-footer__actions">
-                        <a className="site-footer__button site-footer__button--secondary" href="mailto:support@ceatlas.co">Support</a>
-                        <a className="site-footer__button site-footer__button--secondary" href="mailto:providers@ceatlas.co">Providers</a>
-                        <div className="site-footer__socials" aria-label="CEAtlas social media">
-                          {socialLinks.map((link) => (
-                            <a
-                              key={link.label}
-                              className={`site-footer__social-link site-footer__social-link--${link.label.toLowerCase()}`}
-                              href={link.href}
-                              target="_blank"
-                              rel="noreferrer"
-                              aria-label={link.label}
-                              title={link.label}
-                            >
-                              {link.icon}
-                            </a>
-                          ))}
+                    </div>
+
+                    <div className="container">
+                      <SiteHeader />
+                    </div>
+
+                    {children}
+
+                    <footer className="site-footer">
+                      <div className="container site-footer__inner">
+                        <div className="site-footer__brand">
+                          <p className="site-footer__copyright">© {new Date().getFullYear()} CEAtlas</p>
+                          <p className="site-footer__tagline">Dental CE discovery, comparison, and travel planning in one place.</p>
+                        </div>
+                        <div className="site-footer__actions">
+                          <a className="site-footer__button site-footer__button--secondary" href="mailto:support@ceatlas.co">Support</a>
+                          <a className="site-footer__button site-footer__button--secondary" href="mailto:providers@ceatlas.co">Providers</a>
+                          <div className="site-footer__socials" aria-label="CEAtlas social media">
+                            {socialLinks.map((link) => (
+                              <a
+                                key={link.label}
+                                className={`site-footer__social-link site-footer__social-link--${link.label.toLowerCase()}`}
+                                href={link.href}
+                                target="_blank"
+                                rel="noreferrer"
+                                aria-label={link.label}
+                                title={link.label}
+                              >
+                                {link.icon}
+                              </a>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </footer>
-                </div>
-              </TravelPlannerProvider>
+                    </footer>
+                  </div>
+                </TravelPlannerProvider>
+              </TripCartProvider>
             </SavedCoursesProvider>
           </CompareProvider>
         </AuthProvider>

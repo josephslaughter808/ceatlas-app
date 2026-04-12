@@ -1,6 +1,7 @@
 import Link from "next/link";
 import CompareButton from "./compare-button";
 import SaveCourseButton from "./save-course-button";
+import TripCartButton from "./trip-cart-button";
 
 type Course = {
   id: string;
@@ -74,6 +75,7 @@ export default function CourseCard({ course }: { course: Course }) {
 
       <div className="course-card__actions">
         <SaveCourseButton courseId={course.id} />
+        <TripCartButton courseId={course.id} />
         <CompareButton
           item={{
             id: course.id,

@@ -65,10 +65,11 @@ type ProfileRecord = {
 export default function AccountClient() {
   const router = useRouter();
   const { user, session, loading } = useAuth();
-  const [mode, setMode] = useState<"signin" | "signup">("signup");
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [homeAirport, setHomeAirport] = useState("");
   const [authMessage, setAuthMessage] = useState<string | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
   const [cardsBusy, setCardsBusy] = useState(false);
@@ -93,6 +94,11 @@ export default function AccountClient() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
+    const requestedMode = params.get("mode");
+    if (requestedMode === "signup" || requestedMode === "signin") {
+      setMode(requestedMode);
+    }
+
     if (params.get("verified") === "1") {
       setMode("signin");
       setAuthMessage("Email verified. You can sign in and keep testing CEAtlas.");
@@ -142,12 +148,13 @@ export default function AccountClient() {
       setProfile(profileRow || null);
       setFullName(profileRow?.full_name || user?.user_metadata?.full_name || "");
       setStateOfPractice(normalizePracticeStateCode(profileRow?.state_of_practice || user?.user_metadata?.state_of_practice));
+      setHomeAirport(String(user?.user_metadata?.home_airport || ""));
       setProviderLinks(providerData?.links || []);
       setSupportedProviders(providerData?.supportedProviders || []);
     }
 
     loadAccountData();
-  }, [session, user?.user_metadata?.full_name, user?.user_metadata?.state_of_practice]);
+  }, [session, user?.user_metadata?.full_name, user?.user_metadata?.state_of_practice, user?.user_metadata?.home_airport]);
 
   async function handleAuthSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -165,6 +172,7 @@ export default function AccountClient() {
             data: {
               full_name: fullName,
               state_of_practice: normalizePracticeStateCode(stateOfPractice) || null,
+              home_airport: homeAirport.trim().toUpperCase() || null,
             },
           },
         });
@@ -238,6 +246,7 @@ export default function AccountClient() {
     try {
       const nextState = normalizePracticeStateCode(stateOfPractice) || null;
       const nextName = fullName.trim() || null;
+      const nextHomeAirport = homeAirport.trim().toUpperCase() || null;
 
       const { error } = await supabase
         .from("profiles")
@@ -253,6 +262,7 @@ export default function AccountClient() {
         data: {
           full_name: nextName,
           state_of_practice: nextState,
+          home_airport: nextHomeAirport,
         },
       });
 
@@ -381,7 +391,11 @@ export default function AccountClient() {
               <button
                 type="button"
                 className="account-toggle"
-                onClick={() => setMode((current) => current === "signup" ? "signin" : "signup")}
+                onClick={() => {
+                  const nextMode = mode === "signup" ? "signin" : "signup";
+                  setMode(nextMode);
+                  router.replace(`/account?mode=${nextMode}`);
+                }}
               >
                 {mode === "signup" ? "I already have an account" : "I need an account"}
               </button>
@@ -403,6 +417,11 @@ export default function AccountClient() {
                         <option key={state.code} value={state.code}>{state.name}</option>
                       ))}
                     </select>
+                  </label>
+
+                  <label>
+                    <span>Home airport</span>
+                    <input value={homeAirport} onChange={(event) => setHomeAirport(event.target.value.toUpperCase())} placeholder="DFW" maxLength={5} />
                   </label>
                 </>
               ) : null}
@@ -501,6 +520,11 @@ export default function AccountClient() {
                     <option key={state.code} value={state.code}>{state.name}</option>
                   ))}
                 </select>
+              </label>
+
+              <label>
+                <span>Home airport</span>
+                <input value={homeAirport} onChange={(event) => setHomeAirport(event.target.value.toUpperCase())} placeholder="DFW" maxLength={5} />
               </label>
 
               <div className="account-actions">

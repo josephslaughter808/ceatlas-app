@@ -13,7 +13,7 @@ export default function SaveCourseButton({ courseId }: { courseId: string }) {
   if (!user) {
     return (
       <Link
-        href="/account"
+        href="/account?mode=signin"
         className="save-button"
         aria-label="Log in to save courses"
         title="Log in to save courses"

@@ -1164,6 +1164,32 @@ button.auth-button {
   height: 1.45rem;
 }
 
+.trip-cart-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(18, 59, 74, 0.14);
+  border-radius: 999px;
+  padding: 0.65rem 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform var(--transition), background var(--transition), color var(--transition), border-color var(--transition);
+}
+
+.trip-cart-button:hover {
+  transform: translateY(-1px);
+  background: rgba(18, 59, 74, 0.06);
+  color: var(--color-primary);
+}
+
+.trip-cart-button--active {
+  background: rgba(18, 59, 74, 0.12);
+  border-color: rgba(18, 59, 74, 0.22);
+}
+
 .compare-button {
   display: inline-flex;
   align-items: center;

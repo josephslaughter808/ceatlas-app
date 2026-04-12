@@ -12,6 +12,8 @@ import {
   normalizePracticeStateCode,
 } from "@/lib/practice-states";
 
+const HOME_AIRPORT_STORAGE_KEY = "ceatlas:home-airport";
+
 type PaymentMethodRecord = {
   id: string;
   brand: string | null;
@@ -106,6 +108,14 @@ export default function AccountClient() {
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem(HOME_AIRPORT_STORAGE_KEY);
+    if (stored && !homeAirport) {
+      setHomeAirport(stored);
+    }
+  }, [homeAirport]);
+
+  useEffect(() => {
     if (!session) {
       setPaymentMethods([]);
       setOrders([]);
@@ -148,7 +158,7 @@ export default function AccountClient() {
       setProfile(profileRow || null);
       setFullName(profileRow?.full_name || user?.user_metadata?.full_name || "");
       setStateOfPractice(normalizePracticeStateCode(profileRow?.state_of_practice || user?.user_metadata?.state_of_practice));
-      setHomeAirport(String(user?.user_metadata?.home_airport || ""));
+      setHomeAirport(String(user?.user_metadata?.home_airport || window.localStorage.getItem(HOME_AIRPORT_STORAGE_KEY) || ""));
       setProviderLinks(providerData?.links || []);
       setSupportedProviders(providerData?.supportedProviders || []);
     }
@@ -265,6 +275,14 @@ export default function AccountClient() {
           home_airport: nextHomeAirport,
         },
       });
+
+      if (typeof window !== "undefined") {
+        if (nextHomeAirport) {
+          window.localStorage.setItem(HOME_AIRPORT_STORAGE_KEY, nextHomeAirport);
+        } else {
+          window.localStorage.removeItem(HOME_AIRPORT_STORAGE_KEY);
+        }
+      }
 
       setProfile((current) => ({
         full_name: nextName ?? current?.full_name ?? null,

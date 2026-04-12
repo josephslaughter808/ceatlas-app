@@ -19,6 +19,8 @@ import { useAuth } from "./auth-provider";
 import CompareButton from "./compare-button";
 import { useTripCart } from "./trip-cart-provider";
 
+const HOME_AIRPORT_STORAGE_KEY = "ceatlas:home-airport";
+
 type TravelPlannerClientProps = {
   courses?: CourseRecord[];
 };
@@ -227,13 +229,18 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
   }, [availableCourses, form.courseId]);
 
   useEffect(() => {
-    if (!user) return;
+    if (typeof window === "undefined") return;
+
+    const metadataAirport = String(user?.user_metadata?.home_airport || "").trim().toUpperCase();
+    const storedAirport = String(window.localStorage.getItem(HOME_AIRPORT_STORAGE_KEY) || "").trim().toUpperCase();
+    const nextAirport = metadataAirport || storedAirport;
+    if (!nextAirport) return;
 
     setForm((current) => ({
       ...current,
-      departureAirport: current.departureAirport || String(user.user_metadata?.home_airport || "").trim().toUpperCase(),
+      departureAirport: current.departureAirport || nextAirport,
     }));
-  }, [user]);
+  }, [user?.user_metadata?.home_airport]);
 
   useEffect(() => {
     if (!selectedCourse) return;

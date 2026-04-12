@@ -25,6 +25,7 @@ const PAGE_SIZE = 500;
 const CONCURRENCY = 4;
 const FETCH_TIMEOUT_MS = 15000;
 const GEOCODE_TIMEOUT_MS = 12000;
+const FAILURE_COOLDOWN_MS = 1000 * 60 * 60 * 24 * 7;
 
 function isInPersonFormat(format = '', location = '') {
   const text = `${format} ${location}`.toLowerCase();
@@ -123,7 +124,17 @@ async function getSessionsNeedingAddresses(limit = 200) {
     for (const row of data) {
       const metadata = row.metadata || {};
       if (!isInPersonFormat(row.format, row.location)) continue;
+      const lastAttemptAt = metadata.venue_address_backfill_attempted_at
+        ? Date.parse(metadata.venue_address_backfill_attempted_at)
+        : NaN;
+      const recentFailure = Number.isFinite(lastAttemptAt)
+        && (Date.now() - lastAttemptAt) < FAILURE_COOLDOWN_MS
+        && metadata.venue_address_backfill_status === 'failed';
+      const permanentFailure = metadata.venue_address_backfill_status === 'failed'
+        && /HTTP 403|HTTP 404|missing_url/i.test(String(metadata.venue_address_backfill_reason || ''));
+
       if (metadata.venue_address && typeof metadata.venue_latitude === 'number' && typeof metadata.venue_longitude === 'number') continue;
+      if (recentFailure || permanentFailure) continue;
       sessions.push(row);
       if (sessions.length >= limit) break;
     }
@@ -189,6 +200,9 @@ async function enrichSession(session, course) {
       venue_longitude: geocode?.longitude ?? null,
       venue_geocode_label: geocode?.label ?? null,
       venue_geocode_query: venueAddress,
+      venue_address_backfill_status: 'success',
+      venue_address_backfill_reason: geocode ? 'address_and_geocode_saved' : 'address_saved_no_geocode',
+      venue_address_backfill_attempted_at: new Date().toISOString(),
       venue_address_backfilled_at: new Date().toISOString(),
       venue_address_source_url: pageUrl,
     };
@@ -202,6 +216,19 @@ async function enrichSession(session, course) {
 
     return { updated: true, reason: geocode ? 'address_and_geocode_saved' : 'address_saved_no_geocode' };
   } catch (error) {
+    const nextMetadata = {
+      ...(session.metadata || {}),
+      venue_address_backfill_status: 'failed',
+      venue_address_backfill_reason: error.message,
+      venue_address_backfill_attempted_at: new Date().toISOString(),
+      venue_address_source_url: pageUrl,
+    };
+
+    await supabaseAdmin
+      .from('course_sessions')
+      .update({ metadata: nextMetadata })
+      .eq('id', session.id);
+
     return { updated: false, reason: error.message };
   }
 }

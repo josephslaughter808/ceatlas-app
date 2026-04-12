@@ -6,10 +6,16 @@ import { getCatalogOverview, getFeaturedCourses } from "@/lib/courses";
 export const revalidate = 600;
 
 export default async function HomePage() {
-  const [stats, featuredCourses] = await Promise.all([
+  const [statsResult, featuredCoursesResult] = await Promise.allSettled([
     getCatalogOverview(),
     getFeaturedCourses(6),
   ]);
+  const stats = statsResult.status === "fulfilled"
+    ? statsResult.value
+    : { courseCount: 0, providerCount: 0, formatCount: 40 };
+  const featuredCourses = featuredCoursesResult.status === "fulfilled"
+    ? featuredCoursesResult.value
+    : [];
 
   return (
     <div className="container home-page">

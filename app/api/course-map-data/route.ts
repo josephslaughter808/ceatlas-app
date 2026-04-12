@@ -239,18 +239,19 @@ export async function GET(request: Request) {
     const selectedCourseIds = hasChildCities
       ? []
       : (citySelection?.selectedEntry?.courseIds || topLevelSelection?.courseIds || []);
+    const selectedCourses = selectedCourseIds.length
+      ? await getCoursesByIds(selectedCourseIds)
+      : [];
     const totalSelectedCourses = hasChildCities
       ? Number(topLevelSelection?.count || 0)
-      : selectedCourseIds.length;
+      : selectedCourses.length;
     const selectedLocationType = hasChildCities
       ? "region"
       : (selectedCourseIds.length ? "city" : "world");
     const totalPages = Math.max(1, Math.ceil(totalSelectedCourses / MAP_PAGE_SIZE));
     const currentPage = Math.min(page, totalPages);
     const start = (currentPage - 1) * MAP_PAGE_SIZE;
-    const courses = selectedCourseIds.length
-      ? await getCoursesByIds(selectedCourseIds.slice(start, start + MAP_PAGE_SIZE))
-      : [];
+    const courses = selectedCourses.slice(start, start + MAP_PAGE_SIZE);
 
     return NextResponse.json({
       locations: visibleLocations.map(({ location: name, count }) => ({ location: name, count })),

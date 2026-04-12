@@ -411,7 +411,7 @@ export default function CourseCatalogClient({
   const [selectedTopics, setSelectedTopics] = useState<string[]>(initialState.topics);
   const [selectedProviders, setSelectedProviders] = useState<string[]>(initialState.providers);
   const [selectedFormats, setSelectedFormats] = useState<string[]>(initialState.formats);
-  const [viewMode, setViewMode] = useState<"list" | "map">("map");
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [mapLocation, setMapLocation] = useState("");
   const [mapDateStart, setMapDateStart] = useState("");
   const [mapDateEnd, setMapDateEnd] = useState("");

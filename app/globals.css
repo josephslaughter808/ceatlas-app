@@ -1976,6 +1976,12 @@ button.auth-button {
   box-shadow: 0 18px 45px rgba(18, 59, 74, 0.14);
 }
 
+.airport-combobox__hint {
+  padding: 0.25rem 0.45rem 0.4rem;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+}
+
 .airport-combobox__option {
   display: grid;
   grid-template-columns: 5rem 1fr;

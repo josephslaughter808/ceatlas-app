@@ -22,29 +22,39 @@ export default function AirportCombobox({
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const selectedAirport = findAirportByCode(value);
+
+  function commitSelection(nextValue: string) {
+    const exact = resolveAirportOption(nextValue);
+    if (exact) {
+      setQuery(formatAirportLabel(exact));
+      onChange(exact.code);
+      setOpen(false);
+      return true;
+    }
+    return false;
+  }
 
   useEffect(() => {
-    const airport = findAirportByCode(value);
-    setQuery(airport ? formatAirportLabel(airport) : String(value || "").trim().toUpperCase());
+    setQuery(selectedAirport ? formatAirportLabel(selectedAirport) : String(value || "").trim().toUpperCase());
   }, [value]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (!rootRef.current?.contains(event.target as Node)) {
         setOpen(false);
-        const exact = resolveAirportOption(query);
-        if (exact) {
-          setQuery(formatAirportLabel(exact));
-          onChange(exact.code);
-        } else if (!query.trim()) {
+        if (!query.trim()) {
           onChange("");
+          return;
         }
+
+        setQuery(selectedAirport ? formatAirportLabel(selectedAirport) : "");
       }
     }
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [onChange, query]);
+  }, [onChange, query, selectedAirport]);
 
   const options = useMemo(() => searchAirportOptions(query, 50), [query]);
 
@@ -58,24 +68,34 @@ export default function AirportCombobox({
           setQuery(nextValue);
           setOpen(true);
 
-          const exact = resolveAirportOption(nextValue);
-          if (exact) {
-            onChange(exact.code);
-            return;
-          }
-
           if (!nextValue.trim()) {
             onChange("");
           }
         }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            if (!commitSelection(query)) {
+              const firstMatch = options[0];
+              if (firstMatch) {
+                setQuery(formatAirportLabel(firstMatch));
+                onChange(firstMatch.code);
+                setOpen(false);
+              }
+            }
+          }
+
+          if (event.key === "Escape") {
+            setQuery(selectedAirport ? formatAirportLabel(selectedAirport) : "");
+            setOpen(false);
+          }
+        }}
         onBlur={() => {
           window.setTimeout(() => {
-            const exact = resolveAirportOption(query);
-            if (exact) {
-              setQuery(formatAirportLabel(exact));
-              onChange(exact.code);
-            } else if (!query.trim()) {
+            if (!query.trim()) {
               onChange("");
+            } else {
+              setQuery(selectedAirport ? formatAirportLabel(selectedAirport) : "");
             }
             setOpen(false);
           }, 120);
@@ -86,6 +106,9 @@ export default function AirportCombobox({
 
       {open ? (
         <div className="airport-combobox__menu">
+          <div className="airport-combobox__hint">
+            Click an airport or press Enter to apply it.
+          </div>
           {options.length > 0 ? (
             options.map((option) => (
               <button

@@ -2291,6 +2291,51 @@ button.auth-button {
   color: var(--color-muted);
 }
 
+.travel-live-card__subhead {
+  margin: -0.2rem 0 0.35rem;
+  color: var(--color-muted);
+}
+
+.travel-flight-groups {
+  display: grid;
+  gap: 1rem;
+}
+
+.travel-flight-group {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0.95rem;
+  border: 1px solid rgba(18, 59, 74, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.travel-flight-group__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.travel-flight-group__head h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--color-primary);
+}
+
+.travel-flight-group__head span,
+.travel-flight-group__pagination span {
+  color: var(--color-muted);
+  font-size: 0.92rem;
+}
+
+.travel-flight-group__pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .travel-live-list {
   display: grid;
   gap: 0.75rem;

@@ -21,6 +21,9 @@ type TravelSearchRequest = {
   adults?: number;
 };
 
+const FLIGHTS_PER_ORIGIN_PAGE = 5;
+const FLIGHT_FETCH_PAGES = 3;
+
 function toFallbackFlights(rows: Awaited<ReturnType<typeof searchFlightOffers>>, searchOriginCode: string): TravelFlightOption[] {
   return rows.map((flight) => ({
     id: flight.id,
@@ -141,7 +144,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return originFlights.slice(0, 5);
+    return originFlights.slice(0, FLIGHTS_PER_ORIGIN_PAGE * FLIGHT_FETCH_PAGES);
   }));
 
   flights = flightGroups.flat();

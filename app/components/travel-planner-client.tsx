@@ -198,6 +198,7 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
   const [activeDraft, setActiveDraft] = useState<TravelItineraryDraft | null>(null);
   const [checkoutDraft, setCheckoutDraft] = useState<TravelCheckoutDraft | null>(null);
   const [savedItineraries, setSavedItineraries] = useState<TravelBookingRecord[]>([]);
+  const [flightPagesByOrigin, setFlightPagesByOrigin] = useState<Record<string, number>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -331,6 +332,16 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
     selectedHotel,
     selectedCar: form.needsCar ? selectedCar : null,
   }), [form.needsCar, selectedCar, selectedFlight, selectedHotel]);
+  const flightsByOrigin = useMemo(() => {
+    const grouped = new Map<string, TravelFlightOption[]>();
+    for (const flight of liveResults?.flights || []) {
+      const key = flight.searchOriginCode || flight.originCode || form.departureAirport || "Origin";
+      const bucket = grouped.get(key) || [];
+      bucket.push(flight);
+      grouped.set(key, bucket);
+    }
+    return [...grouped.entries()];
+  }, [form.departureAirport, liveResults?.flights]);
 
   function updateField<Key extends keyof PlannerFormState>(key: Key, value: PlannerFormState[Key]) {
     setForm((current) => ({
@@ -401,6 +412,7 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
       setSelectedFlightId(data.flights[0]?.id || "");
       setSelectedHotelId(data.hotels[0]?.id || "");
       setSelectedCarId(data.cars[0]?.id || "");
+      setFlightPagesByOrigin({});
       if (data.error) {
         setTravelMessage(data.error);
       } else if (data.warnings.length > 0) {
@@ -742,50 +754,99 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
                   <h3>Flights</h3>
                   <span>{liveResults.flights.length} found</span>
                 </div>
+                <p className="travel-live-card__subhead">
+                  Flights are being searched against the selected course window:
+                  {" "}
+                  <strong>{formatPlanDates(tripStartDate, tripEndDate)}</strong>
+                </p>
                 {liveResults.flights.length === 0 ? (
                   <p>No flight results yet.</p>
                 ) : (
-                  <div className="travel-live-list">
-                    {liveResults.flights.map((flight) => (
-                      <div key={flight.id} className={`travel-live-item ${selectedFlightId === flight.id ? "travel-live-item--selected" : ""}`}>
-                        <strong>{formatMoney(flight.totalAmount, flight.currency || "USD")}</strong>
-                        <span>{flight.title}</span>
-                        <span>From <strong>{flight.searchOriginCode || flight.originCode || form.departureAirport || "Origin"}</strong></span>
-                        <div className="flight-leg">
-                          <span className="flight-leg__label">Outbound</span>
-                          <span className="flight-leg__summary">
-                            Leave <strong>{formatFlightDay(flight.departureAt)}</strong> at <strong className="flight-leg__time">{formatFlightTime(flight.departureAt)}</strong>
-                          </span>
-                          <span className="flight-leg__route">
-                            {flight.originCode || form.departureAirport || "Origin"} to {flight.destinationCode || form.destinationCode || "Destination"}
-                            {" "}
-                            arriving at <strong className="flight-leg__time">{formatFlightTime(flight.arrivalAt)}</strong>
-                          </span>
-                        </div>
-                        {flight.returnDepartureAt || flight.returnArrivalAt ? (
-                          <div className="flight-leg">
-                            <span className="flight-leg__label">Return</span>
-                            <span className="flight-leg__summary">
-                              Leave <strong>{formatFlightDay(flight.returnDepartureAt)}</strong> at <strong className="flight-leg__time">{formatFlightTime(flight.returnDepartureAt)}</strong>
-                            </span>
-                            <span className="flight-leg__route">
-                              {flight.returnOriginCode || flight.destinationCode || form.destinationCode || "Destination"} to {flight.returnDestinationCode || flight.originCode || form.departureAirport || "Origin"}
-                              {" "}
-                              arriving at <strong className="flight-leg__time">{formatFlightTime(flight.returnArrivalAt)}</strong>
-                            </span>
+                  <div className="travel-flight-groups">
+                    {flightsByOrigin.map(([originCode, flights]) => {
+                      const currentPage = flightPagesByOrigin[originCode] || 1;
+                      const totalPages = Math.max(1, Math.ceil(flights.length / 5));
+                      const start = (currentPage - 1) * 5;
+                      const visibleFlights = flights.slice(start, start + 5);
+
+                      return (
+                        <div key={originCode} className="travel-flight-group">
+                          <div className="travel-flight-group__head">
+                            <h4>{originCode}</h4>
+                            <span>{flights.length} found</span>
                           </div>
-                        ) : (
-                          <span>Return: one-way or not returned by supplier yet</span>
-                        )}
-                        <span>{flight.stops === 0 ? "Nonstop" : `${flight.stops || 0} stop${flight.stops === 1 ? "" : "s"}`}</span>
-                        <div className="travel-live-actions">
-                          <button type="button" className="travel-secondary" onClick={() => setSelectedFlightId(flight.id)}>
-                            {selectedFlightId === flight.id ? "Selected" : "Select"}
-                          </button>
-                          <CompareButton item={{ id: `flight-${flight.id}`, ...toRecord(flight) }} />
+                          <div className="travel-live-list">
+                            {visibleFlights.map((flight) => (
+                              <div key={flight.id} className={`travel-live-item ${selectedFlightId === flight.id ? "travel-live-item--selected" : ""}`}>
+                                <strong>{formatMoney(flight.totalAmount, flight.currency || "USD")}</strong>
+                                <span>{flight.title}</span>
+                                <span>From <strong>{flight.searchOriginCode || flight.originCode || originCode}</strong></span>
+                                <div className="flight-leg">
+                                  <span className="flight-leg__label">Outbound</span>
+                                  <span className="flight-leg__summary">
+                                    Leave <strong>{formatFlightDay(flight.departureAt)}</strong> at <strong className="flight-leg__time">{formatFlightTime(flight.departureAt)}</strong>
+                                  </span>
+                                  <span className="flight-leg__route">
+                                    {flight.originCode || originCode} to {flight.destinationCode || form.destinationCode || "Destination"}
+                                    {" "}
+                                    arriving at <strong className="flight-leg__time">{formatFlightTime(flight.arrivalAt)}</strong>
+                                  </span>
+                                </div>
+                                {flight.returnDepartureAt || flight.returnArrivalAt ? (
+                                  <div className="flight-leg">
+                                    <span className="flight-leg__label">Return</span>
+                                    <span className="flight-leg__summary">
+                                      Leave <strong>{formatFlightDay(flight.returnDepartureAt)}</strong> at <strong className="flight-leg__time">{formatFlightTime(flight.returnDepartureAt)}</strong>
+                                    </span>
+                                    <span className="flight-leg__route">
+                                      {flight.returnOriginCode || flight.destinationCode || form.destinationCode || "Destination"} to {flight.returnDestinationCode || flight.originCode || originCode}
+                                      {" "}
+                                      arriving at <strong className="flight-leg__time">{formatFlightTime(flight.returnArrivalAt)}</strong>
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span>Return: one-way or not returned by supplier yet</span>
+                                )}
+                                <span>{flight.stops === 0 ? "Nonstop" : `${flight.stops || 0} stop${flight.stops === 1 ? "" : "s"}`}</span>
+                                <div className="travel-live-actions">
+                                  <button type="button" className="travel-secondary" onClick={() => setSelectedFlightId(flight.id)}>
+                                    {selectedFlightId === flight.id ? "Selected" : "Select"}
+                                  </button>
+                                  <CompareButton item={{ id: `flight-${flight.id}`, ...toRecord(flight) }} />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          {totalPages > 1 ? (
+                            <div className="travel-flight-group__pagination">
+                              <button
+                                type="button"
+                                className="travel-secondary"
+                                onClick={() => setFlightPagesByOrigin((current) => ({
+                                  ...current,
+                                  [originCode]: Math.max(1, currentPage - 1),
+                                }))}
+                                disabled={currentPage === 1}
+                              >
+                                Previous 5
+                              </button>
+                              <span>Page {currentPage} of {totalPages}</span>
+                              <button
+                                type="button"
+                                className="travel-secondary"
+                                onClick={() => setFlightPagesByOrigin((current) => ({
+                                  ...current,
+                                  [originCode]: Math.min(totalPages, currentPage + 1),
+                                }))}
+                                disabled={currentPage === totalPages}
+                              >
+                                Next 5
+                              </button>
+                            </div>
+                          ) : null}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

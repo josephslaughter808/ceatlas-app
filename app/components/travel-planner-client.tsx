@@ -618,8 +618,12 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
               </label>
 
               <label>
-                <span>Destination code</span>
-                <input value={form.destinationCode} onChange={(event) => updateField("destinationCode", event.target.value)} placeholder="LAS" />
+                <span>Destination airport</span>
+                <AirportCombobox
+                  value={form.destinationCode}
+                  onChange={(value) => updateField("destinationCode", value)}
+                  placeholder="ATH - Athens - Athens International"
+                />
               </label>
 
               <label>
@@ -733,7 +737,7 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
         {!liveResults ? (
           <div className="card travel-empty">
             <h3>No live search yet</h3>
-            <p>Select a trip-cart course and make sure at least one airport and the destination code are filled in. CEAtlas will update live options automatically from there.</p>
+            <p>Select a trip-cart course and make sure at least one origin airport and a destination airport are filled in. CEAtlas will update live options automatically from there.</p>
           </div>
         ) : (
           <>

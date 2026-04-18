@@ -1,3 +1,5 @@
+import { findAirportByCode, inferBestAirportCode } from "./airports";
+
 const LOCATION_TO_AIRPORT: Array<[string, string]> = [
   ["las vegas", "LAS"],
   ["new york city", "JFK"],
@@ -154,7 +156,7 @@ export function inferAirportCodeFromLocation(location: string | null | undefined
     if (normalized.includes(needle)) return airport;
   }
 
-  return null;
+  return inferBestAirportCode(location);
 }
 
 export function inferCityCodeFromLocation(location: string | null | undefined, fallbackAirportCode?: string | null) {
@@ -171,6 +173,11 @@ export function inferCityCodeFromLocation(location: string | null | undefined, f
     return AIRPORT_TO_CITY_CODE[airportCode] || airportCode;
   }
 
+  const inferredAirportCode = inferBestAirportCode(location);
+  if (inferredAirportCode) {
+    return AIRPORT_TO_CITY_CODE[inferredAirportCode] || inferredAirportCode;
+  }
+
   return null;
 }
 
@@ -184,5 +191,15 @@ export function inferCityNameFromLocation(location: string | null | undefined) {
 
   const firstSegment = raw.split("|")[0]?.split("•")[0]?.trim() || raw;
   const cityChunk = firstSegment.split(",").slice(0, 2).join(", ").trim();
-  return cityChunk || raw;
+  if (cityChunk) return cityChunk;
+
+  const inferredAirportCode = inferBestAirportCode(location);
+  const airport = inferredAirportCode ? findAirportByCode(inferredAirportCode) : null;
+  if (airport) {
+    return airport.country && airport.country !== "US"
+      ? `${airport.city}, ${airport.country}`
+      : airport.city;
+  }
+
+  return raw;
 }

@@ -147,6 +147,10 @@ function CourseMapShell({
   const activeLocation = locations.find((entry) => entry.location === selectedLocation) || null;
   const [points, setPoints] = useState<WorldCourseMapPoint[]>([]);
   const [pointsLoading, setPointsLoading] = useState(false);
+  const locationLabels = useMemo(
+    () => new Map(points.map((point) => [point.location, point.label || point.location])),
+    [points],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -333,7 +337,7 @@ function CourseMapShell({
               className={`course-map-panel__location${entry.location === activeLocation?.location ? " is-active" : ""}`}
               onClick={() => onSelectLocation(entry.location)}
             >
-              <span>{entry.location}</span>
+              <span>{locationLabels.get(entry.location) || entry.location}</span>
               <strong>{entry.count || "•"}</strong>
             </button>
           ))}
@@ -341,7 +345,7 @@ function CourseMapShell({
 
         {activeLocation ? (
           <div className="course-map-panel__list">
-            <h3>{activeLocation.location}</h3>
+            <h3>{locationLabels.get(activeLocation.location) || activeLocation.location}</h3>
             <p>
               {selectedLocationType === "region"
                 ? `${selectionCount} courses across cities in this area`

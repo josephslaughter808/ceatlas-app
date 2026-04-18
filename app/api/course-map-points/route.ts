@@ -34,6 +34,7 @@ async function geocodeLocation(location: string) {
   url.searchParams.set("format", "jsonv2");
   url.searchParams.set("limit", "1");
   url.searchParams.set("addressdetails", "1");
+  url.searchParams.set("accept-language", "en");
 
   try {
     const response = await fetch(url, {

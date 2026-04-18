@@ -60,8 +60,12 @@ export default function WorldCourseMap({
         worldCopyJump: true,
       });
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
+        attribution: "Tiles © Esri",
+      }).addTo(map);
+
+      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places_Alternate/MapServer/tile/{z}/{y}/{x}", {
+        attribution: "Labels © Esri",
       }).addTo(map);
 
       const layerGroup = L.layerGroup().addTo(map);

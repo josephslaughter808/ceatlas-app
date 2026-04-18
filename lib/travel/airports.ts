@@ -144,3 +144,37 @@ export function searchAirportOptions(query: string | null | undefined, limit = 5
     }).sort((a, b) => (b.priority || 0) - (a.priority || 0) || a.city.localeCompare(b.city) || a.code.localeCompare(b.code))
     .slice(0, limit);
 }
+
+export function inferBestAirportCode(query: string | null | undefined) {
+  const raw = String(query || "").trim();
+  if (!raw) return null;
+
+  const candidates = [
+    raw,
+    raw.split("|")[0]?.trim() || "",
+    raw.split("•")[0]?.trim() || "",
+    raw.split(",").slice(0, 2).join(", ").trim(),
+    raw.split(",")[0]?.trim() || "",
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    const matches = searchAirportOptions(candidate, 25);
+    if (!matches.length) continue;
+
+    const normalizedCandidate = candidate.toLowerCase();
+    const exactCity = matches.find((option) => option.city.toLowerCase() === normalizedCandidate);
+    if (exactCity) return exactCity.code;
+
+    const startsWithCity = matches.find((option) => normalizedCandidate.startsWith(option.city.toLowerCase()));
+    if (startsWithCity) return startsWithCity.code;
+
+    return matches[0]?.code || null;
+  }
+
+  return null;
+}
+
+export function inferBestAirportOption(query: string | null | undefined) {
+  const code = inferBestAirportCode(query);
+  return code ? findAirportByCode(code) : null;
+}

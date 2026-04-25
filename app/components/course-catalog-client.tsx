@@ -18,8 +18,6 @@ const WorldCourseMap = dynamic(() => import("./world-course-map"), {
   loading: () => <div className="world-course-map world-course-map--loading" />,
 });
 
-const COURSE_MAP_ARCHIVED = true;
-
 type FilterOption = {
   label: string;
   value: string;
@@ -417,63 +415,9 @@ export default function CourseCatalogClient({
   const [selectedTopics, setSelectedTopics] = useState<string[]>(initialState.topics);
   const [selectedProviders, setSelectedProviders] = useState<string[]>(initialState.providers);
   const [selectedFormats, setSelectedFormats] = useState<string[]>(initialState.formats);
-  const [viewMode, setViewMode] = useState<"list" | "map">(COURSE_MAP_ARCHIVED ? "list" : "list");
-  const [mapLocation, setMapLocation] = useState("");
-  const [mapDateStart, setMapDateStart] = useState("");
-  const [mapDateEnd, setMapDateEnd] = useState("");
-  const [mapCourses, setMapCourses] = useState<CourseRecord[]>([]);
-  const [mapTotalCourses, setMapTotalCourses] = useState(0);
-  const [mapSelectionCount, setMapSelectionCount] = useState(0);
-  const [mapCurrentPage, setMapCurrentPage] = useState(1);
-  const [mapTotalPages, setMapTotalPages] = useState(1);
-  const [mapSelectedLocationType, setMapSelectedLocationType] = useState<"world" | "region" | "city">("world");
-  const [mapLoading, setMapLoading] = useState(false);
   const [practiceStateCode, setPracticeStateCode] = useState("");
   const [availableFilters, setAvailableFilters] = useState(filters);
   const [filtersLoading, setFiltersLoading] = useState(filters.providers.length === 0 || filters.formats.length === 0);
-  const appliedMapFilters = useMemo(() => ({
-    search: initialState.search,
-    sort: initialState.sort,
-    topics: initialState.topics,
-    providers: initialState.providers,
-    formats: initialState.formats,
-  }), [
-    initialState.formats,
-    initialState.providers,
-    initialState.search,
-    initialState.sort,
-    initialState.topics,
-  ]);
-
-  useEffect(() => {
-    setMapCurrentPage(1);
-  }, [mapLocation, mapDateStart, mapDateEnd, appliedMapFilters]);
-
-  const handleMapCoursesChange = useCallback(({
-    courses: nextCourses,
-    totalMappableCourses,
-    courseCountForSelection,
-    currentPage,
-    totalPages,
-    selectedLocationType,
-    loading,
-  }: {
-    courses: CourseRecord[];
-    totalMappableCourses: number;
-    courseCountForSelection: number;
-    currentPage: number;
-    totalPages: number;
-    selectedLocationType: "world" | "region" | "city";
-    loading: boolean;
-  }) => {
-    setMapCourses(nextCourses);
-    setMapTotalCourses(totalMappableCourses);
-    setMapSelectionCount(courseCountForSelection);
-    setMapCurrentPage(currentPage);
-    setMapTotalPages(totalPages);
-    setMapSelectedLocationType(selectedLocationType);
-    setMapLoading(loading);
-  }, []);
 
   useEffect(() => {
     setSortBy(initialState.sort);
@@ -775,50 +719,10 @@ export default function CourseCatalogClient({
         </div>
       </div>
 
-      {!COURSE_MAP_ARCHIVED ? (
-        <div className="catalog-view-toggle" role="tablist" aria-label="Course results view">
-          <button
-            type="button"
-            className={`catalog-view-toggle__button${viewMode === "list" ? " is-active" : ""}`}
-            onClick={() => setViewMode("list")}
-          >
-            List view
-          </button>
-          <button
-            type="button"
-            className={`catalog-view-toggle__button${viewMode === "map" ? " is-active" : ""}`}
-            onClick={() => setViewMode("map")}
-          >
-            Map view
-          </button>
-        </div>
-      )}
-
       <div className="course-count">
-        {viewMode === "map" ? (
-          <>
-            {mapLocation ? (
-              <>
-                {mapSelectedLocationType === "region" ? (
-                  <>Exploring <strong>{mapSelectionCount}</strong> courses across cities in <strong>{mapLocation}</strong></>
-                ) : (
-                  <>Showing <strong>{mapCourses.length}</strong> of <strong>{mapSelectionCount}</strong> courses in <strong>{mapLocation}</strong></>
-                )}
-              </>
-            ) : (
-              <>
-                Showing <strong>{mapTotalCourses}</strong> location-based courses on the map
-              </>
-            )}
-            {mapLocation && mapSelectedLocationType === "city" ? (
-              <span className="course-count__map-note"> page <strong>{mapCurrentPage}</strong> of <strong>{mapTotalPages}</strong></span>
-            ) : null}
-          </>
-        ) : (
-          <>
-            Showing <strong>{pageStart}-{pageEnd || 0}</strong> of <strong>{visibleTotal}</strong> courses
-          </>
-        )}
+        <>
+          Showing <strong>{pageStart}-{pageEnd || 0}</strong> of <strong>{visibleTotal}</strong> courses
+        </>
       </div>
 
       {visibleCourses.length === 0 ? (
@@ -828,59 +732,13 @@ export default function CourseCatalogClient({
         </div>
       ) : (
         <>
-          {viewMode === "map" ? (
-            <CourseMapShell
-              appliedFilters={appliedMapFilters}
-              selectedLocation={mapLocation}
-              onSelectLocation={setMapLocation}
-              dateStart={mapDateStart}
-              dateEnd={mapDateEnd}
-              onDateStartChange={setMapDateStart}
-              onDateEndChange={setMapDateEnd}
-              page={mapCurrentPage}
-              onCoursesChange={handleMapCoursesChange}
-            />
-          ) : null}
-
           <div className="course-grid">
-            {(viewMode === "map" ? mapCourses : visibleCourses).map((course) => (
+            {visibleCourses.map((course) => (
               <CourseCard key={course.id} course={course} />
             ))}
           </div>
 
-          {viewMode === "map" && mapLoading ? (
-            <div className="card">
-              <p>Loading map courses...</p>
-            </div>
-          ) : null}
-
-          {viewMode === "map" && mapLocation && mapSelectedLocationType === "city" && mapTotalPages > 1 && !mapLoading ? (
-            <div className="catalog-pagination">
-              <button
-                type="button"
-                className="button button-secondary"
-                onClick={() => setMapCurrentPage((current) => Math.max(1, current - 1))}
-                disabled={mapCurrentPage === 1}
-              >
-                Previous 10
-              </button>
-
-              <span className="catalog-pagination__label">
-                Page {mapCurrentPage} of {mapTotalPages}
-              </span>
-
-              <button
-                type="button"
-                className="button button-secondary"
-                onClick={() => setMapCurrentPage((current) => Math.min(mapTotalPages, current + 1))}
-                disabled={mapCurrentPage === mapTotalPages}
-              >
-                Next 10
-              </button>
-            </div>
-          ) : null}
-
-          {!savedOnly && viewMode !== "map" ? <div className="catalog-pagination">
+          {!savedOnly ? <div className="catalog-pagination">
             <button
               type="button"
               className="button button-secondary"

@@ -495,6 +495,22 @@ const getCachedNormalizedCatalog = unstable_cache(
   { revalidate: 60 * 30 }
 );
 
+function hasActiveCatalogFilters(searchParams: CourseSearchParams = {}) {
+  const search = typeof searchParams.search === 'string' ? searchParams.search.trim() : '';
+  const providers = toList(searchParams.provider);
+  const formats = toList(searchParams.format);
+  const topics = toList(searchParams.topic);
+  const sortBy = typeof searchParams.sort === 'string' ? searchParams.sort.trim() : 'balanced';
+
+  return Boolean(
+    search
+    || providers.length
+    || formats.length
+    || topics.length
+    || (sortBy && sortBy !== 'balanced')
+  );
+}
+
 async function getCatalogRows(
   searchParams: CourseSearchParams = {},
   useLite = false,
@@ -534,6 +550,25 @@ export async function getCoursesPage(
   pageSize = 50,
 ) {
   const safePageSize = pageSize === 100 ? 100 : 50;
+  const hasActiveFilters = hasActiveCatalogFilters(searchParams);
+
+  if (!hasActiveFilters) {
+    const { rows, total } = await getPublicCourseCatalogPage(page, safePageSize);
+    const normalized = rows
+      .map((row: CatalogRow) => normalizeCourse(row as CatalogRow))
+      .filter(shouldIncludeCatalogCourse);
+    const totalPages = Math.max(1, Math.ceil(total / safePageSize));
+    const currentPage = Math.min(Math.max(page, 1), totalPages);
+
+    return {
+      courses: normalized,
+      total,
+      totalPages,
+      currentPage,
+      pageSize: safePageSize,
+    };
+  }
+
   const rows = await getCourses(searchParams);
   const total = rows.length;
   const totalPages = Math.max(1, Math.ceil(total / safePageSize));

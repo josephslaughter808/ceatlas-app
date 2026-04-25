@@ -18,6 +18,8 @@ const WorldCourseMap = dynamic(() => import("./world-course-map"), {
   loading: () => <div className="world-course-map world-course-map--loading" />,
 });
 
+const COURSE_MAP_ARCHIVED = true;
+
 type FilterOption = {
   label: string;
   value: string;
@@ -415,7 +417,7 @@ export default function CourseCatalogClient({
   const [selectedTopics, setSelectedTopics] = useState<string[]>(initialState.topics);
   const [selectedProviders, setSelectedProviders] = useState<string[]>(initialState.providers);
   const [selectedFormats, setSelectedFormats] = useState<string[]>(initialState.formats);
-  const [viewMode, setViewMode] = useState<"list" | "map">("list");
+  const [viewMode, setViewMode] = useState<"list" | "map">(COURSE_MAP_ARCHIVED ? "list" : "list");
   const [mapLocation, setMapLocation] = useState("");
   const [mapDateStart, setMapDateStart] = useState("");
   const [mapDateEnd, setMapDateEnd] = useState("");
@@ -773,22 +775,32 @@ export default function CourseCatalogClient({
         </div>
       </div>
 
-      <div className="catalog-view-toggle" role="tablist" aria-label="Course results view">
-        <button
-          type="button"
-          className={`catalog-view-toggle__button${viewMode === "list" ? " is-active" : ""}`}
-          onClick={() => setViewMode("list")}
-        >
-          List view
-        </button>
-        <button
-          type="button"
-          className={`catalog-view-toggle__button${viewMode === "map" ? " is-active" : ""}`}
-          onClick={() => setViewMode("map")}
-        >
-          Map view
-        </button>
-      </div>
+      {COURSE_MAP_ARCHIVED ? (
+        <div className="card">
+          <h2>Map View Archived</h2>
+          <p>
+            The map experience is temporarily archived while we improve performance and venue accuracy. The underlying
+            implementation is being kept in the codebase for a future relaunch.
+          </p>
+        </div>
+      ) : (
+        <div className="catalog-view-toggle" role="tablist" aria-label="Course results view">
+          <button
+            type="button"
+            className={`catalog-view-toggle__button${viewMode === "list" ? " is-active" : ""}`}
+            onClick={() => setViewMode("list")}
+          >
+            List view
+          </button>
+          <button
+            type="button"
+            className={`catalog-view-toggle__button${viewMode === "map" ? " is-active" : ""}`}
+            onClick={() => setViewMode("map")}
+          >
+            Map view
+          </button>
+        </div>
+      )}
 
       <div className="course-count">
         {viewMode === "map" ? (

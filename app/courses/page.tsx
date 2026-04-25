@@ -1,7 +1,7 @@
 import { getCoursesPage, getDefaultCourseFilters } from "@/lib/courses";
 import CourseCatalogClient from "../components/course-catalog-client";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 600;
 
 type CoursesPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;

@@ -553,7 +553,11 @@ export async function getCoursesPage(
   const hasActiveFilters = hasActiveCatalogFilters(searchParams);
 
   if (!hasActiveFilters) {
-    const { rows, total } = await getPublicCourseCatalogPage(page, safePageSize);
+    const [{ rows }, stats] = await Promise.all([
+      getPublicCourseCatalogPage(page, safePageSize, false),
+      getCatalogStats(),
+    ]);
+    const total = stats.courses;
     const normalized = rows
       .map((row: CatalogRow) => normalizeCourse(row as CatalogRow))
       .filter(shouldIncludeCatalogCourse);

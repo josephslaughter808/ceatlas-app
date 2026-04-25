@@ -775,15 +775,7 @@ export default function CourseCatalogClient({
         </div>
       </div>
 
-      {COURSE_MAP_ARCHIVED ? (
-        <div className="card">
-          <h2>Map View Archived</h2>
-          <p>
-            The map experience is temporarily archived while we improve performance and venue accuracy. The underlying
-            implementation is being kept in the codebase for a future relaunch.
-          </p>
-        </div>
-      ) : (
+      {!COURSE_MAP_ARCHIVED ? (
         <div className="catalog-view-toggle" role="tablist" aria-label="Course results view">
           <button
             type="button"

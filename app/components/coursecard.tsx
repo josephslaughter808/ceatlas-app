@@ -30,12 +30,19 @@ function shortText(value: string | null | undefined, max = 180) {
   return value.length > max ? `${value.slice(0, max - 1)}…` : value;
 }
 
+function formatCredits(value: string | null | undefined) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  if (/\bcredits?\b/i.test(text)) return text;
+  return `${text} credits`;
+}
+
 export default function CourseCard({ course }: { course: Course }) {
   const details = [
     course.provider_name,
     course.next_format || course.category,
-    course.credits_text ? `${course.credits_text} credits` : null,
   ].filter(Boolean).join(' • ');
+  const credits = formatCredits(course.credits_text);
 
   const nextSession = course.next_start_date || 'Available now';
   const location = getCourseCardLocation({
@@ -70,6 +77,9 @@ export default function CourseCard({ course }: { course: Course }) {
           <div className="course-card__meta">
             <span><strong>When:</strong> {nextSession}</span>
             <span><strong>Where:</strong> {shortText(location, 80)}</span>
+            {credits ? (
+              <span className="course-card__credits"><strong>CE Credits:</strong> {credits}</span>
+            ) : null}
             {price ? <span><strong>Price:</strong> {shortText(price, 80)}</span> : null}
             {rating ? <span><strong>Rating:</strong> {rating} ({ratingCount})</span> : null}
           </div>

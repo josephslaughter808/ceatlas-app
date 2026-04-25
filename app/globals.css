@@ -1172,6 +1172,15 @@ button.auth-button {
   border-left: 1px solid var(--color-border);
 }
 
+.course-card__credits {
+  color: #143e59;
+  font-weight: 700;
+}
+
+.course-card__credits strong {
+  color: #143e59;
+}
+
 .course-card__actions {
   display: flex;
   flex-direction: column;

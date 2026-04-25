@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getCourseById } from "@/lib/courses";
+import { getCourseDetailLocation, getCourseVenueAddress } from "@/lib/course-location";
 import CompareButton from "@/app/components/compare-button";
 import CourseRatingPanel from "@/app/components/course-rating-panel";
 import SaveCourseButton from "@/app/components/save-course-button";
@@ -40,14 +41,10 @@ function renderList(items: string[] | null | undefined, fallback = "Not specifie
 
 function venueAddress(course: Awaited<ReturnType<typeof getCourseById>>) {
   if (!course) return "";
-  if (course.next_session_address) return course.next_session_address;
-
-  return [
-    course.next_location,
-    course.next_city,
-    course.next_state,
-    course.next_country,
-  ].filter(Boolean).join(", ");
+  return getCourseVenueAddress({
+    next_session_address: course.next_session_address,
+    next_location: course.next_location,
+  });
 }
 
 export default async function CourseDetailPage({
@@ -65,6 +62,12 @@ export default async function CourseDetailPage({
   const audience = course.topic_tags.filter((tag: string) => tag !== course.category);
   const providerLinks = [course.registration_url, course.source_url].filter(Boolean);
   const address = venueAddress(course);
+  const displayLocation = getCourseDetailLocation({
+    next_location: course.next_location,
+    next_city: course.next_city,
+    next_state: course.next_state,
+    next_country: course.next_country,
+  });
 
   return (
     <div className="container course-detail">
@@ -86,7 +89,7 @@ export default async function CourseDetailPage({
             <div><strong>Price</strong><span>{course.detail_price || "Not specified"}</span></div>
             <div><strong>Start</strong><span>{formatDate(course.next_start_date)}</span></div>
             <div><strong>End</strong><span>{formatDate(course.next_end_date)}</span></div>
-            <div><strong>Location</strong><span>{course.next_location || "Not specified"}</span></div>
+            <div><strong>Location</strong><span>{displayLocation}</span></div>
             <div><strong>Venue Address</strong><span>{address || "Not specified"}</span></div>
             <div><strong>Provider</strong><span>{course.provider_name || "Not specified"}</span></div>
             <div><strong>Sessions</strong><span>{course.session_count || 0}</span></div>
@@ -125,7 +128,7 @@ export default async function CourseDetailPage({
               providerName: course.provider_name,
               topic: course.headline_topic || course.category,
               description: course.description,
-              location: course.next_location,
+              location: displayLocation,
               dateText: formatDate(course.next_start_date),
               priceText: course.detail_price,
               ratingAverage: course.rating_average,

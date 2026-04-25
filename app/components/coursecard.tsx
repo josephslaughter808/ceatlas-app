@@ -2,6 +2,7 @@ import Link from "next/link";
 import CompareButton from "./compare-button";
 import SaveCourseButton from "./save-course-button";
 import TripCartButton from "./trip-cart-button";
+import { getCourseCardLocation } from "@/lib/course-location";
 
 type Course = {
   id: string;
@@ -9,6 +10,7 @@ type Course = {
   title: string | null;
   description: string | null;
   next_location: string | null;
+  next_city?: string | null;
   next_start_date: string | null;
   next_end_date: string | null;
   next_format: string | null;
@@ -36,7 +38,10 @@ export default function CourseCard({ course }: { course: Course }) {
   ].filter(Boolean).join(' • ');
 
   const nextSession = course.next_start_date || 'Available now';
-  const location = course.next_location || 'Online / self-paced';
+  const location = getCourseCardLocation({
+    next_location: course.next_location,
+    next_city: course.next_city,
+  });
   const price = course.card_price || null;
   const rating = typeof course.rating_average === "number" ? `${course.rating_average.toFixed(1)}★` : null;
   const ratingCount = course.rating_count || 0;
@@ -75,8 +80,8 @@ export default function CourseCard({ course }: { course: Course }) {
 
       <div className="course-card__actions">
         <div className="course-card__quick-actions">
-          <SaveCourseButton courseId={course.id} />
           <TripCartButton courseId={course.id} />
+          <SaveCourseButton courseId={course.id} />
         </div>
         <CompareButton
           item={{

@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CEAtlas
 
-## Getting Started
+CEAtlas is a continuing education discovery and planning platform for dental professionals. It brings course search, state requirement guidance, saved learning plans, comparison tools, travel planning, and provider connections into one application.
 
-First, run the development server:
+**Live application:** [ceatlas-app.vercel.app](https://ceatlas-app.vercel.app)
+
+> CEAtlas is an active work in progress. The public deployment demonstrates the current product experience while course coverage, provider integrations, and planning workflows continue to expand.
+
+## Problem
+
+Dental professionals often have to search across many provider websites to find eligible continuing education, compare formats and destinations, and understand whether a course supports their state requirements. CEAtlas explores a more organized workflow for discovering and planning that education.
+
+## Current capabilities
+
+- Search and filter a structured continuing education catalog
+- Open individual course pages with normalized provider and location information
+- Compare selected courses side by side
+- Save courses and maintain a personal planning list
+- Browse course locations through an interactive world map
+- Review state specific continuing education requirements
+- Explore dental education cruises and destination based learning
+- Build travel plans and continue through a checkout workflow
+- Create an account and manage provider connections
+- Submit a course or provider for future catalog inclusion
+
+## Architecture
+
+CEAtlas uses the Next.js App Router for the interface and server routes. Course and provider data is normalized through a collection of ingestion scripts before it is exposed to the catalog, comparison, map, and planning experiences.
+
+The repository includes:
+
+- API routes for course filters, map data, featured courses, saved planning, travel, ratings, and account connections
+- Data collection and normalization scripts using Playwright, Axios, and Cheerio
+- Supabase services for authentication and application data
+- Prisma models for structured database access
+- Stripe integration for checkout workflows
+- Vercel Analytics and Speed Insights for deployment monitoring
+
+## Technology
+
+- Next.js 16 and React 19
+- TypeScript and JavaScript
+- Supabase and Prisma
+- Playwright, Axios, and Cheerio
+- Leaflet
+- Stripe
+- Tailwind CSS
+- Vercel
+
+## Run locally
 
 ```bash
+npm install
+cp .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Some account, database, provider, and checkout features require the services documented in `.env.example`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Development status
 
-## Learn More
+The application is live but unfinished. Current development is focused on improving catalog quality, expanding provider coverage, refining state eligibility guidance, and completing production ready account and transaction workflows.
 
-To learn more about Next.js, take a look at the following resources:
+## Author
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Designed and developed by [Joseph Slaughter](https://github.com/josephslaughter808) as a portfolio and product development project.

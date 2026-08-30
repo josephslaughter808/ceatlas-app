@@ -1,6 +1,6 @@
 import { scrapeFromList } from './universal-scraper.js';
 import { writeCSV } from './write-csv.js';
-import { syncProviderCatalog, getCatalogStats } from '../lib/db.js';
+import { syncProviderCatalog, pruneExpiredCatalog, getCatalogStats } from '../lib/db.js';
 import { runVenueBackfill } from '../scripts/lib/run-venue-backfill.js';
 
 async function main() {
@@ -8,6 +8,7 @@ async function main() {
   const review = writeCSV(rows);
 
   const result = await syncProviderCatalog(review.rows);
+  const pruned = await pruneExpiredCatalog();
   await runVenueBackfill();
   const stats = await getCatalogStats();
 
@@ -18,6 +19,8 @@ async function main() {
   console.log(`   • providers inserted: ${result.insertedProviders}`);
   console.log(`   • courses inserted: ${result.insertedCourses}`);
   console.log(`   • sessions inserted: ${result.insertedSessions}`);
+  console.log(`   • expired sessions deleted: ${pruned.deletedSessions}`);
+  console.log(`   • expired courses deleted: ${pruned.deletedCourses}`);
   console.log(`   • providers total: ${stats.providers}`);
   console.log(`   • courses total: ${stats.courses}`);
   console.log(`   • sessions total: ${stats.sessions}`);

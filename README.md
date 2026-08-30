@@ -59,6 +59,23 @@ Then open [http://localhost:3000](http://localhost:3000).
 
 Some account, database, provider, and checkout features require the services documented in `.env.example`.
 
+## Daily catalog refresh
+
+The `Daily course catalog refresh` GitHub Actions workflow runs `npm run scrape:sync`
+every day at 12:00 AM in `America/Chicago`. The refresh scrapes current courses,
+upserts providers, courses, and sessions into Supabase, deletes expired dated
+sessions, and removes scraper-owned courses that no longer have a session.
+Evergreen, on-demand, self-paced, and asynchronous sessions are preserved.
+
+Before enabling the workflow, add these repository Actions secrets:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+The workflow can also be started manually from the Actions tab. Its concurrency
+setting prevents overlapping catalog refreshes.
+
 ## Development status
 
 The application is live but unfinished. Current development is focused on improving catalog quality, expanding provider coverage, refining state eligibility guidance, and completing production ready account and transaction workflows.

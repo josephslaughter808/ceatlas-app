@@ -1,11 +1,5 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import * as cheerio from 'cheerio';
 import { normalizeCourse } from '../../lib/normalize.js';
-
-const execFileAsync = promisify(execFile);
-
-const BROWSER_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36';
+import { loadHTML } from '../../lib/fetch.js';
 
 function cleanText(value = '', max = 1800) {
   return String(value)
@@ -128,20 +122,7 @@ function parseReviewCount(cardText = '') {
 }
 
 async function loadTownHTML(url) {
-  const { stdout } = await execFileAsync('curl', [
-    '-L',
-    '--max-time',
-    '30',
-    '-A',
-    BROWSER_USER_AGENT,
-    '-H',
-    'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-    url,
-  ], {
-    maxBuffer: 12 * 1024 * 1024,
-  });
-
-  return cheerio.load(stdout);
+  return loadHTML(url);
 }
 
 function extractRowsFromPage($, pageUrl, config) {

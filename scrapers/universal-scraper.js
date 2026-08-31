@@ -361,7 +361,7 @@ async function scrapeProvider(providerUrl) {
     return scrapeGIIA();
   }
 
-  if (hostname.includes('dtstudyclub.com') && providerUrl.includes('dds-world-communities')) {
+  if (hostname.includes('dtstudyclub.com')) {
     return scrapeDDSCommunities();
   }
 
@@ -680,8 +680,10 @@ export async function scrapeFromList(listPath) {
   console.log(`📄 Found ${urls.length} provider URLs`);
 
   const allRows = [];
+  const providerResults = [];
 
   for (const url of urls) {
+    const startedAt = Date.now();
     try {
       const rows = await withTimeout(
         scrapeProvider(url),
@@ -689,12 +691,44 @@ export async function scrapeFromList(listPath) {
         `Provider ${url}`,
       );
       allRows.push(...rows);
+      providerResults.push({
+        url,
+        status: rows.length > 0 ? 'success' : 'empty',
+        rows: rows.length,
+        duration_ms: Date.now() - startedAt,
+      });
       console.log(`   • Provider completed with ${rows.length} rows`);
     } catch (error) {
+      providerResults.push({
+        url,
+        status: 'error',
+        rows: 0,
+        duration_ms: Date.now() - startedAt,
+        error: error.message,
+        http_status: error?.response?.status || null,
+      });
       console.error(`⚠️ Error scraping provider ${url}: ${error.message}`);
     }
   }
 
+  const report = {
+    generated_at: new Date().toISOString(),
+    providers_total: providerResults.length,
+    providers_successful: providerResults.filter((result) => result.status === 'success').length,
+    providers_empty: providerResults.filter((result) => result.status === 'empty').length,
+    providers_failed: providerResults.filter((result) => result.status === 'error').length,
+    rows_collected: allRows.length,
+    providers: providerResults,
+  };
+  fs.writeFileSync(
+    path.join(process.cwd(), 'data', 'scrape-report.json'),
+    JSON.stringify(report, null, 2),
+    'utf8',
+  );
+
   console.log(`\n✅ Universal scraping complete. Collected ${allRows.length} rows.`);
+  console.log(`   • providers successful: ${report.providers_successful}`);
+  console.log(`   • providers empty: ${report.providers_empty}`);
+  console.log(`   • providers failed: ${report.providers_failed}`);
   return allRows;
 }

@@ -13,7 +13,6 @@ https://pndc2026.eventscribe.net/agenda.asp?pfp=BrowsebyDay
 https://www.hinman.org/Education-Events/Courses
 https://pacificdentalconference.com/schedule/
 https://www.yankeedental.com/
-https://ce.edu.dental/online-dental-ce/viva-learning/
 https://www.colgateoralhealthnetwork.com/webinar/
 https://www.cdeworld.com/courses
 https://ultradent.cdeworld.com/courses
@@ -113,7 +112,7 @@ https://courses.styleitaliano.org/
 https://courses.worlddentalacademy.com/courses/
 https://worldsymposium.iti.org/
 https://www.dds.world/en/
-https://www.dtstudyclub.com/en/dds-world-communities
+https://www.dtstudyclub.com/en/
 https://events.gidedental.com/master-clinician-2026/europe/
 https://www.ihs.gov/dentalcde/index.cfm/index.cfm?fuseaction=catalog.printcatalog&year=2026
 https://www.vivalearning.com/member/on-demand-dental-ce-webinars.asp

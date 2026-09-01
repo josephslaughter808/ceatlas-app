@@ -66,11 +66,13 @@ export const metadata: Metadata = {
   description: siteDescription,
   icons: {
     icon: [
-      { url: "/favicon.ico?v=9", sizes: "any" },
-      { url: "/icon.png?v=9", sizes: "512x512", type: "image/png" },
+      { url: "/favicon.ico?v=10", sizes: "16x16 32x32 48x48 64x64", type: "image/x-icon" },
+      { url: "/icon.png?v=10", sizes: "512x512", type: "image/png" },
     ],
-    apple: [{ url: "/apple-icon.png?v=9", sizes: "180x180", type: "image/png" }],
+    shortcut: [{ url: "/favicon.ico?v=10", type: "image/x-icon" }],
+    apple: [{ url: "/apple-icon.png?v=10", sizes: "180x180", type: "image/png" }],
   },
+  manifest: "/manifest.webmanifest",
   openGraph: {
     title: "CEAtlas | Explore Continuing Education by Discipline",
     description: siteDescription,
@@ -79,8 +81,8 @@ export const metadata: Metadata = {
     images: [
       {
         url: "/logo-search.png",
-        width: 1024,
-        height: 1024,
+        width: 1254,
+        height: 1254,
         alt: "CEAtlas logo",
       },
     ],
@@ -104,7 +106,14 @@ export default function RootLayout({
     "@type": "Organization",
     name: "CEAtlas",
     url: siteUrl,
-    logo: `${siteUrl}/logo-search.png`,
+    logo: {
+      "@type": "ImageObject",
+      url: `${siteUrl}/logo-search.png?v=10`,
+      contentUrl: `${siteUrl}/logo-search.png?v=10`,
+      width: 1254,
+      height: 1254,
+      caption: "CEAtlas",
+    },
     email: "support@ceatlas.co",
     contactPoint: [
       {

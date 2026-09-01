@@ -23,7 +23,7 @@ const geistMono = Geist_Mono({
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://ceatlas.co";
 const siteDescription =
-  "Search dental CE courses, conferences, cruises, and hands-on events from providers across the U.S. and beyond. Compare topics, formats, locations, credits, and travel options in one place.";
+  "Explore continuing education by professional discipline. Compare topics, formats, locations, credits, and travel options in one place.";
 
 const socialLinks = [
   {
@@ -60,7 +60,7 @@ const socialLinks = [
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "CEAtlas | Dental CE Courses, Conferences, Cruises & Travel",
+    default: "CEAtlas | Explore Continuing Education by Discipline",
     template: "%s | CEAtlas",
   },
   description: siteDescription,
@@ -72,7 +72,7 @@ export const metadata: Metadata = {
     apple: [{ url: "/apple-icon.png?v=9", sizes: "180x180", type: "image/png" }],
   },
   openGraph: {
-    title: "CEAtlas | Dental CE Courses, Conferences, Cruises & Travel",
+    title: "CEAtlas | Explore Continuing Education by Discipline",
     description: siteDescription,
     url: "/",
     siteName: "CEAtlas",
@@ -88,7 +88,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary",
-    title: "CEAtlas | Dental CE Courses, Conferences, Cruises & Travel",
+    title: "CEAtlas | Explore Continuing Education by Discipline",
     description: siteDescription,
     images: ["/logo-search.png"],
   },
@@ -152,7 +152,7 @@ export default function RootLayout({
                       <div className="container site-footer__inner">
                         <div className="site-footer__brand">
                           <p className="site-footer__copyright">© {new Date().getFullYear()} CEAtlas</p>
-                          <p className="site-footer__tagline">Dental CE discovery, comparison, and travel planning in one place.</p>
+                          <p className="site-footer__tagline">Continuing education discovery, comparison, and travel planning in one place.</p>
                         </div>
                         <div className="site-footer__actions">
                           <a className="site-footer__button site-footer__button--secondary" href="mailto:support@ceatlas.co">Support</a>

@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { disciplines } from "@/lib/disciplines";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://ceatlas-app.vercel.app").replace(/\/$/, "");
 
@@ -7,6 +8,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const routes = [
     "",
     "/courses",
+    "/match",
     "/packages",
     "/cruises",
     "/travel",
@@ -18,7 +20,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/terms",
   ];
 
-  return routes.map((route) => ({
+  const disciplineRoutes = disciplines.filter((discipline) => !discipline.live).map((discipline) => `/disciplines/${discipline.slug}`);
+
+  return [...routes, ...disciplineRoutes].map((route) => ({
     url: `${SITE_URL}${route}`,
     lastModified: now,
     changeFrequency: route === "/courses" ? "daily" : "weekly",

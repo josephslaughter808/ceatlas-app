@@ -2,7 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { getDiscipline } from "@/lib/disciplines";
+import { getDisciplineLogo, getDisciplineLogoAlt } from "@/lib/discipline-logo";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "./auth-provider";
 import { useTripCart } from "./trip-cart-provider";
@@ -11,7 +13,12 @@ export default function SiteHeader() {
   const { user, loading } = useAuth();
   const { tripCourseIds } = useTripCart();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const returnTo = pathname || "/";
+  const pathDiscipline = pathname?.match(/^\/disciplines\/([^/]+)/)?.[1];
+  const activeDisciplineSlug = pathDiscipline || searchParams.get("discipline");
+  const activeDiscipline = getDiscipline(activeDisciplineSlug || "");
+  const brandLogo = getDisciplineLogo(activeDisciplineSlug);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -20,9 +27,9 @@ export default function SiteHeader() {
   return (
     <nav className="site-nav">
       <div className="site-brand">
-        <Image src="/logo.png" alt="CEAtlas logo" width={72} height={72} />
+        <Image src={brandLogo} alt={getDisciplineLogoAlt(activeDiscipline)} width={72} height={72} priority />
         <div className="site-brand__text">
-          <span>Dental CE Catalog</span>
+          <span>{activeDiscipline ? `${activeDiscipline.shortName} CE Explorer` : "Continuing Education Explorer"}</span>
           <strong>CEAtlas</strong>
         </div>
       </div>
@@ -57,6 +64,8 @@ export default function SiteHeader() {
 
         <div className="site-links">
           <Link href="/">Home</Link>
+          <Link href="/#disciplines">Disciplines</Link>
+          <Link href="/match">Trip Match</Link>
           <Link href="/courses">Courses</Link>
           <Link href="/saved">Saved</Link>
           <Link href="/compare">Compare</Link>

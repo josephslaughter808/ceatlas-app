@@ -1,7 +1,9 @@
 import Link from "next/link";
 import HomeStatsClient from "./components/home-stats-client";
 import HomeFeaturedCoursesClient from "./components/home-featured-courses-client";
+import DisciplineExplorer from "./components/discipline-explorer";
 import { getCatalogOverview, getFeaturedCourses } from "@/lib/courses";
+import { disciplines } from "@/lib/disciplines";
 
 export const revalidate = 600;
 
@@ -21,15 +23,15 @@ export default async function HomePage() {
     <div className="container home-page">
       <section className="hero">
         <div className="hero__copy">
-          <p className="hero__eyebrow">Dental CE, Conferences, Travel</p>
-          <h1>Find the right CE faster, and plan the trip around it.</h1>
+          <p className="hero__eyebrow">Continuing education, mapped for you</p>
+          <h1>Your profession. Your credits. One place to explore.</h1>
           <p>
-            CEAtlas helps dentists compare continuing education courses, conferences, cruises, and hands-on trainings
-            in one place. Search by topic, provider, format, and location, then save the options that fit your goals.
+            Choose your discipline to find continuing education by topic, provider, format, and location. Dentistry is
+            live today, with more professional catalogs taking shape next.
           </p>
           <div className="hero__actions">
-            <Link href="/courses" className="button">Browse Courses</Link>
-            <Link href="/packages" className="button button--light">Explore Packages</Link>
+            <Link href="#disciplines" className="button">Choose your discipline</Link>
+            <Link href="/match" className="button button--light">Match a CE trip</Link>
           </div>
         </div>
 
@@ -42,9 +44,30 @@ export default async function HomePage() {
         />
       </section>
 
+      <section className="home-section match-home-cta card">
+        <div className="match-home-cta__visual" aria-hidden="true"><span>De</span><i /><span>Md</span></div>
+        <div>
+          <p className="hero__eyebrow hero__eyebrow--dark">Planning with a partner?</p>
+          <h2>Find two careers in the same place at the same time.</h2>
+          <p>Pair disciplines, compare overlapping CE windows, and turn separate professional requirements into one shared trip.</p>
+        </div>
+        <Link href="/match" className="button">Try CE Trip Match</Link>
+      </section>
+
+      <section className="home-section discipline-section" id="disciplines">
+        <div className="section-heading section-heading--stacked">
+          <p className="hero__eyebrow hero__eyebrow--dark">Explore by discipline</p>
+          <h2>Start with the credentials that matter to your career.</h2>
+          <p className="discipline-section__intro">
+            Select a field to enter its CE space. Preview disciplines show what we’re building and let you help shape what launches next.
+          </p>
+        </div>
+        <DisciplineExplorer disciplines={disciplines} />
+      </section>
+
       <section className="home-section home-section--centered">
         <div className="section-heading section-heading--stacked">
-          <p className="hero__eyebrow hero__eyebrow--dark">Why Dentists Use CEAtlas</p>
+          <p className="hero__eyebrow hero__eyebrow--dark">Built for working professionals</p>
           <h2>Built to make CE discovery feel clear, fast, and worth your time.</h2>
         </div>
         <div className="home-grid">
@@ -66,10 +89,10 @@ export default async function HomePage() {
       <section className="home-section launch-cta card">
         <div>
           <p className="hero__eyebrow">For Providers</p>
-          <h2>Get your CE in front of dentists who are actively looking.</h2>
+          <h2>Get your CE in front of professionals who are actively looking.</h2>
           <p>
-            If you run dental CE, conferences, cruises, or hands-on training, CEAtlas can help more dentists discover
-            your courses, compare them confidently, and plan travel around your events.
+            If you run CE, conferences, or hands-on training, CEAtlas can help the right audience discover your
+            courses, compare them confidently, and plan around your events.
           </p>
         </div>
         <Link href="/list-your-ce" className="button">List your CE</Link>
@@ -77,7 +100,10 @@ export default async function HomePage() {
 
       <section className="home-section">
         <div className="section-heading">
-          <h2>Featured CE Right Now</h2>
+          <div>
+            <p className="featured-discipline-label">Now exploring: Dentistry</p>
+            <h2>Featured Dental CE Right Now</h2>
+          </div>
           <Link href="/courses">See all courses</Link>
         </div>
 

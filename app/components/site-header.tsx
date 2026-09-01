@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { getDiscipline } from "@/lib/disciplines";
 import { getDisciplineLogo, getDisciplineLogoAlt } from "@/lib/discipline-logo";
 import { supabase } from "@/lib/supabase";
@@ -13,10 +13,10 @@ export default function SiteHeader() {
   const { user, loading } = useAuth();
   const { tripCourseIds } = useTripCart();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const returnTo = pathname || "/";
   const pathDiscipline = pathname?.match(/^\/disciplines\/([^/]+)/)?.[1];
-  const activeDisciplineSlug = pathDiscipline || searchParams.get("discipline");
+  const isDentalCatalog = Boolean(pathname?.match(/^\/(courses|cruises)(\/|$)/));
+  const activeDisciplineSlug = pathDiscipline || (isDentalCatalog ? "dentistry" : null);
   const activeDiscipline = getDiscipline(activeDisciplineSlug || "");
   const brandLogo = getDisciplineLogo(activeDisciplineSlug);
 

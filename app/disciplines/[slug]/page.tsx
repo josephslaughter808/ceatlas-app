@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { disciplines, getDiscipline } from "@/lib/disciplines";
 import { getDisciplineIcon } from "@/lib/discipline-logo";
+import { disciplineProofGeneratedAt, getDisciplineProofCourses } from "@/lib/discipline-proof-courses";
 
 type DisciplinePageProps = { params: Promise<{ slug: string }> };
 
@@ -27,6 +28,8 @@ export default async function DisciplinePage({ params }: DisciplinePageProps) {
   const discipline = getDiscipline((await params).slug);
   if (!discipline) notFound();
   if (discipline.live) redirect("/courses");
+  const proofCourses = getDisciplineProofCourses(discipline.slug);
+  const refreshed = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(disciplineProofGeneratedAt));
 
   return (
     <div className="container discipline-page">
@@ -34,10 +37,9 @@ export default async function DisciplinePage({ params }: DisciplinePageProps) {
       <section className="discipline-page__hero" style={{ "--discipline-accent": discipline.accent } as React.CSSProperties}>
         <div>
           <p className="hero__eyebrow">{discipline.credential} on CEAtlas</p>
-          <h1>{discipline.name} CE is coming into focus.</h1>
+          <h1>Explore real {discipline.name} CE.</h1>
           <p>
-            We’re building a dedicated place to discover, compare, save, and plan continuing education for
-            {` ${discipline.name.toLowerCase()} professionals.`}
+            This early proof catalog is already pulling live listings from public provider sources. Browse a few real examples while we build the full discovery experience.
           </p>
           <div className="hero__actions">
             <Link href={`/match?first=${discipline.slug}&second=dentistry`} className="button">Try this discipline in Trip Match</Link>
@@ -45,14 +47,47 @@ export default async function DisciplinePage({ params }: DisciplinePageProps) {
           </div>
         </div>
         <div className="discipline-page__panel">
-          <p className="discipline-card__credential">Planned exploration</p>
-          <h2>What you’ll be able to compare</h2>
+          <p className="discipline-card__credential">Working proof of concept</p>
+          <h2>{proofCourses.length} current listings found</h2>
           <ul>
             {discipline.highlights.map((highlight) => <li key={highlight}>{highlight}</li>)}
             <li>Credits, price, format, and location</li>
             <li>Saved courses and travel planning</li>
           </ul>
         </div>
+      </section>
+
+      <section className="discipline-proof-catalog">
+        <div className="discipline-proof-catalog__heading">
+          <div>
+            <p className="hero__eyebrow hero__eyebrow--dark">Live scraper results</p>
+            <h2>A first look at the catalog.</h2>
+            <p>These listings were collected from public CE provider pages and link back to the provider for current details and registration.</p>
+          </div>
+          <span className="discipline-proof-catalog__refresh">Refreshed {refreshed}</span>
+        </div>
+        <div className="discipline-proof-grid">
+          {proofCourses.map((course) => (
+            <article className="discipline-proof-card card" key={course.id}>
+              <div className="discipline-proof-card__badges">
+                <span>{course.status}</span>
+                <span>{course.format}</span>
+              </div>
+              <div>
+                <p className="discipline-proof-card__provider">{course.provider}</p>
+                <h3>{course.title}</h3>
+                <p>{course.description}</p>
+              </div>
+              <dl>
+                <div><dt>Credit</dt><dd>{course.credits}</dd></div>
+                <div><dt>{course.start_date ? "Date" : "Access"}</dt><dd>{course.start_date ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${course.start_date}T00:00:00Z`)) : "Available now"}</dd></div>
+                <div><dt>Where</dt><dd>{course.location}</dd></div>
+              </dl>
+              <a className="discipline-proof-card__link" href={course.url} target="_blank" rel="noreferrer">View on provider site <span aria-hidden="true">↗</span></a>
+            </article>
+          ))}
+        </div>
+        <p className="discipline-proof-catalog__note">Proof-stage data: always confirm eligibility, accreditation, dates, and credit directly with the provider.</p>
       </section>
 
       <section className="discipline-preview-flow">

@@ -10,7 +10,8 @@
     "lint": "eslint",
     "scrape": "node scrapers/run-all.js",
     "scrape:sync": "node scrapers/sync-db.js",
-    "scrape:cruises": "node scrapers/scrape-cruises.js"
+    "scrape:cruises": "node scrapers/scrape-cruises.js",
+    "scrape:disciplines": "node scrapers/scrape-discipline-proofs.js"
   },
   "dependencies": {
     "@prisma/client": "^7.6.0",

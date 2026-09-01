@@ -833,6 +833,129 @@ button.auth-button {
   color: var(--color-muted);
 }
 
+.discipline-proof-catalog {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 2.5rem;
+}
+
+.discipline-proof-catalog__heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 1.5rem;
+}
+
+.discipline-proof-catalog__heading > div {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.discipline-proof-catalog__heading > div > p:last-child,
+.discipline-proof-catalog__note {
+  color: var(--color-muted);
+  max-width: 70ch;
+}
+
+.discipline-proof-catalog__refresh {
+  flex: 0 0 auto;
+  padding: 0.55rem 0.8rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--discipline-accent, var(--color-primary)) 11%, white);
+  color: var(--color-primary);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.discipline-proof-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.discipline-proof-card {
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  gap: 1.15rem;
+  padding: 1.35rem;
+}
+
+.discipline-proof-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.discipline-proof-card__badges span {
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(29, 111, 104, 0.09);
+  color: var(--color-primary);
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.discipline-proof-card__provider {
+  color: var(--color-accent) !important;
+  font-size: 0.74rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.discipline-proof-card h3 {
+  margin-top: 0.35rem;
+  font-size: 1.25rem;
+  line-height: 1.22;
+}
+
+.discipline-proof-card > div > p:last-child {
+  margin-top: 0.65rem;
+  color: var(--color-muted);
+  font-size: 0.92rem;
+}
+
+.discipline-proof-card dl {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.discipline-proof-card dl div {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  gap: 0.6rem;
+}
+
+.discipline-proof-card dt {
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.discipline-proof-card dd {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.discipline-proof-card__link {
+  color: var(--color-primary);
+  font-weight: 850;
+}
+
+.discipline-proof-card__link span {
+  font-size: 1.05rem;
+}
+
+.discipline-proof-catalog__note {
+  font-size: 0.82rem;
+}
+
 .match-home-cta {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -3411,6 +3534,15 @@ button.auth-button {
 
   .discipline-page__hero {
     grid-template-columns: 1fr;
+  }
+
+  .discipline-proof-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .discipline-proof-catalog__heading {
+    align-items: start;
+    flex-direction: column;
   }
 
   .match-home-cta,

@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import CruiseCatalogClient from "../components/cruise-catalog-client";
 import { getCruises } from "@/lib/cruises";
+
+export const metadata: Metadata = {
+  title: "Dental CE Cruises",
+  icons: { icon: [{ url: "/discipline-logos/default.png?v=12", sizes: "512x512", type: "image/png" }] },
+};
 
 const cruiseProviders = [
   {

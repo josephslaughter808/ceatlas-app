@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import { getCoursesPage, getDefaultCourseFilters } from "@/lib/courses";
 import CourseCatalogClient from "../components/course-catalog-client";
 
 export const revalidate = 600;
+
+export const metadata: Metadata = {
+  title: "Dental CE Courses",
+  icons: { icon: [{ url: "/discipline-logos/default.png?v=12", sizes: "512x512", type: "image/png" }] },
+};
 
 type CoursesPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;

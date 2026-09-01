@@ -16,6 +16,10 @@ export function getDisciplineLogo(slug?: string | null) {
   return logoByDiscipline[slug || ""] || "/discipline-logos/default.png";
 }
 
+export function getDisciplineIcon(slug?: string | null) {
+  return `${getDisciplineLogo(slug)}?v=12`;
+}
+
 export function getDisciplineLogoAlt(discipline?: Pick<Discipline, "name"> | null) {
   return discipline ? `${discipline.name} CEAtlas logo` : "CEAtlas logo";
 }

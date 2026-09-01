@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { disciplines, getDiscipline } from "@/lib/disciplines";
+import { getDisciplineIcon } from "@/lib/discipline-logo";
 
 type DisciplinePageProps = { params: Promise<{ slug: string }> };
 
@@ -15,6 +16,10 @@ export async function generateMetadata({ params }: DisciplinePageProps): Promise
   return {
     title: `${discipline.name} Continuing Education`,
     description: `Explore the upcoming CEAtlas ${discipline.name} continuing education space.`,
+    icons: {
+      icon: [{ url: getDisciplineIcon(discipline.slug), sizes: "512x512", type: "image/png" }],
+      shortcut: [{ url: getDisciplineIcon(discipline.slug), type: "image/png" }],
+    },
   };
 }
 

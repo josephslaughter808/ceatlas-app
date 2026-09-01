@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getCourseById } from "@/lib/courses";
@@ -7,6 +8,14 @@ import CourseRatingPanel from "@/app/components/course-rating-panel";
 import SaveCourseButton from "@/app/components/save-course-button";
 
 type Params = Promise<{ id: string }>;
+
+export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
+  const course = await getCourseById((await params).id);
+  return {
+    title: course?.title || "Dental CE Course",
+    icons: { icon: [{ url: "/discipline-logos/default.png?v=12", sizes: "512x512", type: "image/png" }] },
+  };
+}
 
 function formatDate(value: string | null | undefined) {
   if (!value) return "Not specified";

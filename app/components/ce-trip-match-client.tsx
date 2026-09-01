@@ -44,9 +44,9 @@ function matchesDiscipline(event: MatchEvent, slug: string) {
   return audiencePatterns[slug]?.test(event.audience || "") ?? false;
 }
 
-export default function CeTripMatchClient({ disciplines, events }: { disciplines: Discipline[]; events: MatchEvent[] }) {
-  const [firstDiscipline, setFirstDiscipline] = useState("dentistry");
-  const [secondDiscipline, setSecondDiscipline] = useState("medicine");
+export default function CeTripMatchClient({ disciplines, events, initialFirst = "dentistry", initialSecond = "medicine" }: { disciplines: Discipline[]; events: MatchEvent[]; initialFirst?: string; initialSecond?: string }) {
+  const [firstDiscipline, setFirstDiscipline] = useState(initialFirst);
+  const [secondDiscipline, setSecondDiscipline] = useState(initialSecond);
   const [destination, setDestination] = useState("");
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");

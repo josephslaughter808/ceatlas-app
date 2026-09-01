@@ -157,6 +157,7 @@ export default function RootLayout({
                         <div className="site-footer__actions">
                           <a className="site-footer__button site-footer__button--secondary" href="mailto:support@ceatlas.co">Support</a>
                           <a className="site-footer__button site-footer__button--secondary" href="mailto:providers@ceatlas.co">Providers</a>
+                          <Link className="site-footer__button site-footer__button--secondary" href="/how-it-works">How it works</Link>
                           <div className="site-footer__socials" aria-label="CEAtlas social media">
                             {socialLinks.map((link) => (
                               <a

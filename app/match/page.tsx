@@ -8,8 +8,16 @@ export const metadata: Metadata = {
   description: "Find continuing education for two professional disciplines in the same destination and date window.",
 };
 
-export default async function MatchPage() {
+type MatchPageProps = { searchParams?: Promise<Record<string, string | string[] | undefined>> };
+
+export default async function MatchPage({ searchParams }: MatchPageProps) {
   const events = await getCruises();
+  const params = (await searchParams) || {};
+  const requestedFirst = Array.isArray(params.first) ? params.first[0] : params.first;
+  const requestedSecond = Array.isArray(params.second) ? params.second[0] : params.second;
+  const validSlugs = new Set(disciplines.map((discipline) => discipline.slug));
+  const initialFirst = requestedFirst && validSlugs.has(requestedFirst) ? requestedFirst : "dentistry";
+  const initialSecond = requestedSecond && validSlugs.has(requestedSecond) ? requestedSecond : "medicine";
   return (
     <div className="container match-page">
       <section className="match-hero">
@@ -20,7 +28,7 @@ export default async function MatchPage() {
           making either person’s education an afterthought.
         </p>
       </section>
-      <CeTripMatchClient disciplines={disciplines} events={events} />
+      <CeTripMatchClient disciplines={disciplines} events={events} initialFirst={initialFirst} initialSecond={initialSecond} />
     </div>
   );
 }

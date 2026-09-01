@@ -25,7 +25,7 @@ export default async function DisciplinePage({ params }: DisciplinePageProps) {
 
   return (
     <div className="container discipline-page">
-      <Link href="/#disciplines" className="discipline-page__back">← All disciplines</Link>
+      <Link href="/disciplines" className="discipline-page__back">← All disciplines</Link>
       <section className="discipline-page__hero" style={{ "--discipline-accent": discipline.accent } as React.CSSProperties}>
         <div>
           <p className="hero__eyebrow">{discipline.credential} on CEAtlas</p>
@@ -35,9 +35,7 @@ export default async function DisciplinePage({ params }: DisciplinePageProps) {
             {` ${discipline.name.toLowerCase()} professionals.`}
           </p>
           <div className="hero__actions">
-            <a href={`mailto:support@ceatlas.co?subject=${encodeURIComponent(`${discipline.name} CE early access`)}`} className="button">
-              Request early access
-            </a>
+            <Link href={`/match?first=${discipline.slug}&second=dentistry`} className="button">Try this discipline in Trip Match</Link>
             <Link href="/list-your-ce" className="button button--light">List CE in this discipline</Link>
           </div>
         </div>
@@ -49,6 +47,15 @@ export default async function DisciplinePage({ params }: DisciplinePageProps) {
             <li>Credits, price, format, and location</li>
             <li>Saved courses and travel planning</li>
           </ul>
+        </div>
+      </section>
+
+      <section className="discipline-preview-flow">
+        <div className="section-heading section-heading--stacked"><p className="hero__eyebrow hero__eyebrow--dark">The planned experience</p><h2>More than a list of courses.</h2></div>
+        <div className="discipline-preview-flow__grid">
+          <article className="card"><span>01</span><h3>Browse in your language</h3><p>Filter by {discipline.credential}, topic, provider, delivery format, and location.</p></article>
+          <article className="card"><span>02</span><h3>Understand the fit</h3><p>Compare credit details and renewal context while keeping provider verification front and center.</p></article>
+          <article className="card"><span>03</span><h3>Connect the trip</h3><p>Match this field with a partner’s discipline, save the best overlap, and plan travel together.</p></article>
         </div>
       </section>
 

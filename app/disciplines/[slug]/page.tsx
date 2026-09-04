@@ -4,6 +4,8 @@ import { notFound, redirect } from "next/navigation";
 import { disciplines, getDiscipline } from "@/lib/disciplines";
 import { getDisciplineIcon } from "@/lib/discipline-logo";
 import { disciplineProofGeneratedAt, getDisciplineProofCourses } from "@/lib/discipline-proof-courses";
+import { physicianCatalogCount, physicianCatalogFacets, physicianCatalogGeneratedAt, searchPhysicianCourses } from "@/lib/physician-courses";
+import { PhysicianCatalogClient } from "@/app/components/physician-catalog-client";
 
 type DisciplinePageProps = { params: Promise<{ slug: string }> };
 
@@ -16,7 +18,9 @@ export async function generateMetadata({ params }: DisciplinePageProps): Promise
   if (!discipline) return {};
   return {
     title: `${discipline.name} Continuing Education`,
-    description: `Explore the upcoming CEAtlas ${discipline.name} continuing education space.`,
+    description: discipline.slug === "medicine"
+      ? "Search 5,000 current, accredited physician CME activities by specialty, format, credit, and availability."
+      : `Explore the upcoming CEAtlas ${discipline.name} continuing education space.`,
     icons: {
       icon: [{ url: getDisciplineIcon(discipline.slug), sizes: "512x512", type: "image/png" }],
       shortcut: [{ url: getDisciplineIcon(discipline.slug), type: "image/png" }],
@@ -29,6 +33,12 @@ export default async function DisciplinePage({ params }: DisciplinePageProps) {
   if (!discipline) notFound();
   if (discipline.live) redirect("/courses");
   const proofCourses = getDisciplineProofCourses(discipline.slug);
+  const isMedicine = discipline.slug === "medicine";
+  const physicianInitial = isMedicine ? {
+    ...searchPhysicianCourses({ pageSize: 12 }),
+    facets: physicianCatalogFacets,
+    generatedAt: physicianCatalogGeneratedAt,
+  } : null;
   const refreshed = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(disciplineProofGeneratedAt));
 
   return (
@@ -37,9 +47,11 @@ export default async function DisciplinePage({ params }: DisciplinePageProps) {
       <section className="discipline-page__hero" style={{ "--discipline-accent": discipline.accent } as React.CSSProperties}>
         <div>
           <p className="hero__eyebrow">{discipline.credential} on CEAtlas</p>
-          <h1>Explore real {discipline.name} CE.</h1>
+          <h1>{isMedicine ? "Explore 5,000 accredited physician CME activities." : `Explore real ${discipline.name} CE.`}</h1>
           <p>
-            This early proof catalog is already pulling live listings from public provider sources. Browse a few real examples while we build the full discovery experience.
+            {isMedicine
+              ? "Search active physician CME from accredited providers, organized by specialty, format, credit, and availability."
+              : "This early proof catalog is already pulling live listings from public provider sources. Browse a few real examples while we build the full discovery experience."}
           </p>
           <div className="hero__actions">
             <Link href={`/match?first=${discipline.slug}&second=dentistry`} className="button">Try this discipline in Trip Match</Link>
@@ -47,8 +59,8 @@ export default async function DisciplinePage({ params }: DisciplinePageProps) {
           </div>
         </div>
         <div className="discipline-page__panel">
-          <p className="discipline-card__credential">Working proof of concept</p>
-          <h2>{proofCourses.length} current listings found</h2>
+          <p className="discipline-card__credential">{isMedicine ? "Live physician catalog" : "Working proof of concept"}</p>
+          <h2>{isMedicine ? physicianCatalogCount.toLocaleString() : proofCourses.length} current listings found</h2>
           <ul>
             {discipline.highlights.map((highlight) => <li key={highlight}>{highlight}</li>)}
             <li>Credits, price, format, and location</li>
@@ -57,7 +69,7 @@ export default async function DisciplinePage({ params }: DisciplinePageProps) {
         </div>
       </section>
 
-      <section className="discipline-proof-catalog">
+      {physicianInitial ? <PhysicianCatalogClient initial={physicianInitial} /> : <section className="discipline-proof-catalog">
         <div className="discipline-proof-catalog__heading">
           <div>
             <p className="hero__eyebrow hero__eyebrow--dark">Live scraper results</p>
@@ -88,7 +100,7 @@ export default async function DisciplinePage({ params }: DisciplinePageProps) {
           ))}
         </div>
         <p className="discipline-proof-catalog__note">Proof-stage data: always confirm eligibility, accreditation, dates, and credit directly with the provider.</p>
-      </section>
+      </section>}
 
       <section className="discipline-preview-flow">
         <div className="section-heading section-heading--stacked"><p className="hero__eyebrow hero__eyebrow--dark">The planned experience</p><h2>More than a list of courses.</h2></div>

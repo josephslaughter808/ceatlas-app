@@ -17,10 +17,10 @@ export default function DisciplinesPage() {
           <h1>Every discipline gets its own CE lens.</h1>
           <p>Requirements, credit language, providers, and specialties vary by profession. CEAtlas keeps those details distinct while connecting discovery, comparison, timing, place, and travel.</p>
         </div>
-        <div className="disciplines-hero__proof"><strong>9</strong><span>discipline experiences mapped</span><strong>1</strong><span>live dental catalog proving the model</span></div>
+        <div className="disciplines-hero__proof"><strong>9</strong><span>discipline experiences mapped</span><strong>5,000</strong><span>current physician CME activities</span></div>
       </section>
       <section className="discipline-section">
-        <div className="section-heading section-heading--stacked"><p className="hero__eyebrow hero__eyebrow--dark">Choose a field</p><h2>See the experience through a professional’s eyes.</h2><p className="discipline-section__intro">Dentistry is live. Every preview shows the planned taxonomy and connects into the cross-discipline trip experience.</p></div>
+        <div className="section-heading section-heading--stacked"><p className="hero__eyebrow hero__eyebrow--dark">Choose a field</p><h2>See the experience through a professional’s eyes.</h2><p className="discipline-section__intro">Dentistry is live, and Medicine now has a searchable 5,000-activity catalog. Every discipline connects into the cross-discipline trip experience.</p></div>
         <DisciplineExplorer disciplines={disciplines} />
       </section>
       <section className="discipline-platform-story">

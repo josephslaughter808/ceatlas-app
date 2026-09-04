@@ -956,6 +956,96 @@ button.auth-button {
   font-size: 0.82rem;
 }
 
+.physician-catalog {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 2.5rem;
+}
+
+.physician-catalog__filters {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) minmax(180px, 1fr) minmax(150px, 0.7fr) auto;
+  align-items: end;
+  gap: 0.85rem;
+  padding: 1rem;
+}
+
+.physician-catalog__filters label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.physician-catalog__filters label > span {
+  color: var(--color-primary);
+  font-size: 0.74rem;
+  font-weight: 850;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.physician-catalog__filters input,
+.physician-catalog__filters select {
+  width: 100%;
+  min-height: 3.1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 13px;
+  padding: 0.72rem 0.8rem;
+  background: white;
+  color: var(--color-text);
+  font: inherit;
+}
+
+.physician-catalog__status,
+.physician-catalog__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.physician-catalog__status span,
+.physician-catalog__pagination span {
+  color: var(--color-muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.physician-catalog__grid {
+  transition: opacity 160ms ease;
+}
+
+.physician-catalog__grid--loading {
+  opacity: 0.45;
+}
+
+.physician-catalog__grid .discipline-proof-card > div > p:last-child {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.physician-catalog__pagination {
+  justify-content: center;
+}
+
+.physician-catalog__pagination button:disabled,
+.physician-catalog__filters button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.physician-catalog__empty {
+  display: grid;
+  gap: 0.35rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.physician-catalog__empty p {
+  color: var(--color-muted);
+}
+
 .match-home-cta {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -3537,6 +3627,10 @@ button.auth-button {
   }
 
   .discipline-proof-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .physician-catalog__filters {
     grid-template-columns: 1fr;
   }
 

@@ -13,7 +13,8 @@
     "scrape:cruises": "node scrapers/scrape-cruises.js",
     "scrape:disciplines": "node scrapers/scrape-discipline-proofs.js",
     "scrape:physicians": "node scrapers/scrape-physician-cme.js",
-    "scrape:veterinary": "node scrapers/scrape-veterinary-ce.js"
+    "scrape:veterinary": "node scrapers/scrape-veterinary-ce.js",
+    "scrape:law": "node scrapers/scrape-law-cle.js"
   },
   "dependencies": {
     "@prisma/client": "^7.6.0",

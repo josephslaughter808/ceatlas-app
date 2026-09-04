@@ -7,6 +7,7 @@ import { disciplineProofGeneratedAt, getDisciplineProofCourses } from "@/lib/dis
 import { physicianCatalogCount, physicianCatalogFacets, physicianCatalogGeneratedAt, searchPhysicianCourses } from "@/lib/physician-courses";
 import { PhysicianCatalogClient } from "@/app/components/physician-catalog-client";
 import { searchVeterinaryCourses, veterinaryCatalogCount, veterinaryCatalogFacets, veterinaryCatalogGeneratedAt } from "@/lib/veterinary-courses";
+import { lawCatalogCount, lawCatalogFacets, lawCatalogGeneratedAt, searchLawCourses } from "@/lib/law-courses";
 
 type DisciplinePageProps = { params: Promise<{ slug: string }> };
 
@@ -22,6 +23,7 @@ export async function generateMetadata({ params }: DisciplinePageProps): Promise
     description: discipline.slug === "medicine"
       ? "Search 10,000 current, accredited physician CME activities by specialty, format, credit, and availability."
       : discipline.slug === "veterinary" ? "Search current AAVSB RACE-approved veterinary continuing education."
+      : discipline.slug === "law" ? "Search current continuing legal education by practice area and format."
       : `Explore the upcoming CEAtlas ${discipline.name} continuing education space.`,
     icons: {
       icon: [{ url: getDisciplineIcon(discipline.slug), sizes: "512x512", type: "image/png" }],
@@ -37,12 +39,14 @@ export default async function DisciplinePage({ params }: DisciplinePageProps) {
   const proofCourses = getDisciplineProofCourses(discipline.slug);
   const isMedicine = discipline.slug === "medicine";
   const isVeterinary = discipline.slug === "veterinary";
+  const isLaw = discipline.slug === "law";
   const physicianInitial = isMedicine ? {
     ...searchPhysicianCourses({ pageSize: 12 }),
     facets: physicianCatalogFacets,
     generatedAt: physicianCatalogGeneratedAt,
   } : null;
   const veterinaryInitial = isVeterinary ? { ...searchVeterinaryCourses({ pageSize: 12 }), facets: veterinaryCatalogFacets, generatedAt: veterinaryCatalogGeneratedAt } : null;
+  const lawInitial = isLaw ? { ...searchLawCourses({ pageSize: 12 }), facets: lawCatalogFacets, generatedAt: lawCatalogGeneratedAt } : null;
   const refreshed = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(disciplineProofGeneratedAt));
 
   return (
@@ -51,11 +55,12 @@ export default async function DisciplinePage({ params }: DisciplinePageProps) {
       <section className="discipline-page__hero" style={{ "--discipline-accent": discipline.accent } as React.CSSProperties}>
         <div>
           <p className="hero__eyebrow">{discipline.credential} on CEAtlas</p>
-          <h1>{isMedicine ? "Explore 10,000 accredited physician CME activities." : isVeterinary ? `Explore ${veterinaryCatalogCount.toLocaleString()} current RACE-approved veterinary CE activities.` : `Explore real ${discipline.name} CE.`}</h1>
+          <h1>{isMedicine ? "Explore 10,000 accredited physician CME activities." : isVeterinary ? `Explore ${veterinaryCatalogCount.toLocaleString()} current RACE-approved veterinary CE activities.` : isLaw ? `Explore ${lawCatalogCount.toLocaleString()} current CLE courses.` : `Explore real ${discipline.name} CE.`}</h1>
           <p>
             {isMedicine
               ? "Search active physician CME from accredited providers, organized by specialty, format, credit, and availability."
               : isVeterinary ? "Search verified veterinary education for veterinarians and veterinary technicians, plus destination and cruise CE."
+              : isLaw ? "Search currently published continuing legal education by practice area, provider, and format. Credit eligibility remains jurisdiction-specific."
               : "This early proof catalog is already pulling live listings from public provider sources. Browse a few real examples while we build the full discovery experience."}
           </p>
           <div className="hero__actions">
@@ -64,8 +69,8 @@ export default async function DisciplinePage({ params }: DisciplinePageProps) {
           </div>
         </div>
         <div className="discipline-page__panel">
-          <p className="discipline-card__credential">{isMedicine ? "Live physician catalog" : isVeterinary ? "Live veterinary catalog" : "Working proof of concept"}</p>
-          <h2>{isMedicine ? physicianCatalogCount.toLocaleString() : isVeterinary ? veterinaryCatalogCount.toLocaleString() : proofCourses.length} current listings found</h2>
+          <p className="discipline-card__credential">{isMedicine ? "Live physician catalog" : isVeterinary ? "Live veterinary catalog" : isLaw ? "Live legal catalog" : "Working proof of concept"}</p>
+          <h2>{isMedicine ? physicianCatalogCount.toLocaleString() : isVeterinary ? veterinaryCatalogCount.toLocaleString() : isLaw ? lawCatalogCount.toLocaleString() : proofCourses.length} current listings found</h2>
           <ul>
             {discipline.highlights.map((highlight) => <li key={highlight}>{highlight}</li>)}
             <li>Credits, price, format, and location</li>
@@ -74,7 +79,7 @@ export default async function DisciplinePage({ params }: DisciplinePageProps) {
         </div>
       </section>
 
-      {physicianInitial ? <PhysicianCatalogClient initial={physicianInitial} /> : veterinaryInitial ? <PhysicianCatalogClient initial={veterinaryInitial} discipline="veterinary" /> : <section className="discipline-proof-catalog">
+      {physicianInitial ? <PhysicianCatalogClient initial={physicianInitial} /> : veterinaryInitial ? <PhysicianCatalogClient initial={veterinaryInitial} discipline="veterinary" /> : lawInitial ? <PhysicianCatalogClient initial={lawInitial} discipline="law" /> : <section className="discipline-proof-catalog">
         <div className="discipline-proof-catalog__heading">
           <div>
             <p className="hero__eyebrow hero__eyebrow--dark">Live scraper results</p>

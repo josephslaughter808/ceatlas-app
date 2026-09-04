@@ -964,7 +964,7 @@ button.auth-button {
 
 .physician-catalog__filters {
   display: grid;
-  grid-template-columns: minmax(220px, 1.4fr) minmax(180px, 1fr) minmax(150px, 0.7fr) auto;
+  grid-template-columns: minmax(220px, 1.4fr) repeat(4, minmax(135px, 0.8fr)) auto;
   align-items: end;
   gap: 0.85rem;
   padding: 1rem;

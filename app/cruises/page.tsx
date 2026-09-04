@@ -3,7 +3,7 @@ import CruiseCatalogClient from "../components/cruise-catalog-client";
 import { getCruises } from "@/lib/cruises";
 
 export const metadata: Metadata = {
-  title: "Dental CE Cruises",
+  title: "Accredited Medical & Dental CE Cruises",
   icons: { icon: [{ url: "/discipline-logos/default.png?v=12", sizes: "512x512", type: "image/png" }] },
 };
 
@@ -34,10 +34,10 @@ export default async function CruisesPage() {
   return (
     <div className="container" style={{ paddingTop: "2rem" }}>
       <section className="page-header">
-        <h1>Dental CE Cruises</h1>
+        <h1>Accredited Medical & Dental CE Cruises</h1>
         <p>
-          Cruise CE is one of the strongest premium offers on the site, so this page now starts with live scraped
-          cruise programs and then shows the next providers we can add to deepen the catalog.
+          Browse current physician and dental CE sailings with accredited credit, then compare specialty, ship,
+          destination, departure date, and education provider in one place.
         </p>
       </section>
 

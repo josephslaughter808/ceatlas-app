@@ -1,6 +1,10 @@
 import { loadHTML } from '../../lib/fetch.js';
 
-const SCHEDULE_URL = 'https://www.continuingeducation.net/schedule.php?profession=Dentists';
+const SCHEDULES = [
+  { discipline: 'Medicine', url: 'https://www.continuingeducation.net/schedule.php?profession=Physician' },
+  { discipline: 'Dentistry', url: 'https://www.continuingeducation.net/schedule.php?profession=Dentists' },
+];
+const ACCREDITED_CREDIT = /(?:AMA\s+PRA\s+Category\s+1|ADA\s+CERP)/i;
 
 function cleanText(value = '') {
   return String(value)
@@ -114,40 +118,56 @@ async function scrapeCruiseDetail(url) {
 }
 
 export async function scrapeContinuingEducationCruises() {
-  const $ = await loadHTML(SCHEDULE_URL);
-  const itemList = firstJsonLdMatching($, (node) => node?.['@type'] === 'ItemList');
-  const items = itemList?.itemListElement || [];
+  const today = new Date().toISOString().slice(0, 10);
   const rows = [];
+  const seen = new Map();
 
-  for (const entry of items) {
-    const item = entry?.item;
-    if (!item?.url) continue;
-    try {
-      const detail = await scrapeCruiseDetail(item.url);
-      rows.push({
-        id: `cei-${entry.position || rows.length + 1}`,
-        provider_name: detail.providerName,
-        provider_url: detail.providerUrl,
-        title: detail.title,
-        description: detail.description,
-        topic: cleanText(item.name, 180),
-        start_date: detail.startDate,
-        end_date: detail.endDate,
-        ship: detail.ship,
-        itinerary: detail.itinerary,
-        credits_text: detail.creditsText,
-        audience: detail.audience,
-        instructor_display: detail.instructor,
-        card_price: detail.cardPrice,
-        detail_price: detail.detailPrice,
-        location: detail.location,
-        url: item.url,
-      });
-    } catch (error) {
-      console.log(`      ⚠️ Failed to load cruise detail ${item.url}: ${error.message}`);
+  for (const schedule of SCHEDULES) {
+    const $ = await loadHTML(schedule.url);
+    const itemList = firstJsonLdMatching($, (node) => node?.['@type'] === 'ItemList');
+    const items = itemList?.itemListElement || [];
+
+    for (const entry of items) {
+      const item = entry?.item;
+      if (!item?.url) continue;
+      const existing = seen.get(item.url);
+      if (existing) {
+        existing.disciplines = [...new Set([...existing.disciplines, schedule.discipline])];
+        continue;
+      }
+      try {
+        const detail = await scrapeCruiseDetail(item.url);
+        if (!detail.endDate || detail.endDate.slice(0, 10) < today) continue;
+        if (!ACCREDITED_CREDIT.test(detail.creditsText)) continue;
+        const row = {
+          id: `cei-${rows.length + 1}`,
+          provider_name: detail.providerName,
+          provider_url: detail.providerUrl,
+          title: detail.title,
+          description: detail.description,
+          topic: cleanText(item.name, 180),
+          start_date: detail.startDate,
+          end_date: detail.endDate,
+          ship: detail.ship,
+          itinerary: detail.itinerary,
+          credits_text: detail.creditsText,
+          audience: detail.audience,
+          instructor_display: detail.instructor,
+          card_price: detail.cardPrice,
+          detail_price: detail.detailPrice,
+          location: detail.location,
+          url: item.url,
+          disciplines: [schedule.discipline],
+          accreditation: detail.creditsText,
+        };
+        rows.push(row);
+        seen.set(item.url, row);
+      } catch (error) {
+        console.log(`      ⚠️ Failed to load cruise detail ${item.url}: ${error.message}`);
+      }
     }
   }
 
-  console.log(`   • Extracted ${rows.length} cruise programs from Continuing Education, Inc.`);
+  console.log(`   • Extracted ${rows.length} current accredited cruise programs from Continuing Education, Inc.`);
   return rows;
 }

@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: DisciplinePageProps): Promise
   return {
     title: `${discipline.name} Continuing Education`,
     description: discipline.slug === "medicine"
-      ? "Search 5,000 current, accredited physician CME activities by specialty, format, credit, and availability."
+      ? "Search 10,000 current, accredited physician CME activities by specialty, format, credit, and availability."
       : `Explore the upcoming CEAtlas ${discipline.name} continuing education space.`,
     icons: {
       icon: [{ url: getDisciplineIcon(discipline.slug), sizes: "512x512", type: "image/png" }],
@@ -47,7 +47,7 @@ export default async function DisciplinePage({ params }: DisciplinePageProps) {
       <section className="discipline-page__hero" style={{ "--discipline-accent": discipline.accent } as React.CSSProperties}>
         <div>
           <p className="hero__eyebrow">{discipline.credential} on CEAtlas</p>
-          <h1>{isMedicine ? "Explore 5,000 accredited physician CME activities." : `Explore real ${discipline.name} CE.`}</h1>
+          <h1>{isMedicine ? "Explore 10,000 accredited physician CME activities." : `Explore real ${discipline.name} CE.`}</h1>
           <p>
             {isMedicine
               ? "Search active physician CME from accredited providers, organized by specialty, format, credit, and availability."

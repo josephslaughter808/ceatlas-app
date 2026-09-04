@@ -1,12 +1,12 @@
 {
-  "scraped_at": "2026-09-04T14:40:47.476Z",
+  "scraped_at": "2026-09-04T14:50:36.146Z",
   "source": "https://www.cmepassport.org/activity/search",
-  "total_available": 38413,
-  "scanned": 5178,
-  "accepted": 5000,
+  "total_available": 38423,
+  "scanned": 10323,
+  "accepted": 10000,
   "rejected": {
-    "missing_physician_credit": 64,
-    "missing_registration_url": 62,
-    "duplicate": 52
+    "missing_physician_credit": 119,
+    "missing_registration_url": 107,
+    "duplicate": 97
   }
 }

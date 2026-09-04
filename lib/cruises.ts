@@ -19,6 +19,8 @@ export type CruiseRecord = {
   detail_price: string;
   location: string;
   url: string;
+  disciplines: string[];
+  accreditation: string;
 };
 
 function readCruisesFile() {

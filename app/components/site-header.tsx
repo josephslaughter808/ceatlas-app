@@ -15,7 +15,7 @@ export default function SiteHeader() {
   const pathname = usePathname();
   const returnTo = pathname || "/";
   const pathDiscipline = pathname?.match(/^\/disciplines\/([^/]+)/)?.[1];
-  const isDentalCatalog = Boolean(pathname?.match(/^\/(courses|cruises)(\/|$)/));
+  const isDentalCatalog = Boolean(pathname?.match(/^\/courses(\/|$)/));
   const activeDisciplineSlug = pathDiscipline || (isDentalCatalog ? "dentistry" : null);
   const activeDiscipline = getDiscipline(activeDisciplineSlug || "");
   const brandLogo = getDisciplineLogo(activeDisciplineSlug);

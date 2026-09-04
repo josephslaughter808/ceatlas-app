@@ -40,6 +40,7 @@ export default function CruiseCatalogClient({ cruises }: { cruises: CruiseRecord
   const [provider, setProvider] = useState("all");
   const [topic, setTopic] = useState("all");
   const [destination, setDestination] = useState("all");
+  const [discipline, setDiscipline] = useState("all");
   const [sortBy, setSortBy] = useState("date");
 
   const providerOptions = useMemo(
@@ -60,12 +61,18 @@ export default function CruiseCatalogClient({ cruises }: { cruises: CruiseRecord
     [cruises],
   );
 
+  const disciplineOptions = useMemo(
+    () => [...new Set(cruises.flatMap((cruise) => cruise.disciplines || []))].sort((a, b) => a.localeCompare(b)),
+    [cruises],
+  );
+
   const visibleCruises = useMemo(() => {
     const searchTerm = normalize(search);
 
     const filtered = cruises.filter((cruise) => {
       if (provider !== "all" && cruise.provider_name !== provider) return false;
       if (topic !== "all" && cruise.topic !== topic) return false;
+      if (discipline !== "all" && !(cruise.disciplines || []).includes(discipline)) return false;
 
       const cruiseDestination = cruise.location || cruise.itinerary || "";
       if (destination !== "all" && cruiseDestination !== destination) return false;
@@ -115,7 +122,7 @@ export default function CruiseCatalogClient({ cruises }: { cruises: CruiseRecord
 
       return parseTime(a.start_date) - parseTime(b.start_date);
     });
-  }, [cruises, destination, provider, search, sortBy, topic]);
+  }, [cruises, destination, discipline, provider, search, sortBy, topic]);
 
   return (
     <>
@@ -144,6 +151,11 @@ export default function CruiseCatalogClient({ cruises }: { cruises: CruiseRecord
               {option}
             </option>
           ))}
+        </select>
+
+        <select value={discipline} onChange={(event) => setDiscipline(event.target.value)} aria-label="Filter by discipline">
+          <option value="all">All disciplines</option>
+          {disciplineOptions.map((option) => <option key={option} value={option}>{option}</option>)}
         </select>
 
         <select

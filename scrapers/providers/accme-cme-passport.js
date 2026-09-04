@@ -144,7 +144,7 @@ async function fetchPage(skip, signal) {
   return payload;
 }
 
-export async function scrapeAccmePhysicianCme({ target = 5000, maxPages = 390, onProgress } = {}) {
+export async function scrapeAccmePhysicianCme({ target = 10000, maxPages = 390, onProgress } = {}) {
   const scrapedAt = new Date().toISOString();
   const today = scrapedAt.slice(0, 10);
   const accepted = [];

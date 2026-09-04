@@ -1,7 +1,7 @@
 import { writeFile } from 'node:fs/promises';
 import { scrapeAccmePhysicianCme } from './providers/accme-cme-passport.js';
 
-const target = Math.max(1, Number(process.argv.find((arg) => arg.startsWith('--target='))?.split('=')[1]) || 5000);
+const target = Math.max(1, Number(process.argv.find((arg) => arg.startsWith('--target='))?.split('=')[1]) || 10000);
 const outputUrl = new URL('../data/physician-courses.json', import.meta.url);
 const reportUrl = new URL('../data/physician-scrape-report.json', import.meta.url);
 

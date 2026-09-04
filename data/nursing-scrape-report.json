@@ -1,0 +1,16 @@
+{
+  "scraped_at": "2026-09-04T17:58:16.339Z",
+  "source": "https://courses.cebroker.com/search/fl/registered-nurse?tab=courses",
+  "source_totals": {
+    "Florida Registered Nurse": 33663
+  },
+  "providers_scanned": 1551,
+  "minimum": 10000,
+  "accepted": 32834,
+  "approval_scope": "Florida Registered Nurse",
+  "rejected": {
+    "expired": 0,
+    "unpublished": 571,
+    "missing_identity": 0
+  }
+}

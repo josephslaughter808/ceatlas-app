@@ -1,9 +1,9 @@
 {
-  "scraped_at": "2026-09-04T15:12:08.905Z",
+  "scraped_at": "2026-09-04T17:50:40.221Z",
   "source": "https://courses.cebroker.com/search/aavsb/veterinarian",
-  "accepted": 680,
+  "accepted": 4715,
   "rejected": {
-    "expired": 8145,
+    "expired": 676,
     "missing_identity": 0
   }
 }

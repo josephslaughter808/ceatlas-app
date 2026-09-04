@@ -7,6 +7,7 @@ export type PhysicianCourse = {
   description: string;
   course_type: string;
   format: string;
+  audience?: string;
   topic: string;
   credits: number | null;
   credits_text: string;
@@ -19,6 +20,9 @@ export type PhysicianCourse = {
     accme_activity_id?: string;
     registration?: string;
     is_moc?: boolean;
+    approval_scope?: string;
+    cebroker_offering_id?: string;
+    cebroker_course_id?: string;
   } | null;
 };
 

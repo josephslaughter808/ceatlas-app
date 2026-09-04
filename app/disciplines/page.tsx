@@ -20,7 +20,7 @@ export default function DisciplinesPage() {
         <div className="disciplines-hero__proof"><strong>9</strong><span>discipline experiences mapped</span><strong>10,000</strong><span>current physician CME activities</span></div>
       </section>
       <section className="discipline-section">
-        <div className="section-heading section-heading--stacked"><p className="hero__eyebrow hero__eyebrow--dark">Choose a field</p><h2>See the experience through a professional’s eyes.</h2><p className="discipline-section__intro">Dentistry, Medicine, Veterinary Medicine, and Law now have searchable catalogs. Every discipline connects into the cross-discipline trip experience.</p></div>
+        <div className="section-heading section-heading--stacked"><p className="hero__eyebrow hero__eyebrow--dark">Choose a field</p><h2>See the experience through a professional’s eyes.</h2><p className="discipline-section__intro">Dentistry, Medicine, Nursing, Veterinary Medicine, and Law now have searchable catalogs. Every discipline connects into the cross-discipline trip experience.</p></div>
         <DisciplineExplorer disciplines={disciplines} />
       </section>
       <section className="discipline-platform-story">

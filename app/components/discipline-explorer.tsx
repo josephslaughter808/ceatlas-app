@@ -33,7 +33,7 @@ export default function DisciplineExplorer({ disciplines }: { disciplines: Disci
 
       <div className="discipline-grid">
         {visible.map((discipline) => {
-          const hasCatalog = discipline.live || discipline.slug === "medicine" || discipline.slug === "veterinary" || discipline.slug === "law";
+          const hasCatalog = discipline.live || discipline.slug === "medicine" || discipline.slug === "veterinary" || discipline.slug === "law" || discipline.slug === "nursing";
           const href = discipline.live ? `/courses?discipline=${discipline.slug}` : `/disciplines/${discipline.slug}`;
           return (
             <Link

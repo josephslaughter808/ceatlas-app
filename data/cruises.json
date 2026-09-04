@@ -2141,5 +2141,28 @@
       "Dentistry"
     ],
     "accreditation": "12 ADA CERP Credits"
+  },
+  {
+    "id": "vetbolus-2027-08-07",
+    "provider_name": "VetBolus",
+    "provider_url": "https://vetbolus.com/",
+    "title": "VetBolus Alaska 2027 — Veterinary CE Cruise",
+    "description": "RACE-approved veterinary CE aboard the Royal Princess cruise from Seattle through Alaska. Dermatology and Emergency & Critical Care tracks. Conference registration separate from cruise reservation.",
+    "topic": "Veterinary Dermatology; Emergency & Critical Care",
+    "start_date": "2027-08-07",
+    "end_date": "2027-08-14",
+    "ship": "Royal Princess",
+    "itinerary": "Seattle | Juneau | Skagway | Glacier Bay | Ketchikan | Victoria | Seattle",
+    "credits_text": "15 RACE-approved CE hours",
+    "audience": "Veterinarians and Veterinary Technicians",
+    "instructor_display": "",
+    "card_price": "From $1125",
+    "detail_price": "Conference registration: $1125",
+    "location": "Alaska — round-trip Seattle, Washington",
+    "url": "https://vetbolus.com/alaska-2027/",
+    "disciplines": [
+      "Veterinary Medicine"
+    ],
+    "accreditation": "AAVSB RACE approved"
   }
 ]

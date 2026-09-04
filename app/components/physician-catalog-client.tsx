@@ -17,7 +17,8 @@ function readableDate(value: string) {
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
 }
 
-export function PhysicianCatalogClient({ initial }: { initial: CatalogResponse }) {
+export function PhysicianCatalogClient({ initial, discipline = "physician" }: { initial: CatalogResponse; discipline?: "physician" | "veterinary" }) {
+  const isVeterinary = discipline === "veterinary";
   const [result, setResult] = useState(initial);
   const [query, setQuery] = useState("");
   const [specialty, setSpecialty] = useState("");
@@ -31,7 +32,7 @@ export function PhysicianCatalogClient({ initial }: { initial: CatalogResponse }
       if (values.query) params.set("q", values.query);
       if (values.specialty) params.set("specialty", values.specialty);
       if (values.format) params.set("format", values.format);
-      const response = await fetch(`/api/physician-courses?${params}`);
+      const response = await fetch(`/api/${isVeterinary ? "veterinary" : "physician"}-courses?${params}`);
       if (!response.ok) throw new Error("Catalog search failed");
       setResult(await response.json());
     } finally {
@@ -45,12 +46,12 @@ export function PhysicianCatalogClient({ initial }: { initial: CatalogResponse }
   }
 
   return (
-    <section className="physician-catalog" aria-label="Physician CME catalog">
+    <section className="physician-catalog" aria-label={`${isVeterinary ? "Veterinary" : "Physician"} CE catalog`}>
       <div className="discipline-proof-catalog__heading">
         <div>
-          <p className="hero__eyebrow hero__eyebrow--dark">Accredited physician catalog</p>
-          <h2>Search {initial.total.toLocaleString()} active CME activities.</h2>
-          <p>Every listing below is active in ACCME CME Passport, has a future availability end date, and carries physician CME credit.</p>
+          <p className="hero__eyebrow hero__eyebrow--dark">Accredited {isVeterinary ? "veterinary" : "physician"} catalog</p>
+          <h2>Search {initial.total.toLocaleString()} active {isVeterinary ? "veterinary CE" : "CME"} activities.</h2>
+          <p>{isVeterinary ? "Every listing is current and comes from CE Broker’s official AAVSB RACE-approved catalog." : "Every listing below is active in ACCME CME Passport, has a future availability end date, and carries physician CME credit."}</p>
         </div>
         <span className="discipline-proof-catalog__refresh">Updated {readableDate(initial.generatedAt.slice(0, 10))}</span>
       </div>
@@ -59,7 +60,7 @@ export function PhysicianCatalogClient({ initial }: { initial: CatalogResponse }
         <label><span>Search</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Topic, course, or provider" /></label>
         <label><span>Specialty</span><select value={specialty} onChange={(event) => setSpecialty(event.target.value)}><option value="">All specialties</option>{initial.facets.specialties.map((item) => <option value={item} key={item}>{item}</option>)}</select></label>
         <label><span>Format</span><select value={format} onChange={(event) => setFormat(event.target.value)}><option value="">All formats</option>{initial.facets.formats.map((item) => <option value={item} key={item}>{item}</option>)}</select></label>
-        <button className="button" disabled={loading}>{loading ? "Searching…" : "Search CME"}</button>
+        <button className="button" disabled={loading}>{loading ? "Searching…" : `Search ${isVeterinary ? "CE" : "CME"}`}</button>
       </form>
 
       <div className="physician-catalog__status"><strong>{result.total.toLocaleString()} activities</strong><span>Page {result.page} of {result.pages}</span></div>
@@ -74,7 +75,7 @@ export function PhysicianCatalogClient({ initial }: { initial: CatalogResponse }
               <div><dt>Specialty</dt><dd>{course.topic}</dd></div>
               <div><dt>Where</dt><dd>{course.location}</dd></div>
             </dl>
-            <a className="discipline-proof-card__link" href={course.url} target="_blank" rel="noreferrer">View accredited CME <span aria-hidden="true">↗</span></a>
+            <a className="discipline-proof-card__link" href={course.url} target="_blank" rel="noreferrer">View accredited {isVeterinary ? "CE" : "CME"} <span aria-hidden="true">↗</span></a>
           </article>
         ))}
       </div>
@@ -84,8 +85,7 @@ export function PhysicianCatalogClient({ initial }: { initial: CatalogResponse }
         <span>Page {result.page.toLocaleString()} of {result.pages.toLocaleString()}</span>
         <button className="button button--light" disabled={loading || result.page >= result.pages} onClick={() => void load(result.page + 1)}>Next →</button>
       </div>
-      <p className="discipline-proof-catalog__note">Source: ACCME CME Passport. Verify registration availability and requirements with the accredited provider before enrolling.</p>
+      <p className="discipline-proof-catalog__note">Source: {isVeterinary ? "AAVSB RACE via CE Broker" : "ACCME CME Passport"}. Verify registration availability and jurisdiction requirements with the accredited provider before enrolling.</p>
     </section>
   );
 }
-

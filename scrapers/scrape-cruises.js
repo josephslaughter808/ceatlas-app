@@ -1,8 +1,9 @@
 import { scrapeContinuingEducationCruises } from './providers/cruises-continuingeducation.js';
+import { scrapeVetBolusCruises } from './providers/cruises-vetbolus.js';
 import { writeCruises } from './write-cruises.js';
 
 async function main() {
-  const cruises = await scrapeContinuingEducationCruises();
+  const cruises = [...await scrapeContinuingEducationCruises(), ...await scrapeVetBolusCruises()];
   writeCruises(cruises);
 }
 

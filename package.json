@@ -12,7 +12,8 @@
     "scrape:sync": "node scrapers/sync-db.js",
     "scrape:cruises": "node scrapers/scrape-cruises.js",
     "scrape:disciplines": "node scrapers/scrape-discipline-proofs.js",
-    "scrape:physicians": "node scrapers/scrape-physician-cme.js"
+    "scrape:physicians": "node scrapers/scrape-physician-cme.js",
+    "scrape:veterinary": "node scrapers/scrape-veterinary-ce.js"
   },
   "dependencies": {
     "@prisma/client": "^7.6.0",

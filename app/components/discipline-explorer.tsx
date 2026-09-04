@@ -33,11 +33,12 @@ export default function DisciplineExplorer({ disciplines }: { disciplines: Disci
 
       <div className="discipline-grid">
         {visible.map((discipline) => {
+          const hasCatalog = discipline.live || discipline.slug === "medicine" || discipline.slug === "veterinary";
           const href = discipline.live ? `/courses?discipline=${discipline.slug}` : `/disciplines/${discipline.slug}`;
           return (
             <Link
               href={href}
-              className={discipline.live ? "discipline-card discipline-card--live" : "discipline-card"}
+              className={hasCatalog ? "discipline-card discipline-card--live" : "discipline-card"}
               style={{ "--discipline-accent": discipline.accent } as React.CSSProperties}
               key={discipline.slug}
             >
@@ -45,8 +46,8 @@ export default function DisciplineExplorer({ disciplines }: { disciplines: Disci
                 <span className="discipline-card__mark">
                   <Image src={getDisciplineLogo(discipline.slug)} alt={getDisciplineLogoAlt(discipline)} width={44} height={44} />
                 </span>
-                <span className={discipline.live ? "discipline-status discipline-status--live" : "discipline-status"}>
-                  {discipline.live ? "Explore now" : "Preview"}
+                <span className={hasCatalog ? "discipline-status discipline-status--live" : "discipline-status"}>
+                  {hasCatalog ? "Explore now" : "Preview"}
                 </span>
               </div>
               <div>
@@ -55,7 +56,7 @@ export default function DisciplineExplorer({ disciplines }: { disciplines: Disci
                 <p>{discipline.description}</p>
               </div>
               <span className="discipline-card__link">
-                {discipline.live ? "Browse the catalog" : "Explore this discipline"}
+                {hasCatalog ? "Browse the catalog" : "Explore this discipline"}
                 <span aria-hidden="true">→</span>
               </span>
             </Link>

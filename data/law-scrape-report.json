@@ -1,7 +1,16 @@
 {
-  "scraped_at": "2026-09-04T15:20:48.794Z",
-  "source": "https://www.lawline.com/cle/courses",
-  "accepted": 2185,
+  "scraped_at": "2026-09-04T18:12:57.108Z",
+  "sources": {
+    "Lawline": 2185,
+    "BARBRI": 3269,
+    "NBI": 2574,
+    "PLI": 735,
+    "LexVid": 534,
+    "PBI": 747,
+    "Lorman": 75
+  },
+  "minimum": 10000,
+  "accepted": 10119,
   "rejected": {
     "duplicate": 0
   }

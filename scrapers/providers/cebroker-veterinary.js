@@ -7,7 +7,6 @@ const PROFESSIONS = [
   { id: 4352, audience: 'Veterinary Technicians' },
 ];
 const PAGE_SIZE = 500;
-const TARGET = 10000;
 const SOURCE_FIELDS = [
   'id', 'price', 'isFree', 'endDate', 'startDate', 'location',
   'course.id', 'course.name', 'course.description', 'course.deliveryMethod',
@@ -73,7 +72,7 @@ export async function scrapeVeterinaryCe({ onProgress } = {}) {
   for (const profession of PROFESSIONS) {
     let page = 1;
     let total = Infinity;
-    while (courses.size < TARGET && (page - 1) * PAGE_SIZE < total) {
+    while ((page - 1) * PAGE_SIZE < total) {
       const payload = await fetchPage(profession.id, page);
       total = Number(payload.totalItems) || 0;
       for (const offering of payload.items || []) {
@@ -110,7 +109,6 @@ export async function scrapeVeterinaryCe({ onProgress } = {}) {
           tags: ['Veterinary Medicine', 'RACE Approved', topic, format],
           metadata: { discipline: 'veterinary', cebroker_offering_id: key, cebroker_course_id: String(course.id), audiences: [profession.audience], scraped_at: scrapedAt },
         }));
-        if (courses.size >= TARGET) break;
       }
       onProgress?.({ audience: profession.audience, page, total, accepted: courses.size });
       if (!(payload.items || []).length) break;

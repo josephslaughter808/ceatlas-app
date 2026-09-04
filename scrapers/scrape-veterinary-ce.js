@@ -10,3 +10,4 @@ const { courses, report } = await scrapeVeterinaryCe({
 await writeFile(new URL('../data/veterinary-courses.json', import.meta.url), `${JSON.stringify({ generated_at: report.scraped_at, count: courses.length, courses })}\n`);
 await writeFile(new URL('../data/veterinary-scrape-report.json', import.meta.url), `${JSON.stringify(report, null, 2)}\n`);
 console.log(`Wrote ${courses.length.toLocaleString()} unique current RACE-approved veterinary activities.`);
+if (courses.length < 10000) console.warn(`Verified source inventory is below the 10,000-course goal (${courses.length.toLocaleString()} current unique activities).`);

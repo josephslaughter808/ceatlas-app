@@ -58,7 +58,7 @@ export function PhysicianCatalogClient({ initial, discipline = "physician" }: { 
         <div>
           <p className="hero__eyebrow hero__eyebrow--dark">Accredited {isVeterinary ? "veterinary" : isLaw ? "legal" : isNursing ? "nursing" : "physician"} catalog</p>
           <h2>Search {initial.total.toLocaleString()} active {isVeterinary ? "veterinary CE" : isLaw ? "CLE" : isNursing ? "nursing CE" : "CME"} activities.</h2>
-          <p>{isVeterinary ? "Every listing is current and comes from CE Broker’s official AAVSB RACE-approved catalog." : isLaw ? "Every listing is currently published in Lawline’s CLE catalog; eligible credit varies by jurisdiction." : isNursing ? "Every listing is currently published in CE Broker and pre-approved for its indicated Florida nursing profession. Always confirm eligibility for your own license." : "Every listing below is active in ACCME CME Passport, has a future availability end date, and carries physician CME credit."}</p>
+          <p>{isVeterinary ? "Every listing is current and comes from CE Broker’s official AAVSB RACE-approved catalog." : isLaw ? "Every listing is currently published by an established CLE provider; eligible credit remains jurisdiction-specific." : isNursing ? "Every listing is currently published in CE Broker and pre-approved for its indicated Florida nursing profession. Always confirm eligibility for your own license." : "Every listing below is active in ACCME CME Passport, has a future availability end date, and carries physician CME credit."}</p>
         </div>
         <span className="discipline-proof-catalog__refresh">Updated {readableDate(initial.generatedAt.slice(0, 10))}</span>
       </div>
@@ -95,7 +95,7 @@ export function PhysicianCatalogClient({ initial, discipline = "physician" }: { 
         <span>Page {result.page.toLocaleString()} of {result.pages.toLocaleString()}</span>
         <button className="button button--light" disabled={loading || result.page >= result.pages} onClick={() => void load(result.page + 1)}>Next →</button>
       </div>
-      <p className="discipline-proof-catalog__note">Source: {isVeterinary ? "AAVSB RACE via CE Broker" : isLaw ? "Lawline CLE" : isNursing ? "Florida Board-approved course search via CE Broker" : "ACCME CME Passport"}. Verify registration availability and jurisdiction requirements with the accredited provider before enrolling.</p>
+      <p className="discipline-proof-catalog__note">Source: {isVeterinary ? "AAVSB RACE via CE Broker" : isLaw ? "Lawline, BARBRI, NBI, PLI, LexVid, PBI, and Lorman" : isNursing ? "Florida Board-approved course search via CE Broker" : "ACCME CME Passport"}. Verify registration availability and jurisdiction requirements with the accredited provider before enrolling.</p>
     </section>
   );
 }

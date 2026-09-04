@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: DisciplinePageProps): Promise
     description: discipline.slug === "medicine"
       ? "Search 10,000 current, accredited physician CME activities by specialty, format, credit, and availability."
       : discipline.slug === "veterinary" ? "Search current AAVSB RACE-approved veterinary continuing education."
-      : discipline.slug === "law" ? "Search current continuing legal education by practice area and format."
+      : discipline.slug === "law" ? `Search ${lawCatalogCount.toLocaleString()} current continuing legal education activities by practice area and format.`
       : discipline.slug === "nursing" ? `Search ${nursingCatalogCount.toLocaleString()} current, board-approved nursing continuing education activities.`
       : `Explore the upcoming CEAtlas ${discipline.name} continuing education space.`,
     icons: {

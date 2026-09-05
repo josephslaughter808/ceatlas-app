@@ -34,6 +34,9 @@ export type TravelFlightOption = {
   returnOriginCode?: string | null;
   returnDestinationCode?: string | null;
   refundable?: boolean | null;
+  durationMinutes?: number | null;
+  destinationDistanceMiles?: number | null;
+  isEstimate?: boolean;
   metadata: Record<string, unknown>;
 };
 
@@ -51,6 +54,8 @@ export type TravelHotelOption = {
   currency: string | null;
   rating?: number | null;
   address?: string | null;
+  distanceToVenueMiles?: number | null;
+  isEstimate?: boolean;
   metadata: Record<string, unknown>;
 };
 

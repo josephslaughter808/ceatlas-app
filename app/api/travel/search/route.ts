@@ -9,11 +9,14 @@ import { getDuffelStatus, searchDuffelFlightOffers } from "@/lib/travel/provider
 import { summarizeSearchPricing } from "@/lib/travel/itinerary";
 import type { TravelFlightOption, TravelHotelOption, TravelSearchResponse } from "@/lib/travel/providers/types";
 import { toAmount } from "@/lib/travel/service-fees";
+import { getMetroAirportCodes } from "@/lib/travel/airport-lookup";
+import { buildDemoFlights, buildDemoHotels } from "@/lib/travel/demo-inventory";
 
 type TravelSearchRequest = {
   originCode?: string;
   originCodes?: string[];
   destinationCode?: string;
+  destinationCodes?: string[];
   hotelCityCode?: string;
   hotelCityName?: string;
   departureDate?: string;
@@ -67,6 +70,10 @@ export async function POST(request: Request) {
       .filter(Boolean)
   )];
   const destinationCode = String(body.destinationCode || "").trim().toUpperCase();
+  const destinationCodes = [...new Set([
+    ...getMetroAirportCodes(destinationCode),
+    ...(Array.isArray(body.destinationCodes) ? body.destinationCodes : []).map((value) => String(value || "").trim().toUpperCase()),
+  ].filter(Boolean))];
   const hotelCityCode = String(body.hotelCityCode || "").trim().toUpperCase();
   const hotelCityName = String(body.hotelCityName || "").trim();
   const departureDate = String(body.departureDate || "").trim();
@@ -106,14 +113,14 @@ export async function POST(request: Request) {
   let hotels: TravelHotelOption[] = [];
   let cars: TravelSearchResponse["cars"] = [];
 
-  const flightGroups = await Promise.all(requestedOrigins.map(async (currentOriginCode) => {
+  const flightGroups = await Promise.all(requestedOrigins.flatMap((currentOriginCode) => destinationCodes.map(async (currentDestinationCode) => {
     let originFlights: TravelFlightOption[] = [];
 
     if (duffelStatus.configured) {
       try {
         originFlights = (await searchDuffelFlightOffers({
           originCode: currentOriginCode,
-          destinationCode,
+          destinationCode: currentDestinationCode,
           departureDate,
           returnDate: returnDate || null,
           adults,
@@ -130,7 +137,7 @@ export async function POST(request: Request) {
       try {
         originFlights = toFallbackFlights(await searchFlightOffers({
           originCode: currentOriginCode,
-          destinationCode,
+          destinationCode: currentDestinationCode,
           departureDate,
           returnDate: returnDate || null,
           adults,
@@ -145,9 +152,21 @@ export async function POST(request: Request) {
     }
 
     return originFlights.slice(0, FLIGHTS_PER_ORIGIN_PAGE * FLIGHT_FETCH_PAGES);
-  }));
+  })));
 
   flights = flightGroups.flat();
+
+  if (flights.length === 0) {
+    flights = buildDemoFlights({
+      origins: requestedOrigins,
+      destinations: destinationCodes,
+      departureDate,
+      returnDate: returnDate || null,
+      adults,
+    });
+    duffelStatus.mode = "fallback";
+    duffelStatus.message = "Preview estimates are shown until live flight credentials are connected. Fares are not bookable quotes.";
+  }
 
   if (bookingHotelStatus.configured) {
     try {
@@ -178,6 +197,19 @@ export async function POST(request: Request) {
     } catch (error) {
       warnings.push(`Hotel fallback unavailable: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
+  }
+
+  if (hotels.length === 0) {
+    const start = new Date(`${departureDate}T00:00:00Z`);
+    const end = returnDate ? new Date(`${returnDate}T00:00:00Z`) : new Date(start.getTime() + 2 * 86_400_000);
+    const nights = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86_400_000));
+    hotels = buildDemoHotels({
+      cityCode: hotelCityCode || destinationCode,
+      cityName: hotelCityName || hotelCityCode || destinationCode,
+      nights,
+    });
+    bookingHotelStatus.mode = "fallback";
+    bookingHotelStatus.message = "Preview estimates are shown until live hotel credentials are connected. Rates are not bookable quotes.";
   }
 
   if (bookingCarStatus.configured) {

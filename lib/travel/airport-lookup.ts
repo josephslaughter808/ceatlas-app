@@ -130,6 +130,23 @@ const AIRPORT_TO_CITY_CODE: Record<string, string> = {
   NRT: "TYO",
 };
 
+const METRO_AIRPORTS: Record<string, string[]> = {
+  NYC: ["JFK", "LGA", "EWR"],
+  DFW: ["DFW", "DAL"],
+  CHI: ["ORD", "MDW"],
+  WAS: ["DCA", "IAD", "BWI"],
+  LON: ["LHR", "LGW", "LCY"],
+  YTO: ["YYZ", "YTZ"],
+  TYO: ["HND", "NRT"],
+};
+
+export function getMetroAirportCodes(cityOrAirportCode: string | null | undefined) {
+  const code = String(cityOrAirportCode || "").trim().toUpperCase();
+  if (!code) return [];
+  const cityCode = AIRPORT_TO_CITY_CODE[code] || code;
+  return METRO_AIRPORTS[cityCode] || [code];
+}
+
 const NON_DESTINATIONS = [
   "online",
   "self-paced",

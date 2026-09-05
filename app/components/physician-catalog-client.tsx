@@ -2,6 +2,8 @@
 
 import { FormEvent, useState } from "react";
 import type { PhysicianCourse } from "@/lib/physician-courses";
+import Link from "next/link";
+import { getCatalogCourseKey } from "@/lib/catalog-course-key";
 
 type CatalogResponse = {
   courses: PhysicianCourse[];
@@ -22,6 +24,7 @@ export function PhysicianCatalogClient({ initial, discipline = "physician" }: { 
   const isLaw = discipline === "law";
   const isNursing = discipline === "nursing";
   const catalogName = isVeterinary ? "veterinary" : isLaw ? "law" : isNursing ? "nursing" : "physician";
+  const detailDiscipline = isVeterinary ? "veterinary" : isLaw ? "law" : isNursing ? "nursing" : "medicine";
   const [result, setResult] = useState(initial);
   const [query, setQuery] = useState("");
   const [specialty, setSpecialty] = useState("");
@@ -85,7 +88,7 @@ export function PhysicianCatalogClient({ initial, discipline = "physician" }: { 
               {isNursing && <div><dt>Eligible for</dt><dd>{course.audience || "Florida nurses"}</dd></div>}
               <div><dt>Where</dt><dd>{course.location}</dd></div>
             </dl>
-            <a className="discipline-proof-card__link" href={course.url} target="_blank" rel="noreferrer">View accredited {isVeterinary || isNursing ? "CE" : isLaw ? "CLE" : "CME"} <span aria-hidden="true">↗</span></a>
+            <Link className="discipline-proof-card__link" href={`/disciplines/${detailDiscipline}/courses/${getCatalogCourseKey(course)}`}>View CEAtlas details <span aria-hidden="true">→</span></Link>
           </article>
         ))}
       </div>

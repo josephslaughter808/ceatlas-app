@@ -199,6 +199,8 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
   const [checkoutDraft, setCheckoutDraft] = useState<TravelCheckoutDraft | null>(null);
   const [savedItineraries, setSavedItineraries] = useState<TravelBookingRecord[]>([]);
   const [flightPagesByOrigin, setFlightPagesByOrigin] = useState<Record<string, number>>({});
+  const [flightSort, setFlightSort] = useState<"closest" | "fastest" | "cheapest">("cheapest");
+  const [hotelSort, setHotelSort] = useState<"closest" | "cheapest" | "rated">("closest");
 
   useEffect(() => {
     let cancelled = false;
@@ -334,14 +336,24 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
   }), [form.needsCar, selectedCar, selectedFlight, selectedHotel]);
   const flightsByOrigin = useMemo(() => {
     const grouped = new Map<string, TravelFlightOption[]>();
-    for (const flight of liveResults?.flights || []) {
+    const sortedFlights = [...(liveResults?.flights || [])].sort((a, b) => {
+      if (flightSort === "closest") return (a.destinationDistanceMiles ?? 999) - (b.destinationDistanceMiles ?? 999);
+      if (flightSort === "fastest") return (a.durationMinutes ?? 9999) - (b.durationMinutes ?? 9999);
+      return (a.totalAmount ?? Infinity) - (b.totalAmount ?? Infinity);
+    });
+    for (const flight of sortedFlights) {
       const key = flight.searchOriginCode || flight.originCode || form.departureAirport || "Origin";
       const bucket = grouped.get(key) || [];
       bucket.push(flight);
       grouped.set(key, bucket);
     }
     return [...grouped.entries()];
-  }, [form.departureAirport, liveResults?.flights]);
+  }, [flightSort, form.departureAirport, liveResults?.flights]);
+  const sortedHotels = useMemo(() => [...(liveResults?.hotels || [])].sort((a, b) => {
+    if (hotelSort === "closest") return (a.distanceToVenueMiles ?? 999) - (b.distanceToVenueMiles ?? 999);
+    if (hotelSort === "rated") return (b.rating ?? 0) - (a.rating ?? 0);
+    return (a.totalAmount ?? Infinity) - (b.totalAmount ?? Infinity);
+  }), [hotelSort, liveResults?.hotels]);
 
   function updateField<Key extends keyof PlannerFormState>(key: Key, value: PlannerFormState[Key]) {
     setForm((current) => ({
@@ -730,8 +742,8 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
 
       <section className="travel-results">
         <div className="section-heading">
-          <h2>Live Travel Results</h2>
-          <p>Flights come from Duffel when configured, hotels and cars come from Booking.com when configured, and CEAtlas refreshes the route automatically around your selected cart course.</p>
+          <h2>Travel Results</h2>
+          <p>CEAtlas refreshes the route automatically around your selected course. Clearly marked estimates demonstrate the full experience until supplier credentials are connected.</p>
         </div>
 
         {!liveResults ? (
@@ -758,6 +770,7 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
                   <h3>Flights</h3>
                   <span>{liveResults.flights.length} found</span>
                 </div>
+                <div className="travel-sort">{(["closest", "fastest", "cheapest"] as const).map((sort) => <button type="button" key={sort} className={flightSort === sort ? "is-active" : ""} onClick={() => { setFlightSort(sort); setFlightPagesByOrigin({}); }}>{sort}</button>)}</div>
                 <p className="travel-live-card__subhead">
                   Flights are being searched against the selected course window:
                   {" "}
@@ -812,6 +825,8 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
                                   <span>Return: one-way or not returned by supplier yet</span>
                                 )}
                                 <span>{flight.stops === 0 ? "Nonstop" : `${flight.stops || 0} stop${flight.stops === 1 ? "" : "s"}`}</span>
+                                {flight.durationMinutes ? <span>{Math.floor(flight.durationMinutes / 60)}h {flight.durationMinutes % 60}m · {flight.destinationDistanceMiles?.toFixed(1)} mi from arrival airport to venue</span> : null}
+                                {flight.isEstimate ? <span className="travel-estimate-label">Preview estimate</span> : null}
                                 <div className="travel-live-actions">
                                   <button type="button" className="travel-secondary" onClick={() => setSelectedFlightId(flight.id)}>
                                     {selectedFlightId === flight.id ? "Selected" : "Select"}
@@ -860,17 +875,20 @@ export default function TravelPlannerClient({ courses: initialCourses = [] }: Tr
                   <h3>Hotels</h3>
                   <span>{liveResults.hotels.length} found</span>
                 </div>
+                <div className="travel-sort">{(["closest", "cheapest", "rated"] as const).map((sort) => <button type="button" key={sort} className={hotelSort === sort ? "is-active" : ""} onClick={() => setHotelSort(sort)}>{sort === "rated" ? "highest rated" : sort}</button>)}</div>
                 {liveResults.hotels.length === 0 ? (
                   <p>No hotel results yet.</p>
                 ) : (
                   <div className="travel-live-list">
-                    {liveResults.hotels.map((hotel) => (
+                    {sortedHotels.map((hotel) => (
                       <div key={hotel.id} className={`travel-live-item ${selectedHotelId === hotel.id ? "travel-live-item--selected" : ""}`}>
                         <strong>{hotel.name}</strong>
                         <span>{hotel.cityName || hotel.cityCode || destination}</span>
                         {hotel.address ? <span>{hotel.address}</span> : null}
                         {hotel.rating ? <span>{hotel.rating.toFixed(1)} guest rating</span> : null}
+                        {hotel.distanceToVenueMiles != null ? <span>{hotel.distanceToVenueMiles.toFixed(1)} miles to course venue</span> : null}
                         <span>{formatMoney(hotel.totalAmount, hotel.currency || "USD")}</span>
+                        {hotel.isEstimate ? <span className="travel-estimate-label">Preview estimate</span> : null}
                         <div className="travel-live-actions">
                           <button type="button" className="travel-secondary" onClick={() => setSelectedHotelId(hotel.id)}>
                             {selectedHotelId === hotel.id ? "Selected" : "Select"}

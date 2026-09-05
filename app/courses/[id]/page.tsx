@@ -6,6 +6,7 @@ import { getCourseDetailLocation, getCourseVenueAddress } from "@/lib/course-loc
 import CompareButton from "@/app/components/compare-button";
 import CourseRatingPanel from "@/app/components/course-rating-panel";
 import SaveCourseButton from "@/app/components/save-course-button";
+import CourseTravelPreview from "@/app/components/course-travel-preview";
 
 type Params = Promise<{ id: string }>;
 
@@ -162,6 +163,16 @@ export default async function CourseDetailPage({
         </div>
         {providerLinks.length === 0 ? <p>No provider links are available for this course yet.</p> : null}
       </section>
+
+      {course.next_start_date && course.next_location && !/online|virtual|webinar|on[ -]?demand/i.test(course.next_location) ? (
+        <CourseTravelPreview
+          courseId={course.id}
+          title={course.title || "this course"}
+          location={course.next_location}
+          startDate={course.next_start_date}
+          endDate={course.next_end_date}
+        />
+      ) : null}
 
       <CourseRatingPanel
         courseId={course.id}

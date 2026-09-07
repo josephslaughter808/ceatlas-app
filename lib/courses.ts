@@ -9,6 +9,7 @@ import {
   getPublicSessionFormats,
 } from './db.js';
 import { unstable_cache } from 'next/cache';
+import dentalFallbackJson from '@/data/pending_courses.json';
 
 type CatalogRow = {
   id: string;
@@ -60,6 +61,15 @@ type CourseSearchParams = {
 };
 
 type ProviderFilterSource = Pick<CatalogRow, 'source_url' | 'registration_url' | 'metadata'>;
+
+type DentalFallbackRow = {
+  provider?: string; source_url?: string; url?: string; title?: string; description?: string;
+  course_type?: string; format?: string; topic?: string; credits?: number | null; credits_text?: string;
+  price?: string; price_amount?: number | null; start_date?: string; end_date?: string; location?: string;
+  city?: string; state?: string; country?: string; instructors?: string; accreditation?: string;
+  venue_address?: string; venue_latitude?: number | null; venue_longitude?: number | null; tags?: string[];
+  metadata?: Record<string, unknown> | null;
+};
 
 const TOPIC_BUCKETS: Array<{ label: string; patterns: RegExp[] }> = [
   { label: 'Endodontics', patterns: [/\bendo\b/i, /\bendodont/i, /\broot canal/i] },
@@ -313,6 +323,68 @@ function normalizeCourse(row: CatalogRow) {
   };
 }
 
+function fallbackId(row: DentalFallbackRow) {
+  const value = `${row.provider || ''}|${row.url || row.source_url || ''}|${row.title || ''}`;
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `dental-${(hash >>> 0).toString(36)}`;
+}
+
+function fallbackDate(value: string | undefined) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
+}
+
+function fallbackProviderWebsite(value: string | undefined) {
+  try { return value ? new URL(value).origin : null; } catch { return null; }
+}
+
+const dentalFallbackRows = (dentalFallbackJson as DentalFallbackRow[])
+  .map((row) => {
+    const startDate = fallbackDate(row.start_date);
+    const endDate = fallbackDate(row.end_date);
+    const format = row.format || row.course_type || null;
+    const evergreen = /online|webinar|on[ -]?demand|self[ -]?paced|evergreen|asynchronous/i.test(`${format || ''} ${row.location || ''}`);
+    const today = new Date().toISOString().slice(0, 10);
+    if ((endDate && endDate < today) || (!endDate && startDate && startDate < today && !evergreen)) return null;
+    if (!String(row.accreditation || '').trim()) return null;
+    return normalizeCourse({
+      id: fallbackId(row), provider_name: row.provider || null,
+      provider_website: fallbackProviderWebsite(row.url || row.source_url),
+      title: row.title || null, description: row.description || null,
+      category: row.course_type || null, topic: row.topic || null,
+      price: typeof row.price_amount === 'number' ? row.price_amount : null,
+      price_text: row.price || null, credits: typeof row.credits === 'number' ? row.credits : null,
+      credits_text: row.credits_text || null, source_url: row.source_url || row.url || null,
+      registration_url: row.url || row.source_url || null, tags: Array.isArray(row.tags) ? row.tags : [],
+      metadata: { ...(row.metadata || {}), instructors: row.instructors || null, accreditation: row.accreditation },
+      updated_at: null, next_session_id: null, next_start_date: startDate, next_end_date: endDate,
+      next_location: row.location || null, next_format: format, next_city: row.city || null,
+      next_state: row.state || null, next_country: row.country || null,
+      next_session_address: row.venue_address || null,
+      next_session_latitude: row.venue_latitude ?? null, next_session_longitude: row.venue_longitude ?? null,
+      session_count: 1, rating_average: null, rating_count: null,
+    });
+  })
+  .filter((row): row is ReturnType<typeof normalizeCourse> => Boolean(row));
+
+function getDentalFallbackRows(searchParams: CourseSearchParams = {}) {
+  const search = typeof searchParams.search === 'string' ? searchParams.search.trim() : '';
+  const providers = toList(searchParams.provider);
+  const formats = toList(searchParams.format);
+  const topics = toList(searchParams.topic);
+  const sortBy = typeof searchParams.sort === 'string' ? searchParams.sort.trim() : 'balanced';
+  return sortCourses(dentalFallbackRows
+    .filter((course) => matchesSearch(course, search))
+    .filter((course) => providers.length ? providers.includes(course.provider_filter_name || '') : true)
+    .filter((course) => formats.length ? formats.includes(course.next_format || '') : true)
+    .filter((course) => topics.length ? topics.some((topic) => course.topic_bucket === topic || course.topic_tags.includes(topic)) : true), sortBy);
+}
+
 export type CourseRecord = ReturnType<typeof normalizeCourse>;
 export type EventRecord = CourseRecord;
 
@@ -552,6 +624,8 @@ export async function getCoursesPage(
   const safePageSize = pageSize === 100 ? 100 : 50;
   const hasActiveFilters = hasActiveCatalogFilters(searchParams);
 
+  try {
+
   if (!hasActiveFilters) {
     const [{ rows }, stats] = await Promise.all([
       getPublicCourseCatalogPage(page, safePageSize, false),
@@ -587,6 +661,15 @@ export async function getCoursesPage(
     currentPage,
     pageSize: safePageSize,
   };
+  } catch (error) {
+    console.error('Primary dental catalog unavailable; serving verified fallback catalog.', error);
+    const rows = getDentalFallbackRows(searchParams);
+    const total = rows.length;
+    const totalPages = Math.max(1, Math.ceil(total / safePageSize));
+    const currentPage = Math.min(Math.max(page, 1), totalPages);
+    const start = (currentPage - 1) * safePageSize;
+    return { courses: rows.slice(start, start + safePageSize), total, totalPages, currentPage, pageSize: safePageSize };
+  }
 }
 
 export async function getFeaturedCourses(take = 6) {
@@ -640,10 +723,11 @@ export async function getCatalogOverview() {
 }
 
 export async function getCourseFilters() {
-  const [providerRows, sessionFormats] = await Promise.all([
-    getPublicCourseProviderFilterRows(),
-    getPublicSessionFormats(),
-  ]);
+  try {
+    const [providerRows, sessionFormats] = await Promise.all([
+      getPublicCourseProviderFilterRows(),
+      getPublicSessionFormats(),
+    ]);
 
   const formats = [...new Set(sessionFormats.map((format) => normalizeFormatLabel(String(format))).filter(Boolean))]
     .sort((a, b) => String(a).localeCompare(String(b)));
@@ -654,16 +738,24 @@ export async function getCourseFilters() {
     .filter(Boolean)
     .filter((provider) => !UNVERIFIED_EVENT_AGGREGATOR_LABELS.has(String(provider))))];
 
-  return {
-    providers: providerNames
-      .map((provider) => ({
-        provider,
-        provider_slug: String(provider).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
-      }))
-      .sort((a, b) => String(a.provider).localeCompare(String(b.provider))),
-    formats,
-    topics: normalizedTopics,
-  };
+    return {
+      providers: providerNames
+        .map((provider) => ({
+          provider,
+          provider_slug: String(provider).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
+        }))
+        .sort((a, b) => String(a.provider).localeCompare(String(b.provider))),
+      formats,
+      topics: normalizedTopics,
+    };
+  } catch (error) {
+    console.error('Primary dental filters unavailable; serving fallback filters.', error);
+    const providers = [...new Set(dentalFallbackRows.map((course) => course.provider_filter_name).filter(Boolean))]
+      .map((provider) => ({ provider: String(provider), provider_slug: String(provider).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') }))
+      .sort((a, b) => a.provider.localeCompare(b.provider));
+    const formats = [...new Set(dentalFallbackRows.map((course) => course.next_format).filter((format): format is string => Boolean(format)))].sort();
+    return { providers, formats, topics: TOPIC_BUCKETS.map((bucket) => bucket.label).sort() };
+  }
 }
 
 export function getDefaultCourseFilters() {
@@ -676,6 +768,11 @@ export function getDefaultCourseFilters() {
 }
 
 export async function getCourseById(id: string) {
-  const rows: Array<ReturnType<typeof normalizeCourse>> = await getNormalizedCatalog();
-  return rows.find((row: ReturnType<typeof normalizeCourse>) => row.id === id) || null;
+  try {
+    const rows: Array<ReturnType<typeof normalizeCourse>> = await getNormalizedCatalog();
+    return rows.find((row: ReturnType<typeof normalizeCourse>) => row.id === id) || dentalFallbackRows.find((row) => row.id === id) || null;
+  } catch (error) {
+    console.error('Primary dental course detail unavailable; checking fallback catalog.', error);
+    return dentalFallbackRows.find((row) => row.id === id) || null;
+  }
 }

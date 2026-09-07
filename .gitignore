@@ -14,6 +14,9 @@
 # testing
 /coverage
 /tmp/
+/.pitch-build/
+/.codex-finalizer/
+/outputs/CEAtlas_Friends_and_Family_Investor_Deck.pptx
 
 # next.js
 /.next/

@@ -673,13 +673,18 @@ export async function getCoursesPage(
 }
 
 export async function getFeaturedCourses(take = 6) {
-  const safeTake = Math.max(take, 24);
-  const { rows } = await getPublicCourseCatalogPage(1, safeTake);
-  const normalized = rows
-    .map((row: CatalogRow) => normalizeCourse(row as CatalogRow))
-    .filter(shouldIncludeCatalogCourse);
+  try {
+    const safeTake = Math.max(take, 24);
+    const { rows } = await getPublicCourseCatalogPage(1, safeTake);
+    const normalized = rows
+      .map((row: CatalogRow) => normalizeCourse(row as CatalogRow))
+      .filter(shouldIncludeCatalogCourse);
 
-  return normalized.slice(0, take);
+    return normalized.slice(0, take);
+  } catch (error) {
+    console.error('Featured catalog unavailable; serving local catalog.', error);
+    return getDentalFallbackRows().slice(0, take);
+  }
 }
 
 export async function getCoursesByIds(ids: string[]) {
@@ -713,13 +718,22 @@ export async function getCoursesByIds(ids: string[]) {
 }
 
 export async function getCatalogOverview() {
-  const stats = await getCatalogStats();
+  try {
+    const stats = await getCatalogStats();
 
-  return {
-    courseCount: stats.courses,
-    providerCount: stats.providers,
-    formatCount: 40,
-  };
+    return {
+      courseCount: stats.courses,
+      providerCount: stats.providers,
+      formatCount: 40,
+    };
+  } catch (error) {
+    console.error('Catalog stats unavailable; serving local catalog totals.', error);
+    return {
+      courseCount: dentalFallbackRows.length,
+      providerCount: new Set(dentalFallbackRows.map((course) => course.provider_name).filter(Boolean)).size,
+      formatCount: new Set(dentalFallbackRows.map((course) => course.next_format).filter(Boolean)).size,
+    };
+  }
 }
 
 export async function getCourseFilters() {

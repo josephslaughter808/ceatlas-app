@@ -25,18 +25,25 @@ export default function SiteHeader() {
   }
 
   return (
-    <nav className="site-nav">
-      <div className="site-brand">
+    <nav className="site-nav" aria-label="Main navigation">
+      <Link href="/" className="site-brand">
         <Image src={brandLogo} alt={getDisciplineLogoAlt(activeDiscipline)} width={72} height={72} priority />
         <div className="site-brand__text">
-          <span>{activeDiscipline ? `${activeDiscipline.shortName} CE Explorer` : "Continuing Education Explorer"}</span>
           <strong>CEAtlas</strong>
+          <span>{activeDiscipline ? `${activeDiscipline.shortName} CE` : "Learn. Travel. Grow."}</span>
         </div>
-      </div>
+      </Link>
 
       <div className="site-nav__right">
+        <div className="site-links">
+          <Link href="/courses">Explore CE</Link>
+          <Link href="/disciplines">Professions</Link>
+          <Link href="/match">Trip Match</Link>
+          <Link href="/travel">Plan travel</Link>
+          <Link href="/how-it-works">How it works</Link>
+        </div>
         <div className="auth-actions">
-          <Link href="/travel" className="auth-button auth-button--icon" aria-label="Open cart" title="Open cart">
+          <Link href="/travel" className="auth-button auth-button--icon" aria-label="Open trip plan" title="Open trip plan">
             <span className="auth-button__icon-wrap" aria-hidden="true">
               <svg viewBox="0 0 24 24" className="auth-button__icon">
                 <path d="M3.5 5.5h2.1l1.6 8.1a1 1 0 0 0 .98.8h8.95a1 1 0 0 0 .97-.76l1.58-6.14H7.2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -60,21 +67,6 @@ export default function SiteHeader() {
               <Link href={`/account?mode=signup&returnTo=${encodeURIComponent(returnTo)}`} className="auth-button auth-button--primary">Sign up</Link>
             </>
           )}
-        </div>
-
-        <div className="site-links">
-          <Link href="/">Home</Link>
-          <Link href="/disciplines">Disciplines</Link>
-          <Link href="/match">Trip Match</Link>
-          <Link href="/how-it-works">How it works</Link>
-          <Link href="/courses">Courses</Link>
-          <Link href="/saved">Saved</Link>
-          <Link href="/compare">Compare</Link>
-          <Link href="/travel">Travel</Link>
-          <Link href="/packages">Packages</Link>
-          <Link href="/cruises">Cruises</Link>
-          <Link href="/list-your-ce">List your CE</Link>
-          <Link href="/contact">Contact</Link>
         </div>
       </div>
     </nav>

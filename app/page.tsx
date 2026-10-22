@@ -1,114 +1,64 @@
 import Link from "next/link";
-import HomeStatsClient from "./components/home-stats-client";
+import HomeExplorer from "./components/home-explorer";
 import HomeFeaturedCoursesClient from "./components/home-featured-courses-client";
-import DisciplineExplorer from "./components/discipline-explorer";
 import { getCatalogOverview, getFeaturedCourses } from "@/lib/courses";
-import { disciplines } from "@/lib/disciplines";
 
 export const revalidate = 600;
 
+const pathways = [
+  { icon: "◎", title: "Explore the map", copy: "See in-person CE by city and turn the globe into your course catalog.", href: "/courses", cta: "Browse destinations" },
+  { icon: "✈", title: "Build a CE trip", copy: "Pair a course with flight, hotel, and ground travel options in one itinerary.", href: "/travel", cta: "Plan your trip" },
+  { icon: "⇄", title: "Match two careers", copy: "Find overlapping dates and destinations for you and a travel partner.", href: "/match", cta: "Try Trip Match" },
+];
+
 export default async function HomePage() {
-  const [statsResult, featuredCoursesResult] = await Promise.allSettled([
-    getCatalogOverview(),
-    getFeaturedCourses(6),
-  ]);
-  const stats = statsResult.status === "fulfilled"
-    ? statsResult.value
-    : { courseCount: 0, providerCount: 0, formatCount: 40 };
-  const featuredCourses = featuredCoursesResult.status === "fulfilled"
-    ? featuredCoursesResult.value
-    : [];
+  const [statsResult, featuredResult] = await Promise.allSettled([getCatalogOverview(), getFeaturedCourses(3)]);
+  const stats = statsResult.status === "fulfilled" ? statsResult.value : { courseCount: 0, providerCount: 0, formatCount: 40 };
+  const featured = featuredResult.status === "fulfilled" ? featuredResult.value : [];
 
   return (
-    <div className="container home-page">
-      <section className="hero">
-        <div className="hero__copy">
-          <p className="hero__eyebrow">Continuing education, mapped for you</p>
-          <h1>Your profession. Your credits. One place to explore.</h1>
-          <p>
-            Choose your discipline to find continuing education by topic, provider, format, and location. Dentistry is
-            live today, with more professional catalogs taking shape next.
-          </p>
-          <div className="hero__actions">
-            <Link href="#disciplines" className="button">Choose your discipline</Link>
-            <Link href="/match" className="button button--light">Match a CE trip</Link>
-          </div>
-        </div>
+    <main className="atlas-home">
+      <div className="container"><HomeExplorer /></div>
 
-        <HomeStatsClient
-          stats={{
-            courses: stats.courseCount,
-            providers: stats.providerCount,
-            formatCount: stats.formatCount,
-          }}
-        />
-      </section>
-
-      <section className="home-section match-home-cta card">
-        <div className="match-home-cta__visual" aria-hidden="true"><span>De</span><i /><span>Md</span></div>
-        <div>
-          <p className="hero__eyebrow hero__eyebrow--dark">Planning with a partner?</p>
-          <h2>Find two careers in the same place at the same time.</h2>
-          <p>Pair disciplines, compare overlapping CE windows, and turn separate professional requirements into one shared trip.</p>
-        </div>
-        <Link href="/match" className="button">Try CE Trip Match</Link>
-      </section>
-
-      <section className="home-section discipline-section" id="disciplines">
-        <div className="section-heading section-heading--stacked">
-          <p className="hero__eyebrow hero__eyebrow--dark">Explore by discipline</p>
-          <h2>Start with the credentials that matter to your career.</h2>
-          <p className="discipline-section__intro">
-            Select a field to enter its CE space. Preview disciplines show what we’re building and let you help shape what launches next.
-          </p>
-        </div>
-        <DisciplineExplorer disciplines={disciplines} />
-      </section>
-
-      <section className="home-section home-section--centered">
-        <div className="section-heading section-heading--stacked">
-          <p className="hero__eyebrow hero__eyebrow--dark">Built for working professionals</p>
-          <h2>Built to make CE discovery feel clear, fast, and worth your time.</h2>
-        </div>
-        <div className="home-grid">
-          <div className="card home-feature-card">
-            <h3>Compare Options Side by Side</h3>
-            <p>See topics, providers, prices, locations, and formats together instead of bouncing between dozens of provider websites.</p>
-          </div>
-          <div className="card home-feature-card">
-            <h3>Plan CE Around Real Life</h3>
-            <p>Use CEAtlas to narrow choices by specialty, save favorites, and build a trip around conferences, cruises, and destination courses.</p>
-          </div>
-          <div className="card home-feature-card">
-            <h3>Stay Focused on What Matters</h3>
-            <p>Spend less time hunting through scattered calendars and more time choosing the CE that actually fits your practice and goals.</p>
-          </div>
+      <section className="atlas-proof">
+        <div className="container atlas-proof__inner">
+          <div><strong>{stats.courseCount ? stats.courseCount.toLocaleString() : "1,000+"}</strong><span>courses indexed</span></div>
+          <i />
+          <div><strong>{stats.providerCount ? stats.providerCount.toLocaleString() : "250+"}</strong><span>trusted providers</span></div>
+          <i />
+          <div><strong>5</strong><span>professions and growing</span></div>
+          <p>One search. A world of CE.</p>
         </div>
       </section>
 
-      <section className="home-section launch-cta card">
-        <div>
-          <p className="hero__eyebrow">For Providers</p>
-          <h2>Get your CE in front of professionals who are actively looking.</h2>
-          <p>
-            If you run CE, conferences, or hands-on training, CEAtlas can help the right audience discover your
-            courses, compare them confidently, and plan around your events.
-          </p>
+      <section className="container atlas-section">
+        <div className="atlas-section__heading">
+          <div><span className="atlas-kicker atlas-kicker--dark">Everything for the journey</span><h2>From requirement to reservation.</h2></div>
+          <p>Stop juggling course directories, maps, and travel tabs. CEAtlas keeps the whole decision in view.</p>
         </div>
-        <Link href="/list-your-ce" className="button">List your CE</Link>
+        <div className="atlas-pathways">
+          {pathways.map((item, index) => (
+            <Link className={`atlas-pathway atlas-pathway--${index + 1}`} href={item.href} key={item.title}>
+              <span className="atlas-pathway__icon">{item.icon}</span>
+              <span className="atlas-pathway__number">0{index + 1}</span>
+              <h3>{item.title}</h3><p>{item.copy}</p><strong>{item.cta} →</strong>
+            </Link>
+          ))}
+        </div>
       </section>
 
-      <section className="home-section">
-        <div className="section-heading">
-          <div>
-            <p className="featured-discipline-label">Now exploring: Dentistry</p>
-            <h2>Featured Dental CE Right Now</h2>
-          </div>
-          <Link href="/courses">See all courses</Link>
+      <section className="container atlas-featured">
+        <div className="atlas-section__heading">
+          <div><span className="atlas-kicker atlas-kicker--dark">Worth the trip</span><h2>Upcoming courses to put on your map.</h2></div>
+          <Link href="/courses" className="atlas-text-link">View all courses →</Link>
         </div>
-
-        <HomeFeaturedCoursesClient courses={featuredCourses} />
+        <HomeFeaturedCoursesClient courses={featured} />
       </section>
-    </div>
+
+      <section className="container atlas-final-cta">
+        <div><span className="atlas-kicker">Your next CE trip starts here</span><h2>Credit earned.<br />World explored.</h2></div>
+        <div><p>Save courses, compare options, and build the full journey when you’re ready.</p><Link className="atlas-cta-light" href="/courses">Start exploring <span>→</span></Link></div>
+      </section>
+    </main>
   );
 }

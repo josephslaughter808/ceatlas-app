@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import { AuthProvider } from "./components/auth-provider";
 import { CompareProvider } from "./components/compare-provider";
@@ -10,16 +9,6 @@ import { TravelPlannerProvider } from "./components/travel-planner-provider";
 import { TripCartProvider } from "./components/trip-cart-provider";
 import "leaflet/dist/leaflet.css";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://ceatlas.co";
 const siteDescription =
@@ -131,7 +120,7 @@ export default function RootLayout({
 
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
@@ -145,9 +134,8 @@ export default function RootLayout({
                   <div className="site-shell">
                     <div className="beta-banner">
                       <div className="container beta-banner__inner">
-                        <strong>CEAtlas beta</strong>
-                        <span>Verify CE eligibility, registration status, price, and state-board fit with the provider before enrolling.</span>
-                        <Link href="/contact">Send feedback</Link>
+                        <span>✦ CEAtlas is growing beyond dentistry</span>
+                        <Link href="/disciplines">See what’s new →</Link>
                       </div>
                     </div>
 

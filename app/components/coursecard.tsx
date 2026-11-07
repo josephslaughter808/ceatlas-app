@@ -105,7 +105,7 @@ export default function CourseCard({ course }: { course: Course }) {
 
       <div className="course-catalog-row__details">
         <strong><span className="course-catalog-row__status" aria-hidden="true" />{attendance}</strong>
-        <span>Hosted by {course.provider_name || 'provider pending'}</span>
+        <span>{course.provider_name || 'Provider pending'}</span>
         <div className="course-catalog-row__tools">
           <TripCartButton courseId={course.id} />
           <SaveCourseButton courseId={course.id} />
@@ -128,7 +128,7 @@ export default function CourseCard({ course }: { course: Course }) {
             priceText: price,
             ratingAverage: course.rating_average,
             ratingCount: course.rating_count,
-            details: [`${attendance} • Hosted by ${course.provider_name || 'provider pending'}`],
+            details: [`${attendance} • ${course.provider_name || 'Provider pending'}`],
             href: `/courses/${course.id}`,
           }}
         />

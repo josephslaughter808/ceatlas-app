@@ -51,6 +51,7 @@ import { scrapeHinman } from './providers/hinman.js';
 import { scrapeIowa } from './providers/iowa.js';
 import { scrapeIvoclar } from './providers/ivoclar.js';
 import { scrapeKuraray } from './providers/kuraray.js';
+import { scrapeKois } from './providers/kois.js';
 import { scrapeLLU } from './providers/llu.js';
 import { scrapeMarylandMSDA } from './providers/maryland.js';
 import { scrapeMyDentalCE } from './providers/mydentalce.js';
@@ -69,6 +70,7 @@ import { scrapeDentsply } from './providers/dentsply.js';
 import { scrapePikos } from './providers/pikos.js';
 import { scrapePDC } from './providers/pdc.js';
 import { scrapeSpear } from './providers/spear.js';
+import { scrapeDawson } from './providers/dawson.js';
 import { scrapeStraumannSeeded } from './providers/straumann-seeded.js';
 import { scrapeAnthogyrSeeded } from './providers/anthogyr-seeded.js';
 import {
@@ -405,6 +407,14 @@ async function scrapeProvider(providerUrl) {
 
   if (hostname.includes('campus.speareducation.com') || hostname.includes('speareducation.com')) {
     return scrapeSpear(providerUrl.includes('campus.speareducation.com') ? providerUrl : 'https://campus.speareducation.com/calendar/');
+  }
+
+  if (hostname.includes('koiscenter.com')) {
+    return scrapeKois();
+  }
+
+  if (hostname.includes('thedawsonacademy.com')) {
+    return scrapeDawson();
   }
 
   if (hostname.includes('facialesthetics.org')) {

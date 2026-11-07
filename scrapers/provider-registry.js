@@ -1,6 +1,8 @@
 import { scrapeAGD } from './providers/agd.js';
 import { scrapeCDOCS } from './providers/cdocs.js';
+import { scrapeDawson } from './providers/dawson.js';
 import { scrapeGlidewell } from './providers/glidewell.js';
+import { scrapeKois } from './providers/kois.js';
 import { scrapeSpear } from './providers/spear.js';
 
 export const PRIORITY_PROVIDERS = [
@@ -30,6 +32,22 @@ export const PRIORITY_PROVIDERS = [
     matches: (url) => new URL(url).hostname.includes('cdocs.com'),
     minimumRows: 3,
     scrape: (url) => scrapeCDOCS(url),
+  },
+  {
+    key: 'kois',
+    name: 'Kois Center',
+    urls: ['https://www.koiscenter.com/courses/'],
+    matches: (url) => new URL(url).hostname.includes('koiscenter.com'),
+    minimumRows: 3,
+    scrape: () => scrapeKois(),
+  },
+  {
+    key: 'dawson',
+    name: 'The Dawson Academy',
+    urls: ['https://thedawsonacademy.com/calendar/'],
+    matches: (url) => new URL(url).hostname.includes('thedawsonacademy.com'),
+    minimumRows: 3,
+    scrape: () => scrapeDawson(),
   },
   {
     key: 'glidewell',

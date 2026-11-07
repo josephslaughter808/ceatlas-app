@@ -92,6 +92,51 @@ function courseLikelyOnline(url = '', title = '') {
   return /\bvirtual\b|\bonline\b|\bon-demand\b|\bbruxism\b|\bsleep medicine\b/.test(text);
 }
 
+function canonicalFormat(value = '', fallback = 'In Person') {
+  const text = cleanText(value).toLowerCase();
+  if (/\b(on[- ]?demand|online|virtual)\b/.test(text) && /\b(live patient|hands[- ]?on|in person)\b/.test(text)) return 'Hybrid';
+  if (/\b(online|virtual|webinar|on[- ]?demand|self[- ]?paced)\b/.test(text)) return 'Online';
+  if (/\b(hybrid)\b/.test(text)) return 'Hybrid';
+  if (/\b(in person|live|hands[- ]?on|classroom)\b/.test(text) && text.length <= 80) return 'In Person';
+  return fallback;
+}
+
+function aafeCredits($, extracted = '') {
+  const bodyText = cleanText($('body').text());
+  const designated = bodyText.match(/designates each of these individual activities for\s+(\d+(?:\.\d+)?)\s+continuing education credits/i);
+  if (designated) return `${designated[1]} CE Credits`;
+  return extracted;
+}
+
+function aafePrice(extracted = '') {
+  const price = cleanText(extracted, 120);
+  if (/^free$/i.test(price)) return 'See provider';
+  return price;
+}
+
+function canonicalCourseType(value = '') {
+  const text = cleanText(value, 120);
+  if (!text || /prerequisite|must be completed|on-demand module/i.test(text)) return 'Live Patient Training';
+  return text;
+}
+
+function aafeRequirements($, extracted = '') {
+  const bodyText = cleanText($('body').text());
+  const requirements = [];
+
+  if (/Prepare On-Demand Module must be completed as a prerequisite/i.test(bodyText)) {
+    requirements.push('Complete the AAFE Prepare On-Demand Module before attending the live patient hands-on session. Access to the module is provided after registration.');
+  }
+
+  const experienceMatch = bodyText.match(/Prerequisite for this course\s+(.{40,900}?)(?=Using hyperdilute|Model Patients|Course Agenda|Find a Class|Course Objectives)/i);
+  if (experienceMatch) requirements.push(cleanText(experienceMatch[1], 700));
+
+  const existing = cleanText(extracted, 700);
+  if (existing && !/^prerequisite for this course$/i.test(existing)) requirements.push(existing);
+
+  return [...new Set(requirements)].join(' ');
+}
+
 async function fetchPaged(endpoint, options = {}) {
   const {
     perPage = 100,
@@ -151,6 +196,9 @@ async function scrapeCoursePage(url, fallback = {}) {
     pageUrl: url,
   });
 
+  const fallbackFormat = courseLikelyOnline(url, fallback.title) ? 'Online' : 'In Person';
+  const format = canonicalFormat(extracted.format, fallbackFormat);
+
   return normalizeCourse({
     ...extracted,
     provider: AAFE_PROVIDER,
@@ -158,15 +206,19 @@ async function scrapeCoursePage(url, fallback = {}) {
     source_url: AAFE_SOURCE_URL,
     url,
     title: cleanText(extracted.title, 250) || cleanText(fallback.title, 250),
-    format: cleanText(extracted.format, 80) || (courseLikelyOnline(url, fallback.title) ? 'Online' : 'In Person'),
-    course_type: cleanText(extracted.course_type, 120) || 'Course',
+    format,
+    course_type: canonicalCourseType(extracted.course_type),
     topic: cleanText(extracted.topic, 120) || cleanText(fallback.topic, 120),
+    credits: null,
+    credits_text: aafeCredits($, extracted.credits_text),
+    price: aafePrice(extracted.price),
     accreditation: cleanText(extracted.accreditation, 200) || 'American Academy of Facial Esthetics',
     tags: [...new Set([
       'AAFE',
-      cleanText(extracted.format, 80) || (courseLikelyOnline(url, fallback.title) ? 'Online' : 'In Person'),
+      format,
       cleanText(fallback.topic, 120),
     ].filter(Boolean))],
+    requirements: aafeRequirements($, extracted.requirements),
     metadata: {
       ...(extracted.metadata || {}),
       extracted_from: 'aafe-course-page',

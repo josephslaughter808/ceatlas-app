@@ -128,6 +128,13 @@ export default async function CourseDetailPage({
         </div>
       </section>
 
+      {course.next_requirements ? (
+        <section className="card course-detail__requirements">
+          <h2>Prerequisites &amp; preparation</h2>
+          <p>{course.next_requirements}</p>
+        </section>
+      ) : null}
+
       <section className="card course-detail__actions">
         <h2>Registration & Source</h2>
         <p>This course is synced from the provider catalog and linked back to the original source for registration.</p>

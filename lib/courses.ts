@@ -41,6 +41,7 @@ type CatalogRow = {
   next_state?: string | null;
   next_country?: string | null;
   next_session_address?: string | null;
+  next_requirements?: string | null;
   next_session_latitude?: number | null;
   next_session_longitude?: number | null;
   session_count: number | null;
@@ -68,6 +69,7 @@ type DentalFallbackRow = {
   course_type?: string; format?: string; topic?: string; credits?: number | null; credits_text?: string;
   price?: string; price_amount?: number | null; start_date?: string; end_date?: string; location?: string;
   city?: string; state?: string; country?: string; instructors?: string; accreditation?: string;
+  requirements?: string;
   venue_address?: string; venue_latitude?: number | null; venue_longitude?: number | null; tags?: string[];
   metadata?: Record<string, unknown> | null;
 };
@@ -387,6 +389,7 @@ const dentalFallbackRows = (dentalFallbackJson as DentalFallbackRow[])
       next_location: row.location || null, next_format: format, next_city: row.city || null,
       next_state: row.state || null, next_country: row.country || null,
       next_session_address: row.venue_address || null,
+      next_requirements: row.requirements || null,
       next_session_latitude: row.venue_latitude ?? null, next_session_longitude: row.venue_longitude ?? null,
       session_count: 1, rating_average: null, rating_count: null,
     });

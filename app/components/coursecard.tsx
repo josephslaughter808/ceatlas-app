@@ -60,11 +60,17 @@ function formatCourseDateRange(start: string | null | undefined, end: string | n
   return `${startLabel} – ${endLabel}`;
 }
 
+function attendanceMethod(course: Course) {
+  if (course.next_format) return course.next_format;
+
+  const location = `${course.next_location || ''} ${course.next_city || ''}`;
+  if (/online|virtual|webinar|self[ -]?paced|on[ -]?demand/i.test(location)) return 'Online';
+  if (location.trim()) return 'In Person';
+  return 'Attendance pending';
+}
+
 export default function CourseCard({ course }: { course: Course }) {
-  const details = [
-    course.provider_name,
-    course.next_format || course.category,
-  ].filter(Boolean).join(' • ');
+  const attendance = attendanceMethod(course);
   const credits = formatCreditsForDisplay(course.credits_text, course.credits);
 
   const nextSession = formatCourseDateRange(course.next_start_date, course.next_end_date);
@@ -76,8 +82,6 @@ export default function CourseCard({ course }: { course: Course }) {
     next_session_address: course.next_session_address,
   });
   const price = course.card_price || null;
-  const rating = typeof course.rating_average === "number" ? `${course.rating_average.toFixed(1)}★` : null;
-  const ratingCount = course.rating_count || 0;
 
   return (
     <article className="course-card course-catalog-row">
@@ -100,8 +104,8 @@ export default function CourseCard({ course }: { course: Course }) {
       </div>
 
       <div className="course-catalog-row__details">
-        <strong><span className="course-catalog-row__status" aria-hidden="true" />{course.next_format || 'Format pending'}</strong>
-        <span>{rating ? `${rating} · ${ratingCount} reviews` : details || 'Course details'}</span>
+        <strong><span className="course-catalog-row__status" aria-hidden="true" />{attendance}</strong>
+        <span>Hosted by {course.provider_name || 'provider pending'}</span>
         <div className="course-catalog-row__tools">
           <TripCartButton courseId={course.id} />
           <SaveCourseButton courseId={course.id} />
@@ -124,7 +128,7 @@ export default function CourseCard({ course }: { course: Course }) {
             priceText: price,
             ratingAverage: course.rating_average,
             ratingCount: course.rating_count,
-            details: [details],
+            details: [`${attendance} • Hosted by ${course.provider_name || 'provider pending'}`],
             href: `/courses/${course.id}`,
           }}
         />

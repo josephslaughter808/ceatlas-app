@@ -2,9 +2,13 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import AtlasHomeMap from "./atlas-home-map";
 
-const quickFilters = ["This month", "In-person", "Weekend", "Under $500"];
+const quickFilters = [
+  { label: "In-person", href: "/courses?format=In%20Person" },
+  { label: "Online", href: "/courses?format=Online" },
+  { label: "Cruises", href: "/cruises" },
+  { label: "Trip Match", href: "/match" },
+];
 
 export default function HomeExplorer() {
   const router = useRouter();
@@ -15,22 +19,30 @@ export default function HomeExplorer() {
   function submit(event: FormEvent) {
     event.preventDefault();
     const params = new URLSearchParams();
-    if (location.trim()) params.set("location", location.trim());
-    if (when) params.set("date", when);
-    if (discipline !== "Dentistry") params.set("discipline", discipline.toLowerCase());
+    if (location.trim()) params.set("search", location.trim());
+    if (when) params.set("search", [location.trim(), when].filter(Boolean).join(" "));
+    if (discipline !== "Dentistry") {
+      router.push(`/disciplines/${discipline.toLowerCase()}`);
+      return;
+    }
     router.push(`/courses${params.size ? `?${params}` : ""}`);
   }
 
   return (
-    <section className="atlas-explorer" aria-labelledby="explorer-title">
+    <section className="atlas-explorer atlas-explorer--photo" aria-labelledby="explorer-title">
+      <div className="atlas-explorer__shade" aria-hidden="true" />
       <div className="atlas-explorer__copy">
-        <span className="atlas-kicker">CE that takes you places</span>
-        <h1 id="explorer-title">Learn somewhere <em>worth going.</em></h1>
-        <p>Find accredited continuing education, see it on the map, and plan the trip around it—all in one place.</p>
+        <span className="atlas-kicker atlas-kicker--pill">Learn somewhere unforgettable</span>
+        <h1 id="explorer-title">Your next course comes with a view.</h1>
+        <p>Curated continuing education in extraordinary places. Compare your course, credits, and travel options—all in one place.</p>
 
         <form className="atlas-search" onSubmit={submit}>
           <label>
-            <span>Profession</span>
+            <span>Destination</span>
+            <input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Where do you want to go?" />
+          </label>
+          <label>
+            <span>Specialty</span>
             <select value={discipline} onChange={(event) => setDiscipline(event.target.value)}>
               <option>Dentistry</option>
               <option>Medicine</option>
@@ -40,29 +52,15 @@ export default function HomeExplorer() {
             </select>
           </label>
           <label>
-            <span>Where</span>
-            <input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="City, state, or anywhere" />
-          </label>
-          <label>
-            <span>When</span>
+            <span>Travel dates</span>
             <input type="month" value={when} onChange={(event) => setWhen(event.target.value)} aria-label="Travel month" />
           </label>
-          <button type="submit" aria-label="Search continuing education">Explore courses <span>→</span></button>
+          <button type="submit" aria-label="Search continuing education">Search <span>→</span></button>
         </form>
 
         <div className="atlas-quick" aria-label="Popular filters">
-          <span>Popular:</span>
-          {quickFilters.map((filter) => <button type="button" key={filter} onClick={() => router.push("/courses")}>{filter}</button>)}
+          {quickFilters.map((filter) => <button type="button" key={filter.label} onClick={() => router.push(filter.href)}>{filter.label}</button>)}
         </div>
-      </div>
-
-      <div className="atlas-map-card">
-        <div className="atlas-map-card__top">
-          <div><span className="live-dot" /> Live course map</div>
-          <a href="/courses">Open full map ↗</a>
-        </div>
-        <AtlasHomeMap />
-        <div className="atlas-map-card__legend"><strong>100+ destinations</strong><span>Click a pin to explore</span></div>
       </div>
     </section>
   );

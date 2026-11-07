@@ -732,10 +732,18 @@ export default function CourseCatalogClient({
         </div>
       ) : (
         <>
-          <div className="course-grid">
+          <div className="course-catalog-table">
+            <div className="course-catalog-table__header" aria-hidden="true">
+              <span>Course</span>
+              <span>Destination &amp; dates</span>
+              <span>Course details</span>
+              <span>Price</span>
+            </div>
+            <div className="course-grid course-grid--catalog">
             {visibleCourses.map((course) => (
               <CourseCard key={course.id} course={course} />
             ))}
+            </div>
           </div>
 
           {!savedOnly ? <div className="catalog-pagination">

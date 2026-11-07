@@ -12,10 +12,13 @@ export default function HomeFeaturedCoursesClient({ courses }: { courses: Course
   }
 
   return (
-    <div className="course-grid">
-      {courses.map((course) => (
-        <CourseCard key={course.id} course={course} />
-      ))}
+    <div className="course-catalog-table">
+      <div className="course-catalog-table__header" aria-hidden="true">
+        <span>Course</span><span>Destination &amp; dates</span><span>Course details</span><span>Price</span>
+      </div>
+      <div className="course-grid course-grid--catalog">
+        {courses.map((course) => <CourseCard key={course.id} course={course} />)}
+      </div>
     </div>
   );
 }

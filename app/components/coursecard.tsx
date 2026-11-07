@@ -3,6 +3,7 @@ import CompareButton from "./compare-button";
 import SaveCourseButton from "./save-course-button";
 import TripCartButton from "./trip-cart-button";
 import { getCourseCardLocation } from "@/lib/course-location";
+import { formatCreditsForDisplay } from "@/lib/course-credits";
 
 type Course = {
   id: string;
@@ -15,6 +16,7 @@ type Course = {
   next_end_date: string | null;
   next_format: string | null;
   credits_text: string | null;
+  credits?: number | null;
   price_text: string | null;
   price: number | null;
   category: string | null;
@@ -30,11 +32,29 @@ function shortText(value: string | null | undefined, max = 180) {
   return value.length > max ? `${value.slice(0, max - 1)}…` : value;
 }
 
-function formatCredits(value: string | null | undefined) {
-  const text = String(value || "").trim();
-  if (!text) return "";
-  if (/\bcredits?\b/i.test(text)) return text;
-  return `${text} credits`;
+function formatCourseDate(value: string | null | undefined) {
+  const text = String(value || '').trim();
+  if (!text) return 'Available now';
+
+  const isoDate = text.match(/^\d{4}-\d{2}-\d{2}$/)?.[0];
+  if (!isoDate) return text;
+
+  const parsed = new Date(`${isoDate}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return text;
+
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(parsed);
+}
+
+function formatCourseDateRange(start: string | null | undefined, end: string | null | undefined) {
+  const startLabel = formatCourseDate(start);
+  if (!end || end === start) return startLabel;
+
+  const endLabel = formatCourseDate(end);
+  return `${startLabel} – ${endLabel}`;
 }
 
 export default function CourseCard({ course }: { course: Course }) {
@@ -42,9 +62,9 @@ export default function CourseCard({ course }: { course: Course }) {
     course.provider_name,
     course.next_format || course.category,
   ].filter(Boolean).join(' • ');
-  const credits = formatCredits(course.credits_text);
+  const credits = formatCreditsForDisplay(course.credits_text, course.credits);
 
-  const nextSession = course.next_start_date || 'Available now';
+  const nextSession = formatCourseDateRange(course.next_start_date, course.next_end_date);
   const location = getCourseCardLocation({
     next_location: course.next_location,
     next_city: course.next_city,
@@ -54,45 +74,37 @@ export default function CourseCard({ course }: { course: Course }) {
   const ratingCount = course.rating_count || 0;
 
   return (
-    <article className="course-card">
-      <div className="course-card__content">
-        <div className="course-card__header">
-          <div className="course-card__eyebrow-row">
-            <span className="course-card__eyebrow">{course.provider_name || 'Provider pending'}</span>
-            {course.headline_topic ? (
-              <span className="course-card__topic">{course.headline_topic}</span>
-            ) : null}
-          </div>
+    <article className="course-card course-catalog-row">
+      <div className="course-catalog-row__course">
+        <span className="course-catalog-row__accent" aria-hidden="true" />
+        <div className="course-card__eyebrow-row">
+          <span className="course-card__eyebrow">{course.headline_topic || course.category || 'Continuing education'}</span>
+          <span className="course-card__topic">{credits || 'Credits not provided'}</span>
         </div>
-
-        <div className="course-card__main">
-          <div className="course-card__copy">
-            <h2 className="course-card__title">{course.title || 'Untitled course'}</h2>
-            {course.instructor_display ? (
-              <p className="course-card__instructor">{course.instructor_display}</p>
-            ) : null}
-            <p className="course-card__details">{details || 'Continuing education course'}</p>
-          </div>
-
-          <div className="course-card__meta">
-            <span><strong>When:</strong> {nextSession}</span>
-            <span><strong>Where:</strong> {shortText(location, 80)}</span>
-            {credits ? (
-              <span className="course-card__credits"><strong>CE Credits:</strong> {credits}</span>
-            ) : null}
-            {price ? <span><strong>Price:</strong> {shortText(price, 80)}</span> : null}
-            {rating ? <span><strong>Rating:</strong> {rating} ({ratingCount})</span> : null}
-          </div>
-        </div>
-
-        <p className="course-card__description">{shortText(course.description, 220)}</p>
+        <h2 className="course-card__title">{course.title || 'Untitled course'}</h2>
+        <p className="course-card__details">
+          {course.provider_name || 'Provider pending'}
+          {course.instructor_display ? `  •  ${shortText(course.instructor_display, 52)}` : ''}
+        </p>
       </div>
 
-      <div className="course-card__actions">
-        <div className="course-card__quick-actions">
+      <div className="course-catalog-row__destination">
+        <strong><span aria-hidden="true">⌖</span>{shortText(location, 52)}</strong>
+        <span><span aria-hidden="true">□</span>{nextSession}</span>
+      </div>
+
+      <div className="course-catalog-row__details">
+        <strong><span className="course-catalog-row__status" aria-hidden="true" />{course.next_format || 'Format pending'}</strong>
+        <span>{rating ? `${rating} · ${ratingCount} reviews` : details || 'Course details'}</span>
+        <div className="course-catalog-row__tools">
           <TripCartButton courseId={course.id} />
           <SaveCourseButton courseId={course.id} />
         </div>
+      </div>
+
+      <div className="course-catalog-row__price">
+        <strong>{price ? shortText(price, 42) : 'See provider'}</strong>
+        <span>{price ? 'course price' : 'for pricing'}</span>
         <CompareButton
           item={{
             id: course.id,
@@ -110,8 +122,8 @@ export default function CourseCard({ course }: { course: Course }) {
             href: `/courses/${course.id}`,
           }}
         />
-        <Link href={`/courses/${course.id}`} className="button">
-          View Details
+        <Link href={`/courses/${course.id}`} className="course-catalog-row__arrow" aria-label={`View ${course.title || 'course'} details`}>
+          →
         </Link>
       </div>
     </article>

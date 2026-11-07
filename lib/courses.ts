@@ -10,6 +10,7 @@ import {
 } from './db.js';
 import { unstable_cache } from 'next/cache';
 import dentalFallbackJson from '@/data/pending_courses.json';
+import { normalizeCredits } from './course-credits.js';
 
 type CatalogRow = {
   id: string;
@@ -285,6 +286,7 @@ function buildDetailPrice(priceText: string | null | undefined, price: number | 
 }
 
 function normalizeCourse(row: CatalogRow) {
+  const normalizedCredits = normalizeCredits(row.credits_text, row.credits);
   const providerName = formatProviderName(row.provider_name);
   const tags = Array.isArray(row.tags) ? uniqueStrings(row.tags) : [];
   const topicTags = parseTagList(row.topic);
@@ -308,6 +310,8 @@ function normalizeCourse(row: CatalogRow) {
 
   return {
     ...row,
+    credits_text: normalizedCredits.text || null,
+    credits: normalizedCredits.amount,
     provider_name: providerName,
     provider_filter_name: providerFilterName(row, providerName),
     category,
@@ -401,17 +405,16 @@ function hasExplicitCeCreditSignal(course: ReturnType<typeof normalizeCourse>) {
 }
 
 function shouldIncludeCatalogCourse(course: ReturnType<typeof normalizeCourse>) {
+  const title = String(course.title || '').trim();
+  const looksLikeDirectoryPage = /\b(events?\s+(?:and|&)\s+(?:continuing education|ce)\s+calendar|continuing education calendar|course catalog|course directory)\b/i.test(title);
+  if (looksLikeDirectoryPage) return false;
+
   const providerFilter = String(course.provider_filter_name || "").trim();
   if (!UNVERIFIED_EVENT_AGGREGATOR_LABELS.has(providerFilter)) {
     return true;
   }
 
   return hasExplicitCeCreditSignal(course);
-}
-
-function shouldIncludeNonCeEvent(course: ReturnType<typeof normalizeCourse>) {
-  const providerFilter = String(course.provider_filter_name || "").trim();
-  return UNVERIFIED_EVENT_AGGREGATOR_LABELS.has(providerFilter) && !hasExplicitCeCreditSignal(course);
 }
 
 function matchesSearch(course: ReturnType<typeof normalizeCourse>, search: string) {
@@ -423,6 +426,8 @@ function matchesSearch(course: ReturnType<typeof normalizeCourse>, search: strin
     course.category,
     course.topic,
     course.provider_name,
+    course.next_start_date,
+    course.next_end_date,
     course.next_location,
     course.next_format,
     ...(course.tags || []),
@@ -431,7 +436,11 @@ function matchesSearch(course: ReturnType<typeof normalizeCourse>, search: strin
     .join(' ')
     .toLowerCase();
 
-  return haystack.includes(search.toLowerCase());
+  return search
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((term) => haystack.includes(term));
 }
 
 function toList(value: string | string[] | undefined) {

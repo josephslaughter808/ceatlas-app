@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { formatCreditsForDisplay } from "@/lib/course-credits";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getCourseById } from "@/lib/courses";
@@ -78,6 +79,7 @@ export default async function CourseDetailPage({
     next_state: course.next_state,
     next_country: course.next_country,
   });
+  const displayCredits = formatCreditsForDisplay(course.credits_text, course.credits);
 
   return (
     <div className="container course-detail">
@@ -95,7 +97,7 @@ export default async function CourseDetailPage({
           <div className="detail-pairs">
             <div><strong>Format</strong><span>{course.next_format || "Not specified"}</span></div>
             <div><strong>Type</strong><span>{course.category || "Not specified"}</span></div>
-            <div><strong>Credits</strong><span>{course.credits_text || "Not specified"}</span></div>
+            <div><strong>Credits</strong><span>{displayCredits || "Not provided"}</span></div>
             <div><strong>Price</strong><span>{course.detail_price || "Not specified"}</span></div>
             <div><strong>Start</strong><span>{formatDate(course.next_start_date)}</span></div>
             <div><strong>End</strong><span>{formatDate(course.next_end_date)}</span></div>

@@ -12,7 +12,9 @@ concurrency:
 
 jobs:
   refresh:
-    runs-on: ubuntu-latest
+    # Playwright 1.58 supports Ubuntu 24.04; ubuntu-latest currently resolves
+    # to 26.04, where Chromium installation is unsupported.
+    runs-on: ubuntu-24.04
     timeout-minutes: 330
     permissions:
       contents: read

@@ -1,294 +1,174 @@
-import { loadHTML } from '../../lib/fetch.js';
+import axios from 'axios';
 import { normalizeCourse } from '../../lib/normalize.js';
 
 const CDOCS_PROVIDER = 'CDOCS';
-const CDOCS_PROVIDER_SLUG = 'cdocs';
-const CDOCS_SOURCE_URL = 'https://www.cdocs.com/campus-learning';
+const CDOCS_APP_URL = 'https://app.cdocs.com';
+const CDOCS_SOURCE_URL = `${CDOCS_APP_URL}/events/workshops`;
+const CDOCS_GRAPHQL_URL = process.env.CDOCS_GRAPHQL_URL
+  || 'https://ruqhbjtvtzdg7nafr7b7h3mqzu.appsync-api.us-east-1.amazonaws.com/graphql';
+// This is the public AppSync key shipped to browsers by the CDOCS web app.
+const CDOCS_GRAPHQL_KEY = process.env.CDOCS_GRAPHQL_KEY
+  || 'da2-jh55apuiuze7xhiw6mxyfbngui';
 
-const SUBCATEGORY_TOPIC_MAP = {
-  1: 'Digital Dentistry & Technology',
-  2: 'Cone Beam & Imaging',
-  3: 'Implant Dentistry',
-  5: 'Orthodontics',
-  7: 'Sleep & Airway',
-};
+const CAMPUS_EVENTS_QUERY = `
+  query GetCampusEvents($future: Boolean, $allEvents: Boolean, $scope: String) {
+    getAllEvents(future: $future, allEvents: $allEvents, scope: $scope) {
+      id title description teaser presenterIds scope brand type slug timezone
+      details {
+        price thumbnailPath thumbnailUrl heroUrl credits
+        eventDates {
+          id startDate endDate allocated available length location timezone
+          venue { name address websiteUrl }
+        }
+      }
+    }
+  }
+`;
 
 function cleanText(value = '', max = 500) {
   return String(value)
     .replace(/<[^>]*>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
+    .replace(/&nbsp;|&#160;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
     .replace(/\u00a0/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, max);
 }
 
-function cleanMultiline(value = '', max = 2000) {
-  return String(value)
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\r/g, '\n')
-    .replace(/\u00a0/g, ' ')
-    .split('\n')
-    .map((line) => line.replace(/\s+/g, ' ').trim())
-    .filter(Boolean)
-    .join('\n')
-    .slice(0, max);
+function dateOnly(value = '') {
+  return String(value).match(/\d{4}-\d{2}-\d{2}/)?.[0] || '';
 }
 
-function absoluteUrl(value = '', baseUrl = CDOCS_SOURCE_URL) {
-  if (!value) return '';
-  try {
-    return new URL(value, baseUrl).href;
-  } catch {
-    return '';
-  }
-}
+function parseLocation(value = '', venueAddress = '') {
+  const location = cleanText(value, 160);
+  const combined = `${location} ${cleanText(venueAddress, 300)}`;
 
-function inferTopic(title = '', fallback = '') {
-  const text = cleanText(title, 250).toLowerCase();
-  if (fallback) return fallback;
-  if (/sleep|airway|apnea/.test(text)) return 'Sleep & Airway';
-  if (/aligner|orthodont/.test(text)) return 'Orthodontics';
-  if (/implant|grafting|surgery|molar|full arch/.test(text)) return 'Implant Dentistry';
-  if (/cone beam|cbct|diagnostic/.test(text)) return 'Cone Beam & Imaging';
-  if (/esthetic|smile|restorative|cad\/cam|digital|printing|denture/.test(text)) return 'Digital Dentistry & Technology';
-  return 'General Dentistry';
-}
-
-function extractWorkshopTargets($) {
-  const targets = [];
-
-  $('.workshop-panel').each((_, element) => {
-    const panel = $(element);
-    const className = panel.attr('class') || '';
-    const subcategoryMatch = className.match(/subcategory-(\d+)/);
-    const subcategoryId = subcategoryMatch ? Number(subcategoryMatch[1]) : null;
-    const detailPath = panel.find('a[href*="/campus-learning/hands-on-workshops/id/"]').first().attr('href') || '';
-    const detailUrl = absoluteUrl(detailPath);
-    const title = cleanText(panel.find('h3.media-heading').first().text(), 250);
-
-    if (!detailUrl || !title) return;
-
-    targets.push({
-      detailUrl,
-      title,
-      topic: inferTopic(title, SUBCATEGORY_TOPIC_MAP[subcategoryId] || ''),
-    });
-  });
-
-  return targets.filter((target, index, array) => (
-    array.findIndex((item) => item.detailUrl === target.detailUrl) === index
-  ));
-}
-
-function parseMonthIndex(token = '') {
-  const cleaned = token.toLowerCase().replace(/\./g, '').slice(0, 3);
-  const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-  return months.indexOf(cleaned);
-}
-
-function formatIsoDate(year, monthIndex, day) {
-  const date = new Date(Date.UTC(year, monthIndex, day));
-  return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10);
-}
-
-function parseSessionDateRange(label = '') {
-  const text = cleanText(label, 120);
-  const match = text.match(/^([A-Za-z.]+)\s+(\d{1,2})(?:-(\d{1,2}))?,\s*(\d{4})$/);
-  if (!match) {
-    return { start_date: '', end_date: '' };
-  }
-
-  const [, monthToken, startDayRaw, endDayRaw, yearRaw] = match;
-  const year = Number(yearRaw);
-  const monthIndex = parseMonthIndex(monthToken);
-
-  if (monthIndex < 0 || !year) {
-    return { start_date: '', end_date: '' };
-  }
-
-  const startDay = Number(startDayRaw);
-  const endDay = endDayRaw ? Number(endDayRaw) : startDay;
-  const start_date = formatIsoDate(year, monthIndex, startDay);
-
-  let endMonthIndex = monthIndex;
-  if (endDayRaw && endDay < startDay) {
-    endMonthIndex = (monthIndex + 1) % 12;
-  }
-
-  const endYear = monthIndex === 11 && endMonthIndex === 0 ? year + 1 : year;
-  const end_date = formatIsoDate(endYear, endMonthIndex, endDay);
-
-  return { start_date, end_date };
-}
-
-function parseCityStateCountry(location = '') {
-  const text = cleanText(location, 120);
-  if (!text) return { city: '', state: '', country: '' };
-
-  if (/Toronto, ON \(CAN\)/i.test(text)) {
+  if (/\bToronto\b|\bOntario\b|\bON\b.*\bCanada\b/i.test(combined)) {
     return { city: 'Toronto', state: 'ON', country: 'Canada' };
   }
 
-  const match = text.match(/^(.+?),\s*([A-Z]{2})$/);
-  if (match) {
-    return {
-      city: cleanText(match[1], 80),
-      state: cleanText(match[2], 20),
-      country: 'USA',
-    };
+  const cityState = location.match(/^(.+?),\s*([A-Z]{2})$/);
+  if (cityState) {
+    return { city: cleanText(cityState[1], 100), state: cityState[2], country: 'USA' };
   }
 
-  return { city: text, state: '', country: '' };
+  return { city: location, state: '', country: '' };
 }
 
-function extractBulletLines($) {
-  return $('#course-description .well li .media-body')
-    .map((_, element) => cleanText($(element).text(), 300))
-    .get()
-    .filter(Boolean);
+function inferTopic(title = '') {
+  const value = cleanText(title, 300).toLowerCase();
+  if (/aligner|orthodont/.test(value)) return 'Orthodontics';
+  if (/implant|graft|surg/.test(value)) return 'Implant Dentistry';
+  if (/cone beam|cbct|diagnostic|imaging/.test(value)) return 'Cone Beam & Imaging';
+  if (/sleep|airway|apnea/.test(value)) return 'Sleep & Airway';
+  if (/esthetic|aesthetic|smile|restor|cad\/?cam|cerec|digital|denture/.test(value)) {
+    return 'Digital Dentistry & Technology';
+  }
+  if (/practice|business|team|leadership/.test(value)) return 'Practice Management';
+  return 'General Dentistry';
 }
 
-function extractCosts($) {
-  return $('#course-info h3')
-    .filter((_, element) => cleanText($(element).text(), 40) === 'Cost:')
-    .first()
-    .next('ul')
-    .find('li')
-    .map((_, element) => cleanText($(element).text(), 120))
-    .get()
-    .filter(Boolean)
-    .join(' | ');
-}
+function buildCourse(event, session) {
+  const details = event.details || {};
+  const venue = session.venue || {};
+  const title = cleanText(event.title, 250);
+  const topic = inferTopic(title);
+  const location = cleanText(session.location || venue.name, 160);
+  const geo = parseLocation(location, venue.address);
+  const startDate = dateOnly(session.startDate);
+  const endDate = dateOnly(session.endDate) || startDate;
+  const credits = Number(details.credits);
+  const price = Number(details.price);
+  const available = Number(session.available);
+  const allocated = Number(session.allocated);
+  const soldOut = Number.isFinite(available) && available <= 0;
 
-function extractFaculty($) {
-  return $('#course-info h3')
-    .filter((_, element) => cleanText($(element).text(), 40) === 'Faculty:')
-    .first()
-    .next('ul')
-    .find('li')
-    .map((_, element) => cleanText($(element).text(), 160))
-    .get()
-    .filter(Boolean)
-    .join('\n');
-}
-
-function extractCredits($) {
-  const value = $('#course-info h3')
-    .filter((_, element) => cleanText($(element).text(), 40) === 'Credits:')
-    .first()
-    .next('ul')
-    .find('li')
-    .first()
-    .text();
-
-  return cleanText(value, 80);
-}
-
-function extractDates($) {
-  const heading = $('#course-info h3')
-    .filter((_, element) => /Dates$/i.test(cleanText($(element).text(), 60)))
-    .first();
-
-  const headingText = cleanText(heading.text(), 60);
-  const yearMatch = headingText.match(/(20\d{2})/);
-  const yearText = yearMatch ? yearMatch[1] : '';
-
-  return heading
-    .next('ul')
-    .find('li')
-    .map((index, element) => {
-      const item = $(element);
-      const schedule = cleanText(item.find('small').first().text(), 40);
-      const raw = item.clone();
-      raw.find('small').remove();
-      raw.find('a').remove();
-      let dateLabel = cleanText(raw.text().replace(/\(Sold Out\)|\(Limited Seats\)/gi, ''), 80);
-      if (yearText && !/\b20\d{2}\b/.test(dateLabel)) {
-        dateLabel = `${dateLabel}, ${yearText}`;
-      }
-      const soldOut = /\bSold Out\b/i.test(item.text());
-      const location = cleanText(item.find('a').text(), 120);
-      return {
-        key: index + 1,
-        schedule,
-        dateLabel,
-        location,
-        soldOut,
-      };
-    })
-    .get()
-    .filter((session) => session.dateLabel && session.location);
-}
-
-async function scrapeCdocsWorkshop(target) {
-  const $ = await loadHTML(target.detailUrl);
-  const title = cleanText($('#headline-area h1').first().text(), 250) || target.title;
-  const creditsText = extractCredits($);
-  const instructors = extractFaculty($);
-  const price = extractCosts($);
-  const prerequisites = cleanText($('#headline-area small').last().text().replace(/^Prerequisites:\s*/i, ''), 300);
-  const description = cleanMultiline($('#headline-area p').map((_, element) => $(element).text()).get().join('\n\n'), 2500);
-  const objectives = extractBulletLines($);
-  const sessions = extractDates($);
-  const topic = inferTopic(title, target.topic);
-  const audience = /assistant/i.test(title) ? 'Dental Assistants' : 'Dentists';
-  const requirements = [prerequisites ? `Prerequisites: ${prerequisites}` : '', ...objectives].filter(Boolean).join('\n');
-
-  return sessions.map((session) => {
-    const { start_date, end_date } = parseSessionDateRange(session.dateLabel);
-    const geo = parseCityStateCountry(session.location);
-
-    return normalizeCourse({
-      provider: CDOCS_PROVIDER,
-      provider_slug: CDOCS_PROVIDER_SLUG,
-      source_url: target.detailUrl,
-      url: `${target.detailUrl}#session-${session.key}`,
-      title,
-      description,
-      course_type: 'Hands-On Workshop',
-      format: 'In Person',
-      audience,
-      topic,
-      credits_text: creditsText,
-      price,
-      start_date,
-      end_date,
-      date_text: `${session.schedule} • ${session.dateLabel} • ${session.location}`,
-      location: session.location,
-      city: geo.city,
-      state: geo.state,
-      country: geo.country,
-      instructors,
-      accreditation: 'CDOCS',
-      requirements,
-      tags: ['CDOCS', 'Hands-On Workshop', 'In Person', topic, session.location].filter(Boolean),
-      metadata: {
-        extracted_from: 'cdocs-workshops',
-        detail_url: target.detailUrl,
-        session_index: session.key,
-        sold_out: session.soldOut,
-      },
-    });
+  return normalizeCourse({
+    provider: CDOCS_PROVIDER,
+    provider_slug: 'cdocs',
+    source_url: CDOCS_SOURCE_URL,
+    url: `${CDOCS_APP_URL}/events/workshops/${event.slug}`,
+    title,
+    description: cleanText(event.description || event.teaser, 2000),
+    course_type: 'Hands-On Workshop',
+    format: 'In Person',
+    audience: /assistant/i.test(title) ? 'Dental Assistants' : 'Dentists',
+    topic,
+    credits: Number.isFinite(credits) ? credits : null,
+    credits_text: Number.isFinite(credits) ? `${credits} CE Credits` : '',
+    price: Number.isFinite(price) ? `$${price.toLocaleString('en-US')}` : '',
+    price_amount: Number.isFinite(price) ? price : null,
+    currency: geo.country === 'Canada' ? 'CAD' : 'USD',
+    start_date: startDate,
+    end_date: endDate,
+    date_text: [startDate === endDate ? startDate : `${startDate} – ${endDate}`, location].filter(Boolean).join(' • '),
+    location,
+    city: geo.city,
+    state: geo.state,
+    country: geo.country,
+    accreditation: 'CDOCS Continuing Dental Education',
+    venue_address: venue.address,
+    tags: ['CDOCS', 'Hands-On Workshop', 'In Person', topic, location].filter(Boolean),
+    metadata: {
+      extracted_from: 'cdocs-public-app-api',
+      event_id: event.id,
+      event_date_id: session.id,
+      slug: event.slug,
+      brand: event.brand,
+      event_type: event.type,
+      timezone: session.timezone || event.timezone,
+      available_seats: Number.isFinite(available) ? available : null,
+      allocated_seats: Number.isFinite(allocated) ? allocated : null,
+      availability_status: soldOut ? 'sold_out' : 'available',
+      image_url: cleanText(details.heroUrl || details.thumbnailUrl, 500),
+      presenter_ids: Array.isArray(event.presenterIds) ? event.presenterIds : [],
+    },
   });
 }
 
-export async function scrapeCDOCS(startUrl = CDOCS_SOURCE_URL) {
-  console.log('   • Scraping CDOCS public workshop catalog');
+export async function scrapeCDOCS() {
+  console.log('   • Scraping CDOCS public workshop API');
+  const { data } = await axios.post(
+    CDOCS_GRAPHQL_URL,
+    {
+      query: CAMPUS_EVENTS_QUERY,
+      variables: { future: true, allEvents: true, scope: 'campus' },
+    },
+    {
+      timeout: 60000,
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': CDOCS_GRAPHQL_KEY,
+        'user-agent': 'Mozilla/5.0 (compatible; CEAtlasBot/1.0)',
+      },
+    },
+  );
 
-  const $ = await loadHTML(startUrl);
-  const workshopTargets = extractWorkshopTargets($);
+  if (Array.isArray(data?.errors) && data.errors.length > 0) {
+    throw new Error(data.errors.map((error) => error.message).filter(Boolean).join('; ') || 'CDOCS API returned an error');
+  }
+
+  const events = Array.isArray(data?.data?.getAllEvents) ? data.data.getAllEvents : [];
+  const cdocsEvents = events.filter((event) => (
+    cleanText(event.brand).toLowerCase() === 'cdocs'
+    && cleanText(event.type).toLowerCase() === 'workshop'
+  ));
   const results = [];
+  const seen = new Set();
 
-  for (const target of workshopTargets) {
-    try {
-      const sessions = await scrapeCdocsWorkshop(target);
-      results.push(...sessions);
-    } catch (error) {
-      console.log(`      ⚠️ Failed to load CDOCS workshop ${target.detailUrl}: ${error.message}`);
+  for (const event of cdocsEvents) {
+    const sessions = Array.isArray(event.details?.eventDates) ? event.details.eventDates : [];
+    for (const session of sessions) {
+      const key = `${event.id}|${session.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push(buildCourse(event, session));
     }
   }
 
-  console.log(`   • Extracted ${results.length} CDOCS workshop sessions`);
+  console.log(`   • Extracted ${results.length} sessions from ${cdocsEvents.length} CDOCS workshops`);
   return results;
 }

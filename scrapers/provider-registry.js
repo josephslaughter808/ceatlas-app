@@ -26,7 +26,7 @@ export const PRIORITY_PROVIDERS = [
   {
     key: 'cdocs',
     name: 'CDOCS',
-    urls: ['https://www.cdocs.com/campus-learning'],
+    urls: ['https://app.cdocs.com/events/workshops'],
     matches: (url) => new URL(url).hostname.includes('cdocs.com'),
     minimumRows: 3,
     scrape: (url) => scrapeCDOCS(url),

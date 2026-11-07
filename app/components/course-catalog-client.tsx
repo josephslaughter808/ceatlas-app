@@ -542,6 +542,11 @@ export default function CourseCatalogClient({
     });
   }
 
+  function changePage(page: number) {
+    pushQuery({ page });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   return (
     <>
       <StateRequirementsPanel
@@ -750,7 +755,7 @@ export default function CourseCatalogClient({
             <button
               type="button"
               className="button button-secondary"
-              onClick={() => pushQuery({ page: Math.max(1, currentPageSafe - 1) })}
+              onClick={() => changePage(Math.max(1, currentPageSafe - 1))}
               disabled={currentPageSafe === 1}
             >
               Previous
@@ -763,7 +768,7 @@ export default function CourseCatalogClient({
             <button
               type="button"
               className="button button-secondary"
-              onClick={() => pushQuery({ page: Math.min(totalPages, currentPageSafe + 1) })}
+              onClick={() => changePage(Math.min(totalPages, currentPageSafe + 1))}
               disabled={currentPageSafe === totalPages}
             >
               Next

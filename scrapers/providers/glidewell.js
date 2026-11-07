@@ -109,7 +109,7 @@ function extractContentBlock(product = {}, heading = '') {
 }
 
 function extractCourseDetails(product = {}) {
-  const html = String(product.description || '');
+  const html = String(product.detail_html || product.description || '');
   const detailsMatch = html.match(/<div class="course-details">([\s\S]*?)<\/div>/i);
   return detailsMatch ? detailsMatch[1] : html;
 }
@@ -325,6 +325,16 @@ export async function scrapeGlidewell(startUrl = GLIDEWELL_COLLECTION_URL) {
 
     const hasNext = $(`a[href*="/collections/education?page=${page + 1}"]`).length > 0;
     if (!hasNext) break;
+  }
+
+  for (const product of products.values()) {
+    try {
+      const detailUrl = absoluteUrl(`/collections/education/products/${product.handle}`, GLIDEWELL_COLLECTION_URL);
+      const detailPage = await loadHTML(detailUrl);
+      product.detail_html = detailPage.html();
+    } catch (error) {
+      console.log(`      ⚠️ Failed to enrich Glidewell course ${product.handle}: ${error.message}`);
+    }
   }
 
   const rows = Array.from(products.values()).flatMap((product) => buildRowsForProduct(product));

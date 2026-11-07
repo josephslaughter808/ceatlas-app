@@ -14,6 +14,7 @@
 # testing
 /coverage
 /tmp/
+/data/provider-runs/
 /.pitch-build/
 /.codex-finalizer/
 /outputs/CEAtlas_Friends_and_Family_Investor_Deck.pptx

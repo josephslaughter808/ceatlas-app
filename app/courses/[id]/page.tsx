@@ -78,6 +78,7 @@ export default async function CourseDetailPage({
     next_city: course.next_city,
     next_state: course.next_state,
     next_country: course.next_country,
+    next_session_address: course.next_session_address,
   });
   const displayCredits = formatCreditsForDisplay(course.credits_text, course.credits);
 

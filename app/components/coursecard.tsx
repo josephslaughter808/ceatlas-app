@@ -12,6 +12,9 @@ type Course = {
   description: string | null;
   next_location: string | null;
   next_city?: string | null;
+  next_state?: string | null;
+  next_country?: string | null;
+  next_session_address?: string | null;
   next_start_date: string | null;
   next_end_date: string | null;
   next_format: string | null;
@@ -68,6 +71,9 @@ export default function CourseCard({ course }: { course: Course }) {
   const location = getCourseCardLocation({
     next_location: course.next_location,
     next_city: course.next_city,
+    next_state: course.next_state,
+    next_country: course.next_country,
+    next_session_address: course.next_session_address,
   });
   const price = course.card_price || null;
   const rating = typeof course.rating_average === "number" ? `${course.rating_average.toFixed(1)}★` : null;

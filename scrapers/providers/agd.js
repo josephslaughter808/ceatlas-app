@@ -2,6 +2,7 @@ import { loadHTML } from '../../lib/fetch.js';
 import { normalizeCourse } from '../../lib/normalize.js';
 
 const AGD_PROVIDER = 'AGD';
+const AGD_LEARN_URL = 'https://www.agd.org/education/learn';
 const AGD_SCHEDULE_URL = 'https://agd2026.eventscribe.net/agenda.asp?pfp=FullSchedule';
 const AGD_BASE_URL = 'https://agd2026.eventscribe.net';
 
@@ -141,7 +142,7 @@ async function extractSchedulePageRows(scheduleUrl, seenUrls, results) {
   return [...new Set(dayUrls)];
 }
 
-export async function scrapeAGD(startUrl = AGD_SCHEDULE_URL) {
+export async function scrapeAGDConference(startUrl = AGD_SCHEDULE_URL) {
   console.log('   • Scraping AGD public conference catalog');
 
   const results = [];
@@ -153,5 +154,85 @@ export async function scrapeAGD(startUrl = AGD_SCHEDULE_URL) {
   }
 
   console.log(`   • Extracted ${results.length} AGD conference sessions`);
+  return results;
+}
+
+function decodeHtmlText(value = '') {
+  return cleanText(String(value)
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&ndash;|&mdash;/gi, '-')
+    .replace(/&amp;/gi, '&')
+    .replace(/&nbsp;/gi, ' '));
+}
+
+function parseCurrentCourseDate(segment = '', registrationUrl = '') {
+  const yearMatch = registrationUrl.match(/agd-events-details\/(20\d{2})\//i);
+  const year = yearMatch?.[1] || String(new Date().getFullYear());
+  const text = decodeHtmlText(segment);
+  const match = text.match(/(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),\s+([A-Za-z]+)\s+(\d{1,2})\s*:/i);
+  if (!match) return '';
+  const parsed = new Date(`${match[1]} ${match[2]}, ${year}`);
+  return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10);
+}
+
+export async function scrapeAGD(startUrl = AGD_LEARN_URL) {
+  console.log('   • Scraping AGD current national course catalog');
+  const $ = await loadHTML(startUrl);
+  const html = $.html();
+  const linkPattern = /href="([^"]*agd-events-details\/[^"]*default-calendar\/[^"]+)"[^>]*>[\s\S]*?Register Now/gi;
+  const results = [];
+  const seenUrls = new Set();
+  let previousIndex = 0;
+  let match;
+
+  while ((match = linkPattern.exec(html)) !== null) {
+    const registrationUrl = absoluteUrl(match[1]);
+    const segment = html.slice(Math.max(previousIndex, match.index - 6000), match.index);
+    previousIndex = linkPattern.lastIndex;
+    if (!registrationUrl || seenUrls.has(registrationUrl)) continue;
+
+    const strongValues = [...segment.matchAll(/<strong[^>]*>([\s\S]*?)<\/strong>/gi)]
+      .map((item) => decodeHtmlText(item[1]))
+      .filter((item) => item && !/register|interested|fellowship review/i.test(item));
+    const title = strongValues.at(-1) || '';
+    const creditsText = decodeHtmlText(segment.match(/Credits:\s*([^<]+)/i)?.[1] || '');
+    const subject = decodeHtmlText(segment.match(/Subject:\s*([^<]+)/i)?.[1] || '');
+    const method = decodeHtmlText(segment.match(/Method:\s*([^<]+)/i)?.[1] || '');
+    const audience = decodeHtmlText(segment.match(/Audience:\s*([^<]+)/i)?.[1] || '');
+    const price = decodeHtmlText(segment.match(/Fee:\s*([^<]+)/i)?.[1] || '');
+    const startDate = parseCurrentCourseDate(segment, registrationUrl);
+
+    if (!title || !creditsText || !startDate) continue;
+    seenUrls.add(registrationUrl);
+    const format = /in-person|hands-on|workshop/i.test(`${method} ${title}`) ? 'In Person' : 'Online';
+
+    results.push(normalizeCourse({
+      provider: AGD_PROVIDER,
+      provider_slug: 'agd',
+      source_url: startUrl,
+      url: registrationUrl,
+      title,
+      description: [subject, method, audience].filter(Boolean).join(' • '),
+      course_type: method || 'Live Course',
+      format,
+      audience,
+      topic: subject,
+      credits_text: creditsText,
+      price,
+      start_date: startDate,
+      end_date: startDate,
+      date_text: decodeHtmlText(segment).slice(-500),
+      location: format === 'Online' ? 'Online' : 'AGD Headquarters, Chicago, IL',
+      city: format === 'Online' ? '' : 'Chicago',
+      state: format === 'Online' ? '' : 'IL',
+      country: 'USA',
+      accreditation: 'Academy of General Dentistry',
+      tags: ['AGD', format, subject].filter(Boolean),
+      metadata: { extracted_from: 'agd-national-learn-catalog' },
+    }));
+  }
+
+  console.log(`   • Extracted ${results.length} current AGD courses`);
   return results;
 }

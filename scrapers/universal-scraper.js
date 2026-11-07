@@ -98,6 +98,10 @@ import { scrapeYankee } from './providers/yankee.js';
 import { scrapeZahn } from './providers/zahn.js';
 import { scrapeOsteologyBatch } from './providers/osteology-batch.js';
 import { scrapeOrthotown } from './providers/orthotown.js';
+import {
+  assessProviderRun,
+  getPriorityProviderForUrl,
+} from './provider-registry.js';
 
 const EVENTSCRIBE_PROVIDERS = {
   'odc2026.eventscribe.net': {
@@ -276,6 +280,12 @@ async function scrapeProvider(providerUrl) {
 
   const hostname = new URL(providerUrl).hostname.replace('www.', '');
   const provider = hostname.split('.')[0].toUpperCase();
+  const priorityProvider = getPriorityProviderForUrl(providerUrl);
+
+  if (priorityProvider) {
+    console.log(`   • Using priority adapter: ${priorityProvider.name}`);
+    return priorityProvider.scrape(providerUrl);
+  }
 
   if (provider === 'ADA') {
     return scrapeADA(providerUrl);
@@ -690,14 +700,26 @@ export async function scrapeFromList(listPath) {
         providerTimeoutMs(url),
         `Provider ${url}`,
       );
-      allRows.push(...rows);
+      const priorityProvider = getPriorityProviderForUrl(url);
+      const health = priorityProvider
+        ? assessProviderRun(priorityProvider, rows, Date.now() - startedAt)
+        : null;
+      const quarantined = Boolean(health && !health.healthy);
+
+      if (!quarantined) {
+        allRows.push(...rows);
+      }
       providerResults.push({
         url,
-        status: rows.length > 0 ? 'success' : 'empty',
+        provider_key: priorityProvider?.key || null,
+        status: quarantined ? 'quarantined' : (rows.length > 0 ? 'success' : 'empty'),
         rows: rows.length,
         duration_ms: Date.now() - startedAt,
+        health,
       });
-      console.log(`   • Provider completed with ${rows.length} rows`);
+      console.log(quarantined
+        ? `   • Provider output quarantined: ${health.reason}`
+        : `   • Provider completed with ${rows.length} rows`);
     } catch (error) {
       providerResults.push({
         url,
@@ -717,6 +739,7 @@ export async function scrapeFromList(listPath) {
     providers_successful: providerResults.filter((result) => result.status === 'success').length,
     providers_empty: providerResults.filter((result) => result.status === 'empty').length,
     providers_failed: providerResults.filter((result) => result.status === 'error').length,
+    providers_quarantined: providerResults.filter((result) => result.status === 'quarantined').length,
     rows_collected: allRows.length,
     providers: providerResults,
   };
@@ -730,5 +753,6 @@ export async function scrapeFromList(listPath) {
   console.log(`   • providers successful: ${report.providers_successful}`);
   console.log(`   • providers empty: ${report.providers_empty}`);
   console.log(`   • providers failed: ${report.providers_failed}`);
+  console.log(`   • providers quarantined: ${report.providers_quarantined}`);
   return allRows;
 }

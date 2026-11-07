@@ -121,6 +121,21 @@ const UNVERIFIED_EVENT_AGGREGATOR_LABELS = new Set(
   AGGREGATOR_PROVIDER_LABELS.map((entry) => entry.label)
 );
 
+const NON_COURSE_TITLE_PATTERNS = [
+  /^classifieds?(?: ads?| details)?$/i,
+  /\b(?:events? (?:and|&) )?continuing education(?: \(ce\))? calendar\b/i,
+  /^events? (?:and|&) continuing education$/i,
+  /^(?:fulfill your )?continuing education requirements$/i,
+  /^calendar(?: \(at a glance\))?$/i,
+  /\bcareer fair\b/i,
+  /\b(?:join|membership|member benefits?|dues)\b/i,
+  /\b(?:insurance agency|insurance benefits?|regulatory help)\b/i,
+  /\b(?:exhibit|sponsor|advertis(?:e|ing))\b/i,
+  /^visit with exhibitors?$/i,
+  /^on-demand learning$/i,
+  /^recovering professional program$/i,
+];
+
 function titleCaseWord(word: string) {
   if (!word) return word;
   if (/^[A-Z0-9&/-]{2,}$/.test(word) && word.length <= 4) return word;
@@ -366,7 +381,9 @@ const dentalFallbackRows = (dentalFallbackJson as DentalFallbackRow[])
       credits_text: row.credits_text || null, source_url: row.source_url || row.url || null,
       registration_url: row.url || row.source_url || null, tags: Array.isArray(row.tags) ? row.tags : [],
       metadata: { ...(row.metadata || {}), instructors: row.instructors || null, accreditation: row.accreditation },
-      updated_at: null, next_session_id: null, next_start_date: startDate, next_end_date: endDate,
+      updated_at: null, next_session_id: null,
+      next_start_date: evergreen && startDate && startDate < today ? null : startDate,
+      next_end_date: endDate,
       next_location: row.location || null, next_format: format, next_city: row.city || null,
       next_state: row.state || null, next_country: row.country || null,
       next_session_address: row.venue_address || null,
@@ -374,7 +391,8 @@ const dentalFallbackRows = (dentalFallbackJson as DentalFallbackRow[])
       session_count: 1, rating_average: null, rating_count: null,
     });
   })
-  .filter((row): row is ReturnType<typeof normalizeCourse> => Boolean(row));
+  .filter((row): row is ReturnType<typeof normalizeCourse> => Boolean(row))
+  .filter(shouldIncludeCatalogCourse);
 
 function getDentalFallbackRows(searchParams: CourseSearchParams = {}) {
   const search = typeof searchParams.search === 'string' ? searchParams.search.trim() : '';
@@ -393,21 +411,27 @@ export type CourseRecord = ReturnType<typeof normalizeCourse>;
 export type EventRecord = CourseRecord;
 
 function hasExplicitCeCreditSignal(course: ReturnType<typeof normalizeCourse>) {
-  if (typeof course.credits === "number" && Number.isFinite(course.credits) && course.credits > 0) {
-    return true;
-  }
-
-  const creditsText = String(course.credits_text || "").trim();
-  if (!creditsText) return false;
-
-  return /\b(ce|ceu|cde|credit|credits|hour|hours)\b/i.test(creditsText)
-    && !/\b(not specified|n\/a|tbd|unknown)\b/i.test(creditsText);
+  return typeof course.credits === "number"
+    && Number.isFinite(course.credits)
+    && course.credits > 0;
 }
 
 function shouldIncludeCatalogCourse(course: ReturnType<typeof normalizeCourse>) {
   const title = String(course.title || '').trim();
-  const looksLikeDirectoryPage = /\b(events?\s+(?:and|&)\s+(?:continuing education|ce)\s+calendar|continuing education calendar|course catalog|course directory)\b/i.test(title);
-  if (looksLikeDirectoryPage) return false;
+  if (!title || NON_COURSE_TITLE_PATTERNS.some((pattern) => pattern.test(title))) return false;
+
+  if (!hasExplicitCeCreditSignal(course)) return false;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const startDate = String(course.next_start_date || '');
+  const endDate = String(course.next_end_date || '');
+  const isEvergreen = /\b(?:online|on[ -]?demand|self[ -]?paced|evergreen|asynchronous)\b/i.test(
+    `${course.next_format || ''} ${course.category || ''}`
+  );
+
+  if (endDate && endDate < today) return false;
+  if (!endDate && startDate && startDate < today && !isEvergreen) return false;
+  if (!startDate && !endDate && !isEvergreen) return false;
 
   const providerFilter = String(course.provider_filter_name || "").trim();
   if (!UNVERIFIED_EVENT_AGGREGATOR_LABELS.has(providerFilter)) {
